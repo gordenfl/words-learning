@@ -11,7 +11,6 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CommonActions } from '@react-navigation/native';
 import { authAPI } from '../services/api';
 
 export default function LoginScreen({ navigation }) {
@@ -31,13 +30,8 @@ export default function LoginScreen({ navigation }) {
       await AsyncStorage.setItem('authToken', response.data.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
       
-      // Reset navigation stack to Home
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        })
-      );
+      // Navigate to Home
+      navigation.navigate('Home');
     } catch (error) {
       Alert.alert('Login Failed', error.response?.data?.error || 'Something went wrong');
     } finally {

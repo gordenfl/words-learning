@@ -1,7 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// 使用电脑的局域网IP地址，手机才能访问
+// 如果在iOS模拟器中运行，可以使用 localhost
+// 如果在Android模拟器中运行，可以使用 10.0.2.2
+// 如果在物理设备上运行，必须使用电脑的局域网IP
+const API_BASE_URL = 'http://192.168.101.95:3000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ActivityIndicator, View } from 'react-native';
 
 // Import screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -35,12 +36,17 @@ export default function App() {
   };
 
   if (isLoading) {
-    return null; // Or a loading screen
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+      </View>
+    );
   }
 
   return (
     <NavigationContainer>
       <Stack.Navigator
+        initialRouteName={isAuthenticated ? 'Home' : 'Login'}
         screenOptions={{
           headerStyle: {
             backgroundColor: '#4A90E2',
@@ -51,55 +57,50 @@ export default function App() {
           },
         }}
       >
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen 
-              name="Login" 
-              component={LoginScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen 
-              name="Register" 
-              component={RegisterScreen}
-              options={{ title: 'Create Account' }}
-            />
-          </>
-        ) : (
-          <>
-            <Stack.Screen 
-              name="Home" 
-              component={HomeScreen}
-              options={{ title: 'Words Learning' }}
-            />
-            <Stack.Screen 
-              name="WordsList" 
-              component={WordsListScreen}
-              options={{ title: 'My Words' }}
-            />
-            <Stack.Screen 
-              name="AddWord" 
-              component={AddWordScreen}
-              options={{ title: 'Add Word' }}
-            />
-            <Stack.Screen 
-              name="Camera" 
-              component={CameraScreen}
-              options={{ title: 'Scan Text' }}
-            />
-            <Stack.Screen 
-              name="Article" 
-              component={ArticleScreen}
-              options={{ title: 'Read Article' }}
-            />
-            <Stack.Screen 
-              name="Profile" 
-              component={ProfileScreen}
-              options={{ title: 'Profile' }}
-            />
-          </>
-        )}
+        {/* Auth Screens */}
+        <Stack.Screen 
+          name="Login" 
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Register" 
+          component={RegisterScreen}
+          options={{ title: 'Create Account' }}
+        />
+        
+        {/* Main App Screens */}
+        <Stack.Screen 
+          name="Home" 
+          component={HomeScreen}
+          options={{ title: 'Words Learning' }}
+        />
+        <Stack.Screen 
+          name="WordsList" 
+          component={WordsListScreen}
+          options={{ title: 'My Words' }}
+        />
+        <Stack.Screen 
+          name="AddWord" 
+          component={AddWordScreen}
+          options={{ title: 'Add Word' }}
+        />
+        <Stack.Screen 
+          name="Camera" 
+          component={CameraScreen}
+          options={{ title: 'Scan Text' }}
+        />
+        <Stack.Screen 
+          name="Article" 
+          component={ArticleScreen}
+          options={{ title: 'Read Article' }}
+        />
+        <Stack.Screen 
+          name="Profile" 
+          component={ProfileScreen}
+          options={{ title: 'Profile' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-

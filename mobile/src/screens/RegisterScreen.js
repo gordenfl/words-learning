@@ -12,7 +12,6 @@ import {
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CommonActions } from '@react-navigation/native';
 import { authAPI } from '../services/api';
 
 export default function RegisterScreen({ navigation }) {
@@ -44,13 +43,9 @@ export default function RegisterScreen({ navigation }) {
       await AsyncStorage.setItem('authToken', response.data.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
       
-      // Reset navigation stack to Home
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'Home' }],
-        })
-      );
+      // Navigate to Home
+      Alert.alert('Success', 'Account created successfully!');
+      navigation.navigate('Home');
     } catch (error) {
       Alert.alert('Registration Failed', error.response?.data?.error || 'Something went wrong');
     } finally {

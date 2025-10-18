@@ -9,7 +9,6 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CommonActions } from '@react-navigation/native';
 import { wordsAPI, articlesAPI } from '../services/api';
 
 export default function HomeScreen({ navigation }) {
@@ -50,12 +49,7 @@ export default function HomeScreen({ navigation }) {
           onPress: async () => {
             await AsyncStorage.removeItem('authToken');
             await AsyncStorage.removeItem('user');
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-              })
-            );
+            navigation.navigate('Login');
           },
         },
       ]
