@@ -73,6 +73,26 @@ EOF
     echo "✓ Environment file created"
 fi
 
+# Check AI configuration
+echo ""
+echo "🤖 AI Configuration Status:"
+echo ""
+
+if grep -q "DEEPSEEK_API_KEY=sk-" backend/.env 2>/dev/null; then
+    echo "  ✅ DeepSeek API: Configured"
+    echo "  📝 Story generation: AI-powered (natural & fluent)"
+elif grep -q "OPENAI_API_KEY=sk-" backend/.env 2>/dev/null; then
+    echo "  ✅ OpenAI API: Configured"
+    echo "  📝 Story generation: AI-powered (natural & fluent)"
+else
+    echo "  ⚠️  No AI API configured"
+    echo "  📝 Story generation: Using templates"
+    echo ""
+    echo "💡 Tip: Configure AI for natural Chinese stories"
+    echo "   Visit: https://platform.deepseek.com/"
+fi
+echo ""
+
 # Start backend
 echo ""
 echo "Starting backend server..."
