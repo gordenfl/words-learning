@@ -27,7 +27,7 @@ export default function CameraScreen({ navigation }) {
       return;
     }
 
-    const result = await ImagePicker.launchImagePickerAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
@@ -199,8 +199,8 @@ export default function CameraScreen({ navigation }) {
             <View style={styles.wordsList}>
               {extractedWords.map((item, index) => (
                 <View key={index} style={styles.wordChipNew}>
-                  <Text style={styles.wordChipText}>{item.word}</Text>
                   <Text style={styles.wordChipPinyin}>{item.pinyin}</Text>
+                  <Text style={styles.wordChipText}>{item.word}</Text>
                 </View>
               ))}
             </View>
@@ -228,8 +228,8 @@ export default function CameraScreen({ navigation }) {
             <View style={styles.wordsList}>
               {knownWords.map((item, index) => (
                 <View key={index} style={styles.wordChipKnown}>
-                  <Text style={styles.wordChipTextKnown}>✓ {item.word}</Text>
                   <Text style={styles.wordChipPinyinKnown}>{item.pinyin}</Text>
+                  <Text style={styles.wordChipTextKnown}>✓ {item.word}</Text>
                 </View>
               ))}
             </View>
@@ -323,40 +323,48 @@ const styles = StyleSheet.create({
   wordChipNew: {
     backgroundColor: '#FFE4E1',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 16,
     margin: 4,
     borderWidth: 1,
     borderColor: '#FF6B6B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 50,
   },
   wordChipKnown: {
     backgroundColor: '#E0F8E0',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 16,
     margin: 4,
     borderWidth: 1,
     borderColor: '#50C878',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 50,
   },
   wordChipText: {
     color: '#FF6B6B',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '600',
+    marginTop: 2,
   },
   wordChipPinyin: {
     color: '#FF6B6B',
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 10,
+    opacity: 0.8,
   },
   wordChipTextKnown: {
     color: '#50C878',
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '500',
+    marginTop: 2,
   },
   wordChipPinyinKnown: {
     color: '#50C878',
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: 9,
+    opacity: 0.8,
   },
   addButton: {
     backgroundColor: '#50C878',

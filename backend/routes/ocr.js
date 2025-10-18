@@ -112,10 +112,10 @@ router.post('/extract-base64', async (req, res) => {
     const newWordsWithPinyin = newWords.map(word => {
       try {
         const pinyinArray = pinyin(word, {
-          style: 2, // STYLE_TONE2: 带声调数字的拼音 (e.g., zhong1)
+          style: 1, // STYLE_TONE: 带声调符号的拼音 (e.g., zhōng)
           heteronym: false // 不显示多音字的所有读音
         });
-        const pinyinStr = pinyinArray.flat().join('');
+        const pinyinStr = pinyinArray.flat().join(' ');
         return {
           word: word,
           pinyin: pinyinStr
@@ -132,10 +132,10 @@ router.post('/extract-base64', async (req, res) => {
     const knownWordsWithPinyin = Array.from(existingWordSet).map(word => {
       try {
         const pinyinArray = pinyin(word, {
-          style: 2, // STYLE_TONE2
+          style: 1, // STYLE_TONE: 带声调符号的拼音
           heteronym: false
         });
-        const pinyinStr = pinyinArray.flat().join('');
+        const pinyinStr = pinyinArray.flat().join(' ');
         return {
           word: word,
           pinyin: pinyinStr
