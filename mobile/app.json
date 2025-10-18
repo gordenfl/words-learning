@@ -1,0 +1,25 @@
+{
+    "expo": {
+        "name": "Words Learning",
+        "slug": "words-learning",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "userInterfaceStyle": "light",
+        "splash": {
+            "resizeMode": "contain",
+            "backgroundColor": "#4A90E2"
+        },
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.wordslearning.app"
+        },
+        "android": {
+            "package": "com.wordslearning.app",
+            "permissions": [
+                "android.permission.CAMERA",
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.WRITE_EXTERNAL_STORAGE"
+            ]
+        }
+    }
+}

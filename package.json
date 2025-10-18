@@ -1,0 +1,19 @@
+{
+    "name": "words-learning",
+    "version": "1.0.0",
+    "description": "A vocabulary learning application with image recognition",
+    "main": "index.js",
+    "scripts": {
+        "backend": "cd backend && npm start",
+        "mobile": "cd mobile && npm start",
+        "install-all": "cd backend && npm install && cd ../mobile && npm install"
+    },
+    "keywords": [
+        "vocabulary",
+        "learning",
+        "react-native",
+        "education"
+    ],
+    "author": "",
+    "license": "MIT"
+}
