@@ -1,11 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Config from '../../config';
 
-// 使用电脑的局域网IP地址，手机才能访问
-// 如果在iOS模拟器中运行，可以使用 localhost
-// 如果在Android模拟器中运行，可以使用 10.0.2.2
-// 如果在物理设备上运行，必须使用电脑的局域网IP
-const API_BASE_URL = 'http://192.168.101.95:3000/api';
+// 从配置文件读取API地址
+// 如需修改IP地址，请编辑 mobile/config.js 文件
+const API_BASE_URL = Config.API.BASE_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -103,6 +102,12 @@ export const usersAPI = {
   
   updateLearningPlan: (plan) =>
     api.patch('/users/learning-plan', plan),
+};
+
+// OCR API
+export const ocrAPI = {
+  extractText: (imageBase64) =>
+    api.post('/ocr/extract-base64', { imageBase64 }),
 };
 
 export default api;

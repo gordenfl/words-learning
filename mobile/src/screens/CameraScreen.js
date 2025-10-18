@@ -10,11 +10,13 @@ import {
   ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { wordsAPI } from '../services/api';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { wordsAPI, ocrAPI } from '../services/api';
 
 export default function CameraScreen({ navigation }) {
   const [image, setImage] = useState(null);
   const [extractedWords, setExtractedWords] = useState([]);
+  const [knownWords, setKnownWords] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const pickImage = async () => {
@@ -55,27 +57,69 @@ export default function CameraScreen({ navigation }) {
     }
   };
 
+  const compressImage = async (imageUri) => {
+    try {
+      console.log('🗜️  Compressing image...');
+      
+      // 压缩图片：调整大小并降低质量
+      const manipResult = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [
+          { resize: { width: 1024 } } // 宽度调整为1024px，高度自动按比例
+        ],
+        { 
+          compress: 0.7, // 压缩质量70%
+          format: ImageManipulator.SaveFormat.JPEG 
+        }
+      );
+      
+      console.log('✅ Image compressed');
+      return manipResult.uri;
+    } catch (error) {
+      console.warn('⚠️  Image compression failed, using original:', error.message);
+      return imageUri;
+    }
+  };
+
   const extractTextFromImage = async (imageUri) => {
     setLoading(true);
     try {
-      // In production, this would call Google Cloud Vision API
-      // For now, simulate Chinese text extraction
+      // 先压缩图片
+      const compressedUri = await compressImage(imageUri);
       
-      // 模拟提取的中文单词 - 常用中文词汇
-      const mockWords = [
-        '学习', '中文', '你好', '谢谢', 
-        '朋友', '工作', '生活', '快乐',
-        '美丽', '时间'
-      ];
+      console.log('📸 Converting compressed image to base64...');
       
-      setExtractedWords(mockWords);
+      // 将压缩后的图片转换为base64
+      const response = await fetch(compressedUri);
+      const blob = await response.blob();
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      
+      console.log('🔍 Calling OCR API...');
+      
+      // 调用后端OCR API
+      const ocrResponse = await ocrAPI.extractText(base64);
+      
+      const { newWords, knownWords, stats } = ocrResponse.data;
+      
+      setExtractedWords(newWords);
+      setKnownWords(knownWords);
+      
+      console.log(`✅ OCR: ${newWords.length} new words, ${knownWords.length} already known`);
       
       Alert.alert(
-        'Text Extracted',
-        `Found ${mockWords.length} Chinese words. Review and add them to your list.`,
+        'Text Extracted! 📖',
+        `Found ${stats.totalExtracted} Chinese words:\n` +
+        `• ${newWords.length} new words to learn\n` +
+        `• ${knownWords.length} words you already know`,
         [{ text: 'OK' }]
       );
     } catch (error) {
+      console.error('OCR error:', error);
       Alert.alert('Oops!', 'Could not extract text from the image. Please try another image.');
     } finally {
       setLoading(false);
@@ -146,11 +190,14 @@ export default function CameraScreen({ navigation }) {
         {extractedWords.length > 0 && (
           <View style={styles.wordsContainer}>
             <Text style={styles.wordsTitle}>
-              Extracted Words ({extractedWords.length})
+              New Words to Learn ({extractedWords.length})
+            </Text>
+            <Text style={styles.wordsSubtitle}>
+              These words are not in your vocabulary yet
             </Text>
             <View style={styles.wordsList}>
               {extractedWords.map((word, index) => (
-                <View key={index} style={styles.wordChip}>
+                <View key={index} style={styles.wordChipNew}>
                   <Text style={styles.wordChipText}>{word}</Text>
                 </View>
               ))}
@@ -162,9 +209,27 @@ export default function CameraScreen({ navigation }) {
               disabled={loading}
             >
               <Text style={styles.addButtonText}>
-                Add {extractedWords.length} Words to List
+                ➕ Add {extractedWords.length} New Words
               </Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {knownWords.length > 0 && (
+          <View style={styles.wordsContainer}>
+            <Text style={styles.knownWordsTitle}>
+              Already Known ({knownWords.length})
+            </Text>
+            <Text style={styles.wordsSubtitle}>
+              You've already learned these words
+            </Text>
+            <View style={styles.wordsList}>
+              {knownWords.map((word, index) => (
+                <View key={index} style={styles.wordChipKnown}>
+                  <Text style={styles.wordChipTextKnown}>✓ {word}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
       </View>
@@ -235,21 +300,48 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 15,
+    marginBottom: 8,
+  },
+  knownWordsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#50C878',
+    marginBottom: 8,
+  },
+  wordsSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 12,
   },
   wordsList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
-  wordChip: {
-    backgroundColor: '#E3F2FD',
+  wordChipNew: {
+    backgroundColor: '#FFE4E1',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     margin: 4,
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+  },
+  wordChipKnown: {
+    backgroundColor: '#E0F8E0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    margin: 4,
+    borderWidth: 1,
+    borderColor: '#50C878',
   },
   wordChipText: {
-    color: '#1976D2',
+    color: '#FF6B6B',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  wordChipTextKnown: {
+    color: '#50C878',
     fontSize: 14,
     fontWeight: '500',
   },
