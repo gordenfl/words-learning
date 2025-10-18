@@ -77,7 +77,7 @@ export default function QuickImportScreen({ navigation }) {
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to import words');
+      Alert.alert('Oops!', 'Could not import the words. Please try again.');
     } finally {
       setLoading(false);
     }

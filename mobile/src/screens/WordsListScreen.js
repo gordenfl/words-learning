@@ -27,7 +27,7 @@ export default function WordsListScreen({ navigation }) {
       setWords(response.data.words);
     } catch (error) {
       console.error('Error loading words:', error);
-      Alert.alert('Error', 'Failed to load words');
+      Alert.alert('Oops!', 'Could not load your words. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -38,7 +38,7 @@ export default function WordsListScreen({ navigation }) {
       await wordsAPI.updateWordStatus(wordId, newStatus);
       loadWords();
     } catch (error) {
-      Alert.alert('Error', 'Failed to update word status');
+      Alert.alert('Oops!', 'Could not update the word status. Please try again.');
     }
   };
 
@@ -56,7 +56,7 @@ export default function WordsListScreen({ navigation }) {
               await wordsAPI.deleteWord(wordId);
               loadWords();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete word');
+              Alert.alert('Oops!', 'Could not delete the word. Please try again.');
             }
           },
         },

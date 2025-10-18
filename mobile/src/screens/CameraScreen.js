@@ -21,7 +21,7 @@ export default function CameraScreen({ navigation }) {
     // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need permission to access your photos');
+      Alert.alert('Permission Needed', 'Please allow access to your photos to select images');
       return;
     }
 
@@ -40,7 +40,7 @@ export default function CameraScreen({ navigation }) {
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need permission to access your camera');
+      Alert.alert('Permission Needed', 'Please allow access to your camera to take photos');
       return;
     }
 
@@ -76,7 +76,7 @@ export default function CameraScreen({ navigation }) {
         [{ text: 'OK' }]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to extract text from image');
+      Alert.alert('Oops!', 'Could not extract text from the image. Please try another image.');
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function CameraScreen({ navigation }) {
 
   const addWordsToList = async () => {
     if (extractedWords.length === 0) {
-      Alert.alert('No Words', 'Please scan an image first');
+      Alert.alert('No Words Yet', 'Please scan or select an image first to extract words');
       return;
     }
 
@@ -106,7 +106,7 @@ export default function CameraScreen({ navigation }) {
       setImage(null);
       setExtractedWords([]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to add words');
+      Alert.alert('Oops!', 'Could not add the words to your list. Please try again.');
     } finally {
       setLoading(false);
     }

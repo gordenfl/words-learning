@@ -84,9 +84,9 @@ export default function LearningPlanScreen({ navigation }) {
         preferredStudyTime: studyTimes
       });
       
-      Alert.alert('Success', 'Learning plan updated successfully!');
+      Alert.alert('Saved! ✅', 'Your learning plan has been updated successfully!');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update learning plan');
+      Alert.alert('Oops!', 'Could not save your learning plan. Please try again.');
     } finally {
       setSaving(false);
     }

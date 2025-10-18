@@ -23,7 +23,7 @@ export default function AddWordScreen({ navigation }) {
 
   const handleAddWord = async () => {
     if (!word.trim()) {
-      Alert.alert('Error', 'Please enter a Chinese word');
+      Alert.alert('Missing Word', 'Please enter a Chinese word to add');
       return;
     }
 
@@ -66,7 +66,8 @@ export default function AddWordScreen({ navigation }) {
         },
       ]);
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to add word');
+      const msg = error.response?.data?.error || 'Could not add the word';
+      Alert.alert('Oops!', msg);
     } finally {
       setLoading(false);
     }

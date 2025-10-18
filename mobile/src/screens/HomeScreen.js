@@ -45,7 +45,7 @@ export default function HomeScreen({ navigation }) {
       setLearningPlan(planResponse.data.learningPlan);
     } catch (error) {
       console.error('Error loading data:', error);
-      Alert.alert('Error', 'Failed to load statistics');
+      Alert.alert('Oops!', 'Could not load your statistics. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -74,11 +74,25 @@ export default function HomeScreen({ navigation }) {
     try {
       setLoading(true);
       const response = await articlesAPI.generateArticle(10);
-      Alert.alert('Success', 'Article generated!', [
-        { text: 'Read Now', onPress: () => navigation.navigate('Article', { article: response.data.article }) }
-      ]);
+      
+      // 检查是否需要更多单词
+      if (response.data.needMoreWords) {
+        Alert.alert(
+          response.data.message || 'Great job! 🎉',
+          response.data.suggestion || 'Add more words to continue learning.',
+          [
+            { text: 'Add Words', onPress: () => navigation.navigate('QuickImport') },
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+      } else {
+        Alert.alert('Article Ready! 📖', 'Your new Chinese story is ready to read!', [
+          { text: 'Read Now', onPress: () => navigation.navigate('Article', { article: response.data.article }) }
+        ]);
+      }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to generate article');
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to generate article';
+      Alert.alert('Oops!', errorMsg);
     } finally {
       setLoading(false);
     }

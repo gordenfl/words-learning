@@ -49,7 +49,11 @@ router.post('/generate', async (req, res) => {
     }
 
     if (unknownWords.length === 0) {
-      return res.status(400).json({ error: 'No unknown words available. Add more words first!' });
+      return res.status(200).json({ 
+        message: 'Great job! You\'ve learned all your words! 🎉',
+        suggestion: 'Add some new Chinese words to continue your learning journey.',
+        needMoreWords: true
+      });
     }
 
     // Generate article based on difficulty using AI service

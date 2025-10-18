@@ -19,7 +19,7 @@ export default function ArticleScreen({ route, navigation }) {
       setCompletedWords(prev => new Set([...prev, wordId]));
       Alert.alert('Great!', `You've learned "${wordText}"!`);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update word status');
+      Alert.alert('Oops!', 'Could not update the word status. Please try again.');
     }
   };
 
@@ -37,7 +37,7 @@ export default function ArticleScreen({ route, navigation }) {
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to mark article as read');
+      Alert.alert('Oops!', 'Could not mark the article as completed. Please try again.');
     }
   };
 
