@@ -59,19 +59,20 @@ export default function CameraScreen({ navigation }) {
     setLoading(true);
     try {
       // In production, this would call Google Cloud Vision API
-      // For now, simulate text extraction
+      // For now, simulate Chinese text extraction
       
-      // Simulated extracted words
+      // 模拟提取的中文单词 - 常用中文词汇
       const mockWords = [
-        'challenge', 'opportunity', 'innovation', 'perspective', 
-        'resilience', 'collaboration', 'strategy', 'excellence'
+        '学习', '中文', '你好', '谢谢', 
+        '朋友', '工作', '生活', '快乐',
+        '美丽', '时间'
       ];
       
       setExtractedWords(mockWords);
       
       Alert.alert(
         'Text Extracted',
-        `Found ${mockWords.length} words. Review and add them to your list.`,
+        `Found ${mockWords.length} Chinese words. Review and add them to your list.`,
         [{ text: 'OK' }]
       );
     } catch (error) {

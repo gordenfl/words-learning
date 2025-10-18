@@ -96,6 +96,13 @@ export const usersAPI = {
   
   deleteAccount: () =>
     api.delete('/users/account'),
+  
+  // Learning Plan APIs
+  getLearningPlan: () =>
+    api.get('/users/learning-plan'),
+  
+  updateLearningPlan: (plan) =>
+    api.patch('/users/learning-plan', plan),
 };
 
 export default api;

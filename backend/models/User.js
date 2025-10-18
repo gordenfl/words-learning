@@ -26,6 +26,31 @@ const userSchema = new mongoose.Schema({
     avatar: String,
     bio: String
   },
+  // 学习计划和目标
+  learningPlan: {
+    dailyWordGoal: {
+      type: Number,
+      default: 10
+    },
+    weeklyWordGoal: {
+      type: Number,
+      default: 50
+    },
+    monthlyWordGoal: {
+      type: Number,
+      default: 200
+    },
+    preferredStudyTime: [String], // e.g., ['morning', 'evening']
+    difficulty: {
+      type: String,
+      enum: ['beginner', 'intermediate', 'advanced'],
+      default: 'intermediate'
+    },
+    startDate: {
+      type: Date,
+      default: Date.now
+    }
+  },
   followers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

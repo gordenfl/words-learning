@@ -3,6 +3,7 @@ const router = express.Router();
 const Article = require('../models/Article');
 const Word = require('../models/Word');
 const authMiddleware = require('../middleware/auth');
+const { generateChineseStory } = require('../services/aiService');
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -23,31 +24,47 @@ router.get('/', async (req, res) => {
 // Generate a new article with unknown words
 router.post('/generate', async (req, res) => {
   try {
-    const { wordCount = 10 } = req.body;
+    const User = require('../models/User');
+    
+    // Get user's learning plan
+    const user = await User.findById(req.userId);
+    const difficulty = user?.learningPlan?.difficulty || 'intermediate';
+    const dailyGoal = user?.learningPlan?.dailyWordGoal || 10;
+    
+    const { wordCount = dailyGoal } = req.body;
 
-    // Get unknown words
-    const unknownWords = await Word.find({ 
+    // Get unknown words matching difficulty (or all unknown if not enough)
+    let unknownWords = await Word.find({ 
       userId: req.userId, 
-      status: 'unknown' 
+      status: 'unknown',
+      difficulty: difficulty
     }).limit(wordCount);
+
+    // If not enough words at this difficulty, get any unknown words
+    if (unknownWords.length < 3) {
+      unknownWords = await Word.find({ 
+        userId: req.userId, 
+        status: 'unknown' 
+      }).limit(wordCount);
+    }
 
     if (unknownWords.length === 0) {
       return res.status(400).json({ error: 'No unknown words available. Add more words first!' });
     }
 
-    // Generate a simple article (in production, use AI API)
+    // Generate article based on difficulty using AI service
     const wordTexts = unknownWords.map(w => w.word);
-    const content = generateArticleContent(wordTexts);
+    const content = await generateChineseStory(wordTexts, difficulty);
 
     const article = new Article({
       userId: req.userId,
-      title: `Learning Article - ${new Date().toLocaleDateString()}`,
+      title: `Chinese Learning - ${new Date().toLocaleDateString()}`,
       content,
       targetWords: unknownWords.map(w => ({
         word: w._id,
         wordText: w.word
       })),
-      difficulty: 'intermediate'
+      difficulty: difficulty
     });
 
     await article.save();
@@ -55,7 +72,8 @@ router.post('/generate', async (req, res) => {
 
     res.status(201).json({ 
       message: 'Article generated successfully', 
-      article 
+      article,
+      difficulty: difficulty
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to generate article', message: error.message });
@@ -86,23 +104,4 @@ router.patch('/:articleId/read', async (req, res) => {
   }
 });
 
-// Helper function to generate article content
-function generateArticleContent(words) {
-  const intro = "Welcome to today's reading practice! This article contains words you're learning. Read carefully and try to understand the context.\n\n";
-  
-  const sentences = words.map((word, index) => {
-    const examples = [
-      `The ${word} was incredibly fascinating to observe in its natural habitat.`,
-      `Understanding the concept of ${word} requires careful study and practice.`,
-      `Many people find ${word} to be an important part of their daily routine.`,
-      `The ${word} played a crucial role in the development of modern society.`,
-      `Scientists have been studying ${word} for many years to better understand its implications.`
-    ];
-    return examples[index % examples.length];
-  });
-
-  return intro + sentences.join(' ') + '\n\nKeep practicing and you\'ll master these words in no time!';
-}
-
 module.exports = router;
-

@@ -67,7 +67,15 @@ export default function WordsListScreen({ navigation }) {
   const renderWord = ({ item }) => (
     <View style={styles.wordCard}>
       <View style={styles.wordHeader}>
-        <Text style={styles.wordText}>{item.word}</Text>
+        <View style={styles.wordInfo}>
+          <Text style={styles.wordText}>{item.word}</Text>
+          {item.pinyin && (
+            <Text style={styles.pinyin}>{item.pinyin}</Text>
+          )}
+          {item.translation && (
+            <Text style={styles.translation}>{item.translation}</Text>
+          )}
+        </View>
         <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
           <Text style={styles.statusText}>{item.status}</Text>
         </View>
@@ -206,13 +214,28 @@ const styles = StyleSheet.create({
   wordHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 10,
   },
+  wordInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
   wordText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
+  },
+  pinyin: {
+    fontSize: 14,
+    color: '#4A90E2',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  translation: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 4,
   },
   statusBadge: {
     paddingHorizontal: 10,

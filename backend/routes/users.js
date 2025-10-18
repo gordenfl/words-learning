@@ -133,5 +133,60 @@ router.delete('/account', async (req, res) => {
   }
 });
 
+// Get learning plan
+router.get('/learning-plan', async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('learningPlan');
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ 
+      learningPlan: user.learningPlan || {
+        dailyWordGoal: 10,
+        weeklyWordGoal: 50,
+        monthlyWordGoal: 200,
+        difficulty: 'intermediate',
+        preferredStudyTime: []
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get learning plan', message: error.message });
+  }
+});
+
+// Update learning plan
+router.patch('/learning-plan', async (req, res) => {
+  try {
+    const { 
+      dailyWordGoal, 
+      weeklyWordGoal, 
+      monthlyWordGoal,
+      difficulty,
+      preferredStudyTime 
+    } = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (dailyWordGoal !== undefined) user.learningPlan.dailyWordGoal = dailyWordGoal;
+    if (weeklyWordGoal !== undefined) user.learningPlan.weeklyWordGoal = weeklyWordGoal;
+    if (monthlyWordGoal !== undefined) user.learningPlan.monthlyWordGoal = monthlyWordGoal;
+    if (difficulty !== undefined) user.learningPlan.difficulty = difficulty;
+    if (preferredStudyTime !== undefined) user.learningPlan.preferredStudyTime = preferredStudyTime;
+
+    await user.save();
+
+    res.json({ 
+      message: 'Learning plan updated successfully',
+      learningPlan: user.learningPlan
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update learning plan', message: error.message });
+  }
+});
+
 module.exports = router;
 

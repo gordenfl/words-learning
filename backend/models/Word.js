@@ -9,8 +9,15 @@ const wordSchema = new mongoose.Schema({
   word: {
     type: String,
     required: true,
-    trim: true,
-    lowercase: true
+    trim: true
+  },
+  // 拼音 (for Chinese words)
+  pinyin: {
+    type: String
+  },
+  // 英文翻译
+  translation: {
+    type: String
   },
   definition: {
     type: String
@@ -18,6 +25,12 @@ const wordSchema = new mongoose.Schema({
   examples: [{
     type: String
   }],
+  // 难度级别
+  difficulty: {
+    type: String,
+    enum: ['beginner', 'intermediate', 'advanced'],
+    default: 'intermediate'
+  },
   status: {
     type: String,
     enum: ['unknown', 'learning', 'known'],
