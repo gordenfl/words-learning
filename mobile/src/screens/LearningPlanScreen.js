@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Animated,
 } from 'react-native';
 import { usersAPI } from '../services/api';
 
@@ -44,7 +45,7 @@ const STUDY_TIMES = [
 
 export default function LearningPlanScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [showSavedToast, setShowSavedToast] = useState(false);
   
   const [dailyGoal, setDailyGoal] = useState(10);
   const [weeklyGoal, setWeeklyGoal] = useState(50);
@@ -73,31 +74,45 @@ export default function LearningPlanScreen({ navigation }) {
     }
   };
 
-  const handleSave = async () => {
-    setSaving(true);
+  const autoSave = async (updates) => {
     try {
-      await usersAPI.updateLearningPlan({
-        dailyWordGoal: dailyGoal,
-        weeklyWordGoal: weeklyGoal,
-        monthlyWordGoal: monthlyGoal,
-        difficulty,
-        preferredStudyTime: studyTimes
-      });
+      await usersAPI.updateLearningPlan(updates);
       
-      Alert.alert('Saved! ✅', 'Your learning plan has been updated successfully!');
+      // 显示保存成功的toast提示
+      setShowSavedToast(true);
+      setTimeout(() => setShowSavedToast(false), 1500);
     } catch (error) {
-      Alert.alert('Oops!', 'Could not save your learning plan. Please try again.');
-    } finally {
-      setSaving(false);
+      console.error('Auto-save failed:', error);
     }
   };
 
+  const handleDifficultyChange = (newDifficulty) => {
+    setDifficulty(newDifficulty);
+    autoSave({ difficulty: newDifficulty });
+  };
+
+  const handleDailyGoalChange = (goal) => {
+    setDailyGoal(goal);
+    autoSave({ dailyWordGoal: goal });
+  };
+
+  const handleWeeklyGoalChange = (goal) => {
+    setWeeklyGoal(goal);
+    autoSave({ weeklyWordGoal: goal });
+  };
+
+  const handleMonthlyGoalChange = (goal) => {
+    setMonthlyGoal(goal);
+    autoSave({ monthlyWordGoal: goal });
+  };
+
   const toggleStudyTime = (time) => {
-    if (studyTimes.includes(time)) {
-      setStudyTimes(studyTimes.filter(t => t !== time));
-    } else {
-      setStudyTimes([...studyTimes, time]);
-    }
+    const newStudyTimes = studyTimes.includes(time)
+      ? studyTimes.filter(t => t !== time)
+      : [...studyTimes, time];
+    
+    setStudyTimes(newStudyTimes);
+    autoSave({ preferredStudyTime: newStudyTimes });
   };
 
   if (loading) {
@@ -127,7 +142,7 @@ export default function LearningPlanScreen({ navigation }) {
                   styles.optionButton,
                   dailyGoal === goal && styles.optionButtonActive
                 ]}
-                onPress={() => setDailyGoal(goal)}
+                onPress={() => handleDailyGoalChange(goal)}
               >
                 <Text style={[
                   styles.optionText,
@@ -152,7 +167,7 @@ export default function LearningPlanScreen({ navigation }) {
                   styles.optionButton,
                   weeklyGoal === goal && styles.optionButtonActive
                 ]}
-                onPress={() => setWeeklyGoal(goal)}
+                onPress={() => handleWeeklyGoalChange(goal)}
               >
                 <Text style={[
                   styles.optionText,
@@ -177,7 +192,7 @@ export default function LearningPlanScreen({ navigation }) {
                   styles.optionButton,
                   monthlyGoal === goal && styles.optionButtonActive
                 ]}
-                onPress={() => setMonthlyGoal(goal)}
+                onPress={() => handleMonthlyGoalChange(goal)}
               >
                 <Text style={[
                   styles.optionText,
@@ -204,7 +219,7 @@ export default function LearningPlanScreen({ navigation }) {
               styles.difficultyCard,
               difficulty === level.value && styles.difficultyCardActive
             ]}
-            onPress={() => setDifficulty(level.value)}
+            onPress={() => handleDifficultyChange(level.value)}
           >
             <View style={styles.difficultyHeader}>
               <Text style={styles.difficultyIcon}>{level.icon}</Text>
@@ -248,20 +263,14 @@ export default function LearningPlanScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Save Button */}
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Save Learning Plan</Text>
-          )}
-        </TouchableOpacity>
       </View>
+
+      {/* 保存成功Toast提示 */}
+      {showSavedToast && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>✓ Saved</Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -405,18 +414,25 @@ const styles = StyleSheet.create({
   timeLabelActive: {
     color: '#4A90E2',
   },
-  saveButton: {
-    backgroundColor: '#4A90E2',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
+  toast: {
+    position: 'absolute',
+    bottom: 30,
+    left: '50%',
+    marginLeft: -40,
+    backgroundColor: '#50C878',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  saveButtonText: {
+  toastText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

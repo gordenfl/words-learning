@@ -10,33 +10,90 @@ import {
 } from 'react-native';
 import { wordsAPI } from '../services/api';
 
-export default function WordsListScreen({ navigation }) {
+export default function WordsListScreen({ navigation, route }) {
+  const initialFilter = route.params?.filter || 'all';
   const [words, setWords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [filter, setFilter] = useState(initialFilter);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
-    loadWords();
+    // 监听路由参数变化
+    if (route.params?.filter && route.params.filter !== filter) {
+      setFilter(route.params.filter);
+    }
+  }, [route.params?.filter]);
+
+  useEffect(() => {
+    // 重置分页并重新加载
+    setWords([]);
+    setPage(1);
+    setHasMore(true);
+    loadWords(1, true);
   }, [filter]);
 
-  const loadWords = async () => {
+  const loadWords = async (pageNum = page, isRefresh = false) => {
+    if (!hasMore && !isRefresh) return;
+    
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      
       const status = filter === 'all' ? undefined : filter;
       const response = await wordsAPI.getWords(status);
-      setWords(response.data.words);
+      const allWords = response.data.words;
+      
+      // 按创建时间倒序排列（最新的在前）
+      const sortedWords = allWords.sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      
+      // 分页：获取指定页的数据
+      const start = (pageNum - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const pageWords = sortedWords.slice(start, end);
+      
+      if (isRefresh) {
+        setWords(pageWords);
+      } else {
+        setWords(prev => [...prev, ...pageWords]);
+      }
+      
+      setHasMore(end < sortedWords.length);
+      setPage(pageNum);
     } catch (error) {
       console.error('Error loading words:', error);
-      Alert.alert('Oops!', 'Could not load your words. Please try again.');
+      if (isRefresh) {
+        Alert.alert('Oops!', 'Could not load your words. Please try again.');
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+  
+  const loadMoreWords = () => {
+    if (!loadingMore && hasMore) {
+      loadWords(page + 1, false);
     }
   };
 
   const updateWordStatus = async (wordId, newStatus) => {
     try {
       await wordsAPI.updateWordStatus(wordId, newStatus);
-      loadWords();
+      
+      // 本地更新状态，不重新加载列表（保持滚动位置）
+      setWords(prevWords => 
+        prevWords.map(word => 
+          word._id === wordId ? { ...word, status: newStatus } : word
+        )
+      );
     } catch (error) {
       Alert.alert('Oops!', 'Could not update the word status. Please try again.');
     }
@@ -54,7 +111,9 @@ export default function WordsListScreen({ navigation }) {
           onPress: async () => {
             try {
               await wordsAPI.deleteWord(wordId);
-              loadWords();
+              
+              // 本地删除单词，不重新加载列表（保持滚动位置）
+              setWords(prevWords => prevWords.filter(word => word._id !== wordId));
             } catch (error) {
               Alert.alert('Oops!', 'Could not delete the word. Please try again.');
             }
@@ -66,48 +125,54 @@ export default function WordsListScreen({ navigation }) {
 
   const renderWord = ({ item }) => (
     <View style={styles.wordCard}>
-      <View style={styles.wordHeader}>
-        <View style={styles.wordInfo}>
-          <Text style={styles.wordText}>{item.word}</Text>
-          {item.pinyin && (
-            <Text style={styles.pinyin}>{item.pinyin}</Text>
-          )}
-          {item.translation && (
-            <Text style={styles.translation}>{item.translation}</Text>
-          )}
-        </View>
+      <View style={styles.cardHeader}>
         <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
           <Text style={styles.statusText}>{item.status}</Text>
         </View>
       </View>
-      
-      {item.definition && (
-        <Text style={styles.definition}>{item.definition}</Text>
-      )}
 
-      <View style={styles.actions}>
-        {item.status !== 'known' && (
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.knownBtn]}
-            onPress={() => updateWordStatus(item._id, 'known')}
-          >
-            <Text style={styles.actionBtnText}>✓ Known</Text>
-          </TouchableOpacity>
-        )}
-        {item.status !== 'learning' && (
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.learningBtn]}
-            onPress={() => updateWordStatus(item._id, 'learning')}
-          >
-            <Text style={styles.actionBtnText}>📖 Learning</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.deleteBtn]}
-          onPress={() => deleteWord(item._id)}
+      <View style={styles.cardContent}>
+        <TouchableOpacity 
+          style={styles.wordInfo}
+          onPress={() => navigation.navigate('WordDetail', { wordId: item._id })}
+          activeOpacity={0.7}
         >
-          <Text style={styles.actionBtnText}>🗑️</Text>
+          {item.pinyin && (
+            <Text style={styles.pinyin}>{item.pinyin}</Text>
+          )}
+          <Text style={styles.wordText}>{item.word}</Text>
+          {item.translation && (
+            <Text style={styles.translation}>{item.translation}</Text>
+          )}
+          {item.definition && (
+            <Text style={styles.definition}>{item.definition}</Text>
+          )}
         </TouchableOpacity>
+
+        <View style={styles.actions}>
+          {item.status !== 'known' && (
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.knownBtn]}
+              onPress={() => updateWordStatus(item._id, 'known')}
+            >
+              <Text style={styles.actionBtnText}>✓</Text>
+            </TouchableOpacity>
+          )}
+          {item.status !== 'learning' && (
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.learningBtn]}
+              onPress={() => updateWordStatus(item._id, 'learning')}
+            >
+              <Text style={styles.actionBtnText}>📖</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.deleteBtn]}
+            onPress={() => deleteWord(item._id)}
+          >
+            <Text style={styles.actionBtnText}>🗑️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -160,6 +225,24 @@ export default function WordsListScreen({ navigation }) {
           ListEmptyComponent={
             <Text style={styles.emptyText}>No words found</Text>
           }
+          onEndReached={loadMoreWords}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() => 
+            loadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color="#4A90E2" />
+                <Text style={styles.footerText}>Loading more...</Text>
+              </View>
+            ) : hasMore ? null : (
+              words.length > 0 && (
+                <Text style={styles.footerText}>All words loaded</Text>
+              )
+            )
+          }
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+          }}
+          windowSize={10}
         />
       )}
     </View>
@@ -202,45 +285,50 @@ const styles = StyleSheet.create({
   },
   wordCard: {
     backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  wordHeader: {
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 10,
+  },
+  cardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
+    alignItems: 'center',
   },
   wordInfo: {
     flex: 1,
-    marginRight: 10,
+    marginRight: 15,
   },
   wordText: {
-    fontSize: 22,
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#333',
   },
   pinyin: {
-    fontSize: 14,
+    fontSize: 20,
     color: '#4A90E2',
-    marginTop: 2,
+    marginBottom: 6,
     fontStyle: 'italic',
   },
   translation: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#666',
-    marginTop: 4,
+    marginTop: 8,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
   },
   status_unknown: {
     backgroundColor: '#FFE4E1',
@@ -252,24 +340,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0F8E0',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: '#333',
   },
   definition: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#666',
-    marginBottom: 10,
+    marginTop: 8,
   },
   actions: {
     flexDirection: 'row',
-    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   actionBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 5,
-    marginRight: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginLeft: 6,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   knownBtn: {
     backgroundColor: '#50C878',
@@ -283,13 +376,23 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: 13,
   },
   emptyText: {
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
     color: '#666',
+  },
+  footerLoader: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  footerText: {
+    textAlign: 'center',
+    padding: 20,
+    fontSize: 14,
+    color: '#999',
   },
 });
 

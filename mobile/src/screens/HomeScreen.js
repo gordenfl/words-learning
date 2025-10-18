@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { wordsAPI, articlesAPI, usersAPI } from '../services/api';
@@ -14,6 +15,7 @@ import { wordsAPI, articlesAPI, usersAPI } from '../services/api';
 export default function HomeScreen({ navigation }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [generatingArticle, setGeneratingArticle] = useState(false);
   const [user, setUser] = useState(null);
   const [learningPlan, setLearningPlan] = useState(null);
 
@@ -37,64 +39,74 @@ export default function HomeScreen({ navigation }) {
       }
 
       const [statsResponse, planResponse] = await Promise.all([
-        wordsAPI.getStats(),
-        usersAPI.getLearningPlan().catch(() => ({ data: { learningPlan: null } }))
+        wordsAPI.getStats().catch(err => {
+          console.error('Stats error:', err);
+          // 如果是401错误，需要重新登录
+          if (err.response?.status === 401) {
+            Alert.alert(
+              'Session Expired',
+              'Please login again',
+              [{ text: 'OK', onPress: () => {
+                AsyncStorage.clear();
+                navigation.replace('Login');
+              }}]
+            );
+            throw err;
+          }
+          return { data: { total: 0, known: 0, unknown: 0, learning: 0, todayLearned: 0 } };
+        }),
+        usersAPI.getLearningPlan().catch(err => {
+          console.error('Learning plan error:', err);
+          // 401错误会被上面的stats捕获
+          return { 
+            data: { 
+              learningPlan: {
+                dailyWordGoal: 10,
+                weeklyWordGoal: 50,
+                monthlyWordGoal: 200,
+                difficulty: 'intermediate',
+                preferredStudyTime: []
+              }
+            } 
+          };
+        })
       ]);
       
       setStats(statsResponse.data);
       setLearningPlan(planResponse.data.learningPlan);
     } catch (error) {
       console.error('Error loading data:', error);
-      Alert.alert('Oops!', 'Could not load your statistics. Please try again.');
+      // 401错误已经处理，其他错误使用默认值
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('authToken');
-            await AsyncStorage.removeItem('user');
-            navigation.navigate('Login');
-          },
-        },
-      ]
-    );
-  };
-
   const handleGenerateArticle = async () => {
     try {
-      setLoading(true);
+      setGeneratingArticle(true);
       const response = await articlesAPI.generateArticle(10);
       
       // 检查是否需要更多单词
       if (response.data.needMoreWords) {
+        setGeneratingArticle(false);
         Alert.alert(
           response.data.message || 'Great job! 🎉',
           response.data.suggestion || 'Add more words to continue learning.',
           [
-            { text: 'Add Words', onPress: () => navigation.navigate('QuickImport') },
+            { text: 'Add Words', onPress: () => navigation.navigate('AddWord') },
             { text: 'OK', style: 'cancel' }
           ]
         );
       } else {
-        Alert.alert('Article Ready! 📖', 'Your new Chinese story is ready to read!', [
-          { text: 'Read Now', onPress: () => navigation.navigate('Article', { article: response.data.article }) }
-        ]);
+        // 直接进入文章页面
+        setGeneratingArticle(false);
+        navigation.navigate('Article', { article: response.data.article });
       }
     } catch (error) {
+      setGeneratingArticle(false);
       const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to generate article';
       Alert.alert('Oops!', errorMsg);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -110,8 +122,15 @@ export default function HomeScreen({ navigation }) {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.welcomeText}>Welcome back, {user?.username}!</Text>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Logout</Text>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Profile')} 
+          style={styles.avatarButton}
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {user?.username?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -135,7 +154,11 @@ export default function HomeScreen({ navigation }) {
       )}
 
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
+        <TouchableOpacity 
+          style={styles.statCard}
+          onPress={() => navigation.navigate('WordsList', { filter: 'all' })}
+          activeOpacity={0.7}
+        >
           <Text style={styles.statNumber}>{stats?.total || 0}</Text>
           <Text style={styles.statLabel}>Total Words</Text>
           {learningPlan && (
@@ -143,16 +166,28 @@ export default function HomeScreen({ navigation }) {
               Goal: {learningPlan.monthlyWordGoal}/month
             </Text>
           )}
-        </View>
-        <View style={styles.statCard}>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.statCard}
+          onPress={() => navigation.navigate('WordsList', { filter: 'known' })}
+          activeOpacity={0.7}
+        >
           <Text style={styles.statNumber}>{stats?.known || 0}</Text>
           <Text style={styles.statLabel}>Known</Text>
-        </View>
-        <View style={styles.statCard}>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.statCard}
+          onPress={() => navigation.navigate('WordsList', { filter: 'unknown' })}
+          activeOpacity={0.7}
+        >
           <Text style={styles.statNumber}>{stats?.unknown || 0}</Text>
           <Text style={styles.statLabel}>To Learn</Text>
-        </View>
-        <View style={styles.statCard}>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.statCard}
+          onPress={() => navigation.navigate('WordsList', { filter: 'learning' })}
+          activeOpacity={0.7}
+        >
           <Text style={styles.statNumber}>{stats?.todayLearned || 0}</Text>
           <Text style={styles.statLabel}>Today</Text>
           {learningPlan && (
@@ -160,17 +195,10 @@ export default function HomeScreen({ navigation }) {
               Goal: {learningPlan.dailyWordGoal}/day
             </Text>
           )}
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.highlightButton]}
-          onPress={() => navigation.navigate('QuickImport')}
-        >
-          <Text style={styles.actionButtonText}>⚡ Quick Import Sample Words</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.actionButton, styles.primaryButton]}
           onPress={() => navigation.navigate('Camera')}
@@ -193,8 +221,13 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionButton, styles.primaryButton]}
+          style={[
+            styles.actionButton, 
+            styles.primaryButton,
+            generatingArticle && styles.disabledButton
+          ]}
           onPress={handleGenerateArticle}
+          disabled={generatingArticle}
         >
           <Text style={styles.actionButtonText}>📝 Generate Article</Text>
         </TouchableOpacity>
@@ -205,14 +238,24 @@ export default function HomeScreen({ navigation }) {
         >
           <Text style={styles.actionButtonText}>🎯 Learning Plan</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.secondaryButton]}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Text style={styles.actionButtonText}>👤 Profile</Text>
-        </TouchableOpacity>
       </View>
+
+      {/* 生成文章时的加载overlay */}
+      <Modal
+        transparent={true}
+        visible={generatingArticle}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color="#4A90E2" />
+            <Text style={styles.modalTitle}>Generating Article...</Text>
+            <Text style={styles.modalSubtitle}>
+              AI is creating your personalized Chinese story
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -239,12 +282,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  logoutButton: {
-    padding: 8,
+  avatarButton: {
+    padding: 0,
   },
-  logoutText: {
-    color: '#4A90E2',
-    fontSize: 16,
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#4A90E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   planInfo: {
     backgroundColor: '#fff',
@@ -329,10 +386,45 @@ const styles = StyleSheet.create({
   highlightButton: {
     backgroundColor: '#FF6B6B',
   },
+  disabledButton: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
   actionButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

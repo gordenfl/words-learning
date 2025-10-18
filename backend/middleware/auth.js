@@ -7,6 +7,7 @@ const authMiddleware = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('❌ Auth failed: No token provided');
       return res.status(401).json({ error: 'No authentication token provided' });
     }
 
@@ -17,6 +18,7 @@ const authMiddleware = async (req, res, next) => {
     const user = await User.findById(decoded.userId);
     
     if (!user) {
+      console.log('❌ Auth failed: User not found for ID:', decoded.userId);
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -26,7 +28,8 @@ const authMiddleware = async (req, res, next) => {
     
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid authentication token' });
+    console.error('❌ Auth middleware error:', error.message);
+    res.status(401).json({ error: 'Invalid authentication token', details: error.message });
   }
 };
 

@@ -20,10 +20,29 @@ api.interceptors.request.use(
     const token = await AsyncStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log(`📤 Request: ${config.method.toUpperCase()} ${config.url} (Token: ${token.substring(0, 15)}...)`);
+    } else {
+      console.log(`📤 Request: ${config.method.toUpperCase()} ${config.url} (No token)`);
     }
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Log responses
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ Response: ${response.config.url} - ${response.status}`);
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      console.error(`❌ Response: ${error.config.url} - ${error.response.status}`, error.response.data);
+    } else {
+      console.error(`❌ Request failed: ${error.config.url}`, error.message);
+    }
     return Promise.reject(error);
   }
 );
@@ -48,6 +67,9 @@ export const wordsAPI = {
   getWords: (status) =>
     api.get('/words', { params: { status } }),
   
+  getAll: () =>
+    api.get('/words'),
+  
   getStats: () =>
     api.get('/words/stats'),
   
@@ -57,8 +79,14 @@ export const wordsAPI = {
   addWords: (words, sourceImage) =>
     api.post('/words/batch', { words, sourceImage }),
   
+  updateStatus: (wordId, status) =>
+    api.patch(`/words/${wordId}/status`, { status }),
+  
   updateWordStatus: (wordId, status) =>
     api.patch(`/words/${wordId}/status`, { status }),
+  
+  delete: (wordId) =>
+    api.delete(`/words/${wordId}`),
   
   deleteWord: (wordId) =>
     api.delete(`/words/${wordId}`),
@@ -97,8 +125,17 @@ export const usersAPI = {
     api.delete('/users/account'),
   
   // Learning Plan APIs
-  getLearningPlan: () =>
-    api.get('/users/learning-plan'),
+  getLearningPlan: async () => {
+    console.log('🔍 Calling GET /users/learning-plan');
+    try {
+      const response = await api.get('/users/learning-plan');
+      console.log('✅ Learning plan response:', response.status);
+      return response;
+    } catch (error) {
+      console.error('❌ Learning plan request failed:', error.response?.status, error.response?.data);
+      throw error;
+    }
+  },
   
   updateLearningPlan: (plan) =>
     api.patch('/users/learning-plan', plan),

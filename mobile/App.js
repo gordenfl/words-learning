@@ -14,7 +14,7 @@ import CameraScreen from './src/screens/CameraScreen';
 import ArticleScreen from './src/screens/ArticleScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import LearningPlanScreen from './src/screens/LearningPlanScreen';
-import QuickImportScreen from './src/screens/QuickImportScreen';
+import WordDetailScreen from './src/screens/WordDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -108,9 +108,9 @@ export default function App() {
           options={{ title: 'Learning Plan' }}
         />
         <Stack.Screen 
-          name="QuickImport" 
-          component={QuickImportScreen}
-          options={{ title: 'Import Sample Words' }}
+          name="WordDetail" 
+          component={WordDetailScreen}
+          options={{ title: 'Word Details' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

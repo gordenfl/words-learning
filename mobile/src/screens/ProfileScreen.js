@@ -95,6 +95,25 @@ export default function ProfileScreen({ navigation }) {
     );
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await AsyncStorage.removeItem('authToken');
+            await AsyncStorage.removeItem('user');
+            navigation.replace('Login');
+          },
+        },
+      ]
+    );
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
@@ -179,6 +198,14 @@ export default function ProfileScreen({ navigation }) {
             onPress={handleChangePassword}
           >
             <Text style={styles.settingButtonText}>Change Password</Text>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={handleLogout}
+          >
+            <Text style={styles.settingButtonText}>Logout</Text>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
 
