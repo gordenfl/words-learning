@@ -56,3 +56,8 @@
 - [ ] Use Pusher for real-time notifications and updates
 - [ ] Use Docker for containerization and deployment
 
+## 改进: 
+
+ - [ ] 增加一个功能，让用户可以设置自己的学习计划和目标，并且根据这个计划来生成相应的文章。
+ - [ ] 增加一个功能，这个软件只能让人学习中文, 界面用英语来实现. 
+ - [ ] 增加一个功能，让用户可以选择不同的难度级别来进行学习。
