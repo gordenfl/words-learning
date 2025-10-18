@@ -55,7 +55,7 @@ router.get('/stats', async (req, res) => {
 // Add a new word
 router.post('/', async (req, res) => {
   try {
-    const { word, definition, examples, sourceImage } = req.body;
+    const { word, pinyin, definition, translation, examples, sourceImage } = req.body;
 
     // Check if word already exists for this user
     const existingWord = await Word.findOne({ userId: req.userId, word: word.toLowerCase() });
@@ -66,6 +66,8 @@ router.post('/', async (req, res) => {
     const newWord = new Word({
       userId: req.userId,
       word: word.toLowerCase(),
+      pinyin,
+      translation,
       definition,
       examples,
       sourceImage,
@@ -91,7 +93,11 @@ router.post('/batch', async (req, res) => {
     const newWords = [];
     const skippedWords = [];
 
-    for (const wordText of words) {
+    for (const wordItem of words) {
+      // 支持两种格式：字符串或对象{word, pinyin}
+      const wordText = typeof wordItem === 'string' ? wordItem : wordItem.word;
+      const wordPinyin = typeof wordItem === 'object' ? wordItem.pinyin : undefined;
+      
       const existingWord = await Word.findOne({ 
         userId: req.userId, 
         word: wordText.toLowerCase() 
@@ -101,6 +107,7 @@ router.post('/batch', async (req, res) => {
         const newWord = new Word({
           userId: req.userId,
           word: wordText.toLowerCase(),
+          pinyin: wordPinyin,
           sourceImage,
           status: 'unknown'
         });

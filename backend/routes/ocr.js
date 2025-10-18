@@ -4,6 +4,7 @@ const multer = require('multer');
 const { extractTextFromImage } = require('../services/ocrService');
 const Word = require('../models/Word');
 const authMiddleware = require('../middleware/auth');
+const { default: pinyin } = require('pinyin');
 
 // 配置multer用于文件上传
 const storage = multer.memoryStorage();
@@ -107,13 +108,54 @@ router.post('/extract-base64', async (req, res) => {
     // Step 3: 过滤新单词
     const newWords = extractedWords.filter(word => !existingWordSet.has(word));
     
+    // Step 4: 为每个字添加拼音
+    const newWordsWithPinyin = newWords.map(word => {
+      try {
+        const pinyinArray = pinyin(word, {
+          style: 2, // STYLE_TONE2: 带声调数字的拼音 (e.g., zhong1)
+          heteronym: false // 不显示多音字的所有读音
+        });
+        const pinyinStr = pinyinArray.flat().join('');
+        return {
+          word: word,
+          pinyin: pinyinStr
+        };
+      } catch (error) {
+        console.warn(`Failed to get pinyin for ${word}:`, error.message);
+        return {
+          word: word,
+          pinyin: ''
+        };
+      }
+    });
+    
+    const knownWordsWithPinyin = Array.from(existingWordSet).map(word => {
+      try {
+        const pinyinArray = pinyin(word, {
+          style: 2, // STYLE_TONE2
+          heteronym: false
+        });
+        const pinyinStr = pinyinArray.flat().join('');
+        return {
+          word: word,
+          pinyin: pinyinStr
+        };
+      } catch (error) {
+        console.warn(`Failed to get pinyin for ${word}:`, error.message);
+        return {
+          word: word,
+          pinyin: ''
+        };
+      }
+    });
+    
     console.log(`✨ ${newWords.length} new words, ${existingWordSet.size} already known`);
     
     res.json({
       success: true,
       message: `Found ${newWords.length} new Chinese words!`,
-      newWords: newWords,
-      knownWords: Array.from(existingWordSet),
+      newWords: newWordsWithPinyin,
+      knownWords: knownWordsWithPinyin,
       stats: {
         totalExtracted: extractedWords.length,
         alreadyKnown: existingWordSet.size,

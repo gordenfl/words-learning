@@ -134,6 +134,7 @@ export default function CameraScreen({ navigation }) {
 
     setLoading(true);
     try {
+      // extractedWords 现在是对象数组 [{word, pinyin}]
       const response = await wordsAPI.addWords(extractedWords, image);
       
       Alert.alert(
@@ -196,9 +197,10 @@ export default function CameraScreen({ navigation }) {
               These words are not in your vocabulary yet
             </Text>
             <View style={styles.wordsList}>
-              {extractedWords.map((word, index) => (
+              {extractedWords.map((item, index) => (
                 <View key={index} style={styles.wordChipNew}>
-                  <Text style={styles.wordChipText}>{word}</Text>
+                  <Text style={styles.wordChipText}>{item.word}</Text>
+                  <Text style={styles.wordChipPinyin}>{item.pinyin}</Text>
                 </View>
               ))}
             </View>
@@ -224,9 +226,10 @@ export default function CameraScreen({ navigation }) {
               You've already learned these words
             </Text>
             <View style={styles.wordsList}>
-              {knownWords.map((word, index) => (
+              {knownWords.map((item, index) => (
                 <View key={index} style={styles.wordChipKnown}>
-                  <Text style={styles.wordChipTextKnown}>✓ {word}</Text>
+                  <Text style={styles.wordChipTextKnown}>✓ {item.word}</Text>
+                  <Text style={styles.wordChipPinyinKnown}>{item.pinyin}</Text>
                 </View>
               ))}
             </View>
@@ -340,10 +343,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  wordChipPinyin: {
+    color: '#FF6B6B',
+    fontSize: 11,
+    marginTop: 2,
+  },
   wordChipTextKnown: {
     color: '#50C878',
     fontSize: 14,
     fontWeight: '500',
+  },
+  wordChipPinyinKnown: {
+    color: '#50C878',
+    fontSize: 10,
+    marginTop: 2,
   },
   addButton: {
     backgroundColor: '#50C878',
