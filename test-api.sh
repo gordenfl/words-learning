@@ -71,21 +71,26 @@ else
 fi
 echo ""
 
-# Add a word
-echo "4. Adding a test word..."
-word_response=$(curl -s -X POST $API_URL/words \
+# Add Chinese test words
+echo "4. Adding Chinese test words..."
+
+# 添加多个中文单词用于测试
+chinese_words='[
+  "学习", "中文", "你好", "谢谢", "朋友",
+  "工作", "生活", "快乐", "美丽", "时间"
+]'
+
+word_response=$(curl -s -X POST $API_URL/words/batch \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "word": "challenge",
-    "definition": "A task that tests someone'\''s abilities",
-    "examples": ["This is a real challenge"]
-  }')
+  -d "{\"words\": $chinese_words}")
 
-if echo "$word_response" | grep -q "Word added successfully"; then
-    echo -e "${GREEN}✓${NC} Word added successfully"
+if echo "$word_response" | grep -q "Added"; then
+    added_count=$(echo $word_response | grep -o '"added":\[[^]]*\]' | grep -o '学习' | wc -l)
+    echo -e "${GREEN}✓${NC} Chinese words added successfully"
+    echo "   Added 10 Chinese words for testing"
 else
-    echo -e "${YELLOW}⚠${NC} Word might already exist or add failed"
+    echo -e "${YELLOW}⚠${NC} Some words might already exist"
 fi
 echo ""
 
@@ -112,15 +117,37 @@ else
 fi
 echo ""
 
+# Set learning plan
+echo "7. Setting up learning plan..."
+plan_response=$(curl -s -X PATCH $API_URL/users/learning-plan \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "dailyWordGoal": 10,
+    "weeklyWordGoal": 50,
+    "monthlyWordGoal": 200,
+    "difficulty": "intermediate"
+  }')
+
+if echo "$plan_response" | grep -q "Learning plan updated"; then
+    echo -e "${GREEN}✓${NC} Learning plan set successfully"
+    echo "   Difficulty: Intermediate (中级)"
+    echo "   Daily goal: 10 words/day"
+else
+    echo -e "${YELLOW}⚠${NC} Learning plan setup skipped"
+fi
+echo ""
+
 # Generate article
-echo "7. Generating learning article..."
+echo "8. Generating Chinese learning article..."
 article_response=$(curl -s -X POST $API_URL/articles/generate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"wordCount": 5}')
 
 if echo "$article_response" | grep -q "Article generated successfully"; then
-    echo -e "${GREEN}✓${NC} Article generated successfully"
+    echo -e "${GREEN}✓${NC} Chinese learning article generated successfully"
+    echo "   Article will contain your Chinese words"
 else
     echo -e "${YELLOW}⚠${NC} Article generation skipped (need more words)"
 fi
