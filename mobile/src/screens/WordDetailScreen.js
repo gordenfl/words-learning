@@ -418,8 +418,8 @@ export default function WordDetailScreen({ route, navigation }) {
                     <body>
                       <svg id="character-target" width="280" height="280"></svg>
                       <div class="controls">
-                        <button id="animateBtn" ontouchstart="animate()" onclick="animate()">▶️ Animate</button>
-                        <button id="practiceBtn" ontouchstart="practice()" onclick="practice()">✏️ Practice</button>
+                        <button id="animateBtn" ontouchstart="handleAnimate(event)" onclick="handleAnimate(event)">▶️ Animate</button>
+                        <button id="practiceBtn" ontouchstart="handlePractice(event)" onclick="handlePractice(event)">✏️ Practice</button>
                       </div>
                       <div class="info">Tap buttons to animate or practice</div>
                       <div id="status"></div>
@@ -438,27 +438,114 @@ export default function WordDetailScreen({ route, navigation }) {
                         
                         let loopCount = 0;
                         let maxLoops = 3; // 循环 3 次
+                        let quizActive = false;
+                        let animationTimer = null; // 保存 setTimeout 的 ID
+                        
+                        function handleAnimate(event) {
+                          if (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }
+                          setStatus('Animate button clicked!');
+                          animate();
+                        }
+                        
+                        function handlePractice(event) {
+                          if (event) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }
+                          setStatus('Practice button clicked!');
+                          practice();
+                        }
                         
                         function animate() {
-                          if (!writer) return;
+                          setStatus('Animate: checking states...');
                           
-                          if (!isAnimating) {
-                            loopCount = 0;
+                          if (!writer) {
+                            setStatus('Writer not ready');
+                            return;
                           }
                           
+                          // 如果正在播放动画，忽略点击（无效）
+                          if (isAnimating) {
+                            setStatus('Animation already running');
+                            return;
+                          }
+                          
+                          // 如果正在练习模式，先取消并清空
+                          if (quizActive) {
+                            setStatus('Cancelling quiz...');
+                            try {
+                              writer.cancelQuiz();
+                              quizActive = false;
+                              setStatus('Switching to animation...');
+                            } catch (e) {
+                              setStatus('Cancel quiz error: ' + e.message);
+                              quizActive = false;
+                            }
+                            
+                            // 延迟一下再开始动画，确保练习模式完全清空
+                            setTimeout(() => {
+                              setStatus('Starting animation after quiz...');
+                              if (!quizActive && !isAnimating) {
+                                startAnimation();
+                              } else {
+                                setStatus('Cannot start: quiz=' + quizActive + ', anim=' + isAnimating);
+                              }
+                            }, 200);
+                            return;
+                          }
+                          
+                          // 直接开始动画
+                          setStatus('Starting animation directly...');
+                          startAnimation();
+                        }
+                        
+                        function startAnimation() {
+                          // 重置循环计数并开始动画
+                          loopCount = 0;
                           isAnimating = true;
+                          animateLoop();
+                        }
+                        
+                        function stopAnimation() {
+                          // 停止动画循环
+                          isAnimating = false;
+                          loopCount = 0;
+                          if (animationTimer) {
+                            clearTimeout(animationTimer);
+                            animationTimer = null;
+                          }
+                        }
+                        
+                        function animateLoop() {
+                          // 检查是否应该继续
+                          if (!isAnimating) {
+                            return;
+                          }
+                          
+                          if (loopCount >= maxLoops) {
+                            isAnimating = false;
+                            loopCount = 0;
+                            setStatus('Animation complete!');
+                            setTimeout(() => setStatus('Tap Animate to replay'), 2000);
+                            return;
+                          }
+                          
                           setStatus('Playing animation... (Loop ' + (loopCount + 1) + '/' + maxLoops + ')');
                           
                           writer.animateCharacter({
                             onComplete: function() {
+                              // 再次检查是否应该继续
+                              if (!isAnimating) {
+                                return;
+                              }
+                              
                               loopCount++;
                               if (loopCount < maxLoops) {
-                                // 继续下一次循环
-                                setTimeout(() => {
-                                  animate();
-                                }, 800); // 每次循环之间暂停 800ms
+                                animationTimer = setTimeout(animateLoop, 800);
                               } else {
-                                // 完成所有循环
                                 isAnimating = false;
                                 loopCount = 0;
                                 setStatus('Animation complete!');
@@ -469,18 +556,51 @@ export default function WordDetailScreen({ route, navigation }) {
                         }
                         
                         function practice() {
-                          if (!writer) return;
+                          if (!writer) {
+                            setStatus('Writer not ready');
+                            return;
+                          }
+                          
+                          // 如果正在动画中，完全停止动画
+                          if (isAnimating) {
+                            stopAnimation();
+                            setStatus('Stopping animation...');
+                            // 延迟后启动练习模式
+                            setTimeout(() => {
+                              startPractice();
+                            }, 150);
+                            return;
+                          }
+                          
+                          // 如果已经在练习模式，清空内容并重新开始
+                          if (quizActive) {
+                            writer.cancelQuiz();
+                            // 延迟一下再重启，确保清空完成
+                            setTimeout(() => {
+                              startPractice();
+                            }, 100);
+                            return;
+                          }
+                          
+                          // 启动练习模式
+                          startPractice();
+                        }
+                        
+                        function startPractice() {
+                          quizActive = true;
                           setStatus('Starting practice mode...');
+                          
                           writer.quiz({
                             onMistake: function(strokeData) {
-                              setStatus('Try again!');
+                              setStatus('Try again! ❌');
                             },
                             onCorrectStroke: function(strokeData) {
-                              setStatus('Good! Stroke ' + (strokeData.strokeNum + 1));
+                              setStatus('Good! ✓ Stroke ' + (strokeData.strokeNum + 1));
                             },
                             onComplete: function() {
-                              setStatus('Perfect! 完成！');
-                              setTimeout(() => setStatus(''), 3000);
+                              quizActive = false;
+                              setStatus('Perfect! 完成！🎉');
+                              setTimeout(() => setStatus('Tap Practice to try again'), 3000);
                             }
                           });
                         }
