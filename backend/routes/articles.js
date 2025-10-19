@@ -56,9 +56,21 @@ router.post('/generate', async (req, res) => {
       });
     }
 
+    // 获取用户已学的单词（known）
+    // 限制数量避免单词太多，取最近学习的30个
+    const knownWords = await Word.find({ 
+      userId: req.userId, 
+      status: 'known'
+    })
+    .sort({ updatedAt: -1 })
+    .limit(30);
+
+    console.log(`📚 Generating article with ${unknownWords.length} unknown words and ${knownWords.length} known words`);
+
     // Generate article based on difficulty using AI service
-    const wordTexts = unknownWords.map(w => w.word);
-    const content = await generateChineseStory(wordTexts, difficulty);
+    const targetWords = unknownWords.map(w => w.word);
+    const knownWordTexts = knownWords.map(w => w.word);
+    const content = await generateChineseStory(targetWords, knownWordTexts, difficulty);
 
     const article = new Article({
       userId: req.userId,

@@ -41,13 +41,73 @@ export default function ArticleScreen({ route, navigation }) {
     }
   };
 
+  // 高亮显示目标单词的函数
+  const highlightTargetWords = (content, targetWords) => {
+    // 提取所有目标单词
+    const wordTexts = targetWords.map(tw => tw.word?.word || tw.wordText);
+    
+    if (wordTexts.length === 0) {
+      return <Text style={styles.articleText}>{content}</Text>;
+    }
+
+    // 将所有目标单词用正则匹配并分割文本
+    const parts = [];
+    let lastIndex = 0;
+    
+    // 为每个字符检查是否是目标单词
+    for (let i = 0; i < content.length; i++) {
+      const char = content[i];
+      
+      // 检查当前字符是否是目标单词
+      if (wordTexts.includes(char)) {
+        // 添加之前的普通文本
+        if (i > lastIndex) {
+          parts.push({
+            text: content.substring(lastIndex, i),
+            isTarget: false
+          });
+        }
+        
+        // 添加高亮的目标单词
+        parts.push({
+          text: char,
+          isTarget: true
+        });
+        
+        lastIndex = i + 1;
+      }
+    }
+    
+    // 添加剩余的文本
+    if (lastIndex < content.length) {
+      parts.push({
+        text: content.substring(lastIndex),
+        isTarget: false
+      });
+    }
+
+    return (
+      <Text style={styles.articleText}>
+        {parts.map((part, index) => (
+          part.isTarget ? (
+            <Text key={index} style={styles.highlightedWord}>
+              {part.text}
+            </Text>
+          ) : (
+            <Text key={index}>{part.text}</Text>
+          )
+        ))}
+      </Text>
+    );
+  };
+
   const renderContent = () => {
     let content = article.content;
     const targetWords = article.targetWords || [];
 
     return (
       <View>
-        <Text style={styles.articleText}>{content}</Text>
+        {highlightTargetWords(content, targetWords)}
         
         <View style={styles.wordsSection}>
           <Text style={styles.sectionTitle}>Target Words:</Text>
@@ -146,6 +206,11 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#333',
     marginBottom: 30,
+  },
+  highlightedWord: {
+    color: '#FF0000',
+    fontWeight: 'bold',
+    fontSize: 18,
   },
   wordsSection: {
     backgroundColor: '#fff',

@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { wordsAPI } from '../services/api';
 
 export default function WordDetailScreen({ route, navigation }) {
@@ -33,10 +34,19 @@ export default function WordDetailScreen({ route, navigation }) {
     }
   };
 
+  const speakWord = (text) => {
+    Speech.speak(text, {
+      language: 'zh-CN', // 中文（普通话）
+      pitch: 1.0,
+      rate: 0.1, // 极慢速播放，便于初学者
+    });
+  };
+
   const updateWordStatus = async (status) => {
     try {
       await wordsAPI.updateStatus(wordId, status);
-      setWord({ ...word, status });
+      const updatedWord = { ...word, status };
+      setWord(updatedWord);
       Alert.alert('Success', `Word marked as ${status}`);
     } catch (error) {
       Alert.alert('Error', 'Could not update word status');
@@ -94,12 +104,22 @@ export default function WordDetailScreen({ route, navigation }) {
         {/* 主要内容 */}
         <View style={styles.mainContent}>
           {word.pinyin && (
-            <Text style={styles.pinyin}>{word.pinyin}</Text>
+            <View style={styles.pinyinWithSpeaker}>
+              <Text style={styles.pinyin}>{word.pinyin}</Text>
+              <TouchableOpacity 
+                onPress={() => speakWord(word.word)}
+                activeOpacity={0.6}
+                style={styles.speakerButton}
+              >
+                <Text style={styles.speakerIcon}>🔊</Text>
+              </TouchableOpacity>
+            </View>
           )}
           <Text style={styles.wordText}>{word.word}</Text>
           {word.translation && (
             <Text style={styles.translation}>{word.translation}</Text>
           )}
+          <Text style={styles.tapHint}>Tap 🔊 to hear pronunciation</Text>
         </View>
 
         {/* 定义 */}
@@ -134,16 +154,10 @@ export default function WordDetailScreen({ route, navigation }) {
               ]}
               onPress={() => updateWordStatus('unknown')}
             >
-              <Text style={styles.statusBtnText}>❓ Unknown</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.statusBtn,
-                word.status === 'learning' && styles.statusBtnActive,
-              ]}
-              onPress={() => updateWordStatus('learning')}
-            >
-              <Text style={styles.statusBtnText}>📖 Learning</Text>
+              <Text style={[
+                styles.statusBtnText,
+                word.status === 'unknown' && styles.statusBtnTextActive,
+              ]}>📖 Learning</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -152,7 +166,10 @@ export default function WordDetailScreen({ route, navigation }) {
               ]}
               onPress={() => updateWordStatus('known')}
             >
-              <Text style={styles.statusBtnText}>✓ Known</Text>
+              <Text style={[
+                styles.statusBtnText,
+                word.status === 'known' && styles.statusBtnTextActive,
+              ]}>✓ Known</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -199,9 +216,6 @@ const styles = StyleSheet.create({
   status_unknown: {
     backgroundColor: '#FFE4E1',
   },
-  status_learning: {
-    backgroundColor: '#FFF4E0',
-  },
   status_known: {
     backgroundColor: '#E0F8E0',
   },
@@ -222,23 +236,44 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  pinyinWithSpeaker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
   pinyin: {
     fontSize: 32,
     color: '#4A90E2',
-    marginBottom: 10,
     fontStyle: 'italic',
     fontWeight: '500',
+  },
+  speakerButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 10,
+  },
+  speakerIcon: {
+    fontSize: 28,
   },
   wordText: {
     fontSize: 96,
     fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
     marginBottom: 12,
   },
   translation: {
     fontSize: 24,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  tapHint: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   section: {
     backgroundColor: '#fff',
@@ -311,6 +346,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#666',
+  },
+  statusBtnTextActive: {
+    color: '#fff',
   },
   deleteButton: {
     backgroundColor: '#FF6347',

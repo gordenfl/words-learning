@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { wordsAPI } from '../services/api';
 
 export default function WordsListScreen({ navigation, route }) {
@@ -34,6 +35,36 @@ export default function WordsListScreen({ navigation, route }) {
     setHasMore(true);
     loadWords(1, true);
   }, [filter]);
+
+  useEffect(() => {
+    // 监听页面焦点，当从详情页返回时重新获取单词数据
+    const unsubscribe = navigation.addListener('focus', async () => {
+      // 只在已经加载过数据后才刷新（避免初次加载时重复请求）
+      if (words.length > 0) {
+        // 重新获取数据但保持滚动位置
+        try {
+          const status = filter === 'all' ? undefined : filter;
+          const response = await wordsAPI.getWords(status);
+          const allWords = response.data.words;
+          
+          // 按创建时间倒序排列（最新的在前）
+          const sortedWords = allWords.sort((a, b) => 
+            new Date(b.createdAt) - new Date(a.createdAt)
+          );
+          
+          // 更新已加载的单词数据
+          const currentPageCount = words.length;
+          const updatedWords = sortedWords.slice(0, currentPageCount);
+          setWords(updatedWords);
+          setHasMore(currentPageCount < sortedWords.length);
+        } catch (error) {
+          console.error('Error refreshing words:', error);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, words.length, filter]);
 
   const loadWords = async (pageNum = page, isRefresh = false) => {
     if (!hasMore && !isRefresh) return;
@@ -84,6 +115,14 @@ export default function WordsListScreen({ navigation, route }) {
     }
   };
 
+  const speakWord = (word) => {
+    Speech.speak(word, {
+      language: 'zh-CN', // 中文（普通话）
+      pitch: 1.0,
+      rate: 0.1, // 极慢速播放，便于初学者
+    });
+  };
+
   const updateWordStatus = async (wordId, newStatus) => {
     try {
       await wordsAPI.updateWordStatus(wordId, newStatus);
@@ -124,7 +163,11 @@ export default function WordsListScreen({ navigation, route }) {
   };
 
   const renderWord = ({ item }) => (
-    <View style={styles.wordCard}>
+    <TouchableOpacity 
+      style={styles.wordCard}
+      onPress={() => navigation.navigate('WordDetail', { wordId: item._id })}
+      activeOpacity={0.9}
+    >
       <View style={styles.cardHeader}>
         <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
           <Text style={styles.statusText}>{item.status}</Text>
@@ -132,49 +175,62 @@ export default function WordsListScreen({ navigation, route }) {
       </View>
 
       <View style={styles.cardContent}>
-        <TouchableOpacity 
-          style={styles.wordInfo}
-          onPress={() => navigation.navigate('WordDetail', { wordId: item._id })}
-          activeOpacity={0.7}
-        >
+        <View style={styles.wordInfo}>
           {item.pinyin && (
-            <Text style={styles.pinyin}>{item.pinyin}</Text>
+            <View style={styles.pinyinWithSpeaker}>
+              <Text style={styles.pinyin}>{item.pinyin}</Text>
+              <TouchableOpacity 
+                onPress={() => speakWord(item.word)}
+                activeOpacity={0.6}
+                style={styles.speakerButton}
+              >
+                <Text style={styles.speakerIcon}>🔊</Text>
+              </TouchableOpacity>
+            </View>
           )}
+          
           <Text style={styles.wordText}>{item.word}</Text>
+          
           {item.translation && (
             <Text style={styles.translation}>{item.translation}</Text>
           )}
           {item.definition && (
             <Text style={styles.definition}>{item.definition}</Text>
           )}
-        </TouchableOpacity>
+        </View>
 
         <View style={styles.actions}>
-          {item.status !== 'known' && (
+          {item.status === 'unknown' && (
             <TouchableOpacity
               style={[styles.actionBtn, styles.knownBtn]}
-              onPress={() => updateWordStatus(item._id, 'known')}
+              onPress={(e) => {
+                updateWordStatus(item._id, 'known');
+              }}
             >
               <Text style={styles.actionBtnText}>✓</Text>
             </TouchableOpacity>
           )}
-          {item.status !== 'learning' && (
+          {item.status === 'known' && (
             <TouchableOpacity
-              style={[styles.actionBtn, styles.learningBtn]}
-              onPress={() => updateWordStatus(item._id, 'learning')}
+              style={[styles.actionBtn, styles.unknownBtn]}
+              onPress={(e) => {
+                updateWordStatus(item._id, 'unknown');
+              }}
             >
-              <Text style={styles.actionBtnText}>📖</Text>
+              <Text style={styles.actionBtnText}>↺</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={[styles.actionBtn, styles.deleteBtn]}
-            onPress={() => deleteWord(item._id)}
+            onPress={(e) => {
+              deleteWord(item._id);
+            }}
           >
             <Text style={styles.actionBtnText}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -193,14 +249,6 @@ export default function WordsListScreen({ navigation, route }) {
           onPress={() => setFilter('unknown')}
         >
           <Text style={[styles.filterText, filter === 'unknown' && styles.filterTextActive]}>
-            Unknown
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterBtn, filter === 'learning' && styles.filterBtnActive]}
-          onPress={() => setFilter('learning')}
-        >
-          <Text style={[styles.filterText, filter === 'learning' && styles.filterTextActive]}>
             Learning
           </Text>
         </TouchableOpacity>
@@ -308,16 +356,29 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 15,
   },
-  wordText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#333',
+  pinyinWithSpeaker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   pinyin: {
     fontSize: 20,
     color: '#4A90E2',
-    marginBottom: 6,
     fontStyle: 'italic',
+  },
+  speakerButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  speakerIcon: {
+    fontSize: 20,
+  },
+  wordText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
   },
   translation: {
     fontSize: 18,
@@ -332,9 +393,6 @@ const styles = StyleSheet.create({
   },
   status_unknown: {
     backgroundColor: '#FFE4E1',
-  },
-  status_learning: {
-    backgroundColor: '#FFF4E0',
   },
   status_known: {
     backgroundColor: '#E0F8E0',
@@ -367,8 +425,8 @@ const styles = StyleSheet.create({
   knownBtn: {
     backgroundColor: '#50C878',
   },
-  learningBtn: {
-    backgroundColor: '#FFD700',
+  unknownBtn: {
+    backgroundColor: '#FFA500',
   },
   deleteBtn: {
     backgroundColor: '#FF6347',

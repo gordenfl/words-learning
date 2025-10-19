@@ -181,56 +181,80 @@ export default function HomeScreen({ navigation }) {
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Needed', 'Please allow camera access to take photos');
-      return;
-    }
+    console.log('📷 takePhoto function called');
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      console.log('📷 Camera permission status:', status);
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow camera access to take photos');
+        return;
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 1,
+      });
+      console.log('📷 Camera result:', result.canceled ? 'Cancelled' : 'Got image');
 
-    if (!result.canceled) {
-      processImage(result.assets[0].uri);
+      if (!result.canceled) {
+        processImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('❌ takePhoto error:', error);
+      Alert.alert('Error', 'Camera failed: ' + error.message);
     }
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Needed', 'Please allow photo access to select images');
-      return;
-    }
+    console.log('🖼️ pickImage function called');
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('🖼️ Gallery permission status:', status);
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Please allow photo access to select images');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+      console.log('🖼️ Gallery result:', result.canceled ? 'Cancelled' : 'Got image');
 
-    if (!result.canceled) {
-      processImage(result.assets[0].uri);
+      if (!result.canceled) {
+        processImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('❌ pickImage error:', error);
+      Alert.alert('Error', 'Gallery failed: ' + error.message);
     }
   };
 
   const handleScanBook = () => {
+    console.log('📸 Camera button clicked!');
     Alert.alert(
       'Scan Book 📸',
       'Choose how to import Chinese words',
       [
         {
           text: 'Take Photo',
-          onPress: takePhoto
+          onPress: () => {
+            console.log('📷 Take Photo selected');
+            takePhoto();
+          }
         },
         {
           text: 'Choose from Gallery',
-          onPress: pickImage
+          onPress: () => {
+            console.log('🖼️ Gallery selected');
+            pickImage();
+          }
         },
         {
           text: 'Cancel',
-          style: 'cancel'
+          style: 'cancel',
+          onPress: () => console.log('❌ Cancelled')
         }
       ]
     );
@@ -347,7 +371,7 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.statCard}
-          onPress={() => navigation.navigate('WordsList', { filter: 'learning' })}
+          onPress={() => navigation.navigate('WordsList', { filter: 'unknown' })}
           activeOpacity={0.7}
         >
           <Text style={styles.statNumber}>{stats?.todayLearned || 0}</Text>

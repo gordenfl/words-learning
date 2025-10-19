@@ -12,16 +12,17 @@ const USE_DEEPSEEK = process.env.USE_DEEPSEEK === 'true';
 
 /**
  * 使用AI生成中文学习文章
- * @param {Array} words - 要学习的中文单词数组
+ * @param {Array} targetWords - 要学习的新单词数组（必须出现）
+ * @param {Array} knownWords - 用户已学过的单词数组（建议使用）
  * @param {String} difficulty - 难度级别 (beginner/intermediate/advanced)
  * @returns {Promise<String>} 生成的文章内容
  */
-async function generateChineseStory(words, difficulty = 'intermediate') {
+async function generateChineseStory(targetWords, knownWords = [], difficulty = 'intermediate') {
   // 优先使用AI生成
   if (USE_DEEPSEEK && DEEPSEEK_API_KEY) {
-    return await generateWithDeepSeek(words, difficulty);
+    return await generateWithDeepSeek(targetWords, knownWords, difficulty);
   } else if (OPENAI_API_KEY && OPENAI_API_KEY !== 'your_openai_api_key_here') {
-    return await generateWithOpenAI(words, difficulty);
+    return await generateWithOpenAI(targetWords, knownWords, difficulty);
   }
   
   // 如果没有配置AI，抛出错误
@@ -32,9 +33,9 @@ async function generateChineseStory(words, difficulty = 'intermediate') {
 /**
  * 使用OpenAI生成故事
  */
-async function generateWithOpenAI(words, difficulty) {
+async function generateWithOpenAI(targetWords, knownWords, difficulty) {
   try {
-    const prompt = buildPrompt(words, difficulty);
+    const prompt = buildPrompt(targetWords, knownWords, difficulty);
     
     console.log('🤖 Calling OpenAI API to generate story...');
     
@@ -75,9 +76,9 @@ async function generateWithOpenAI(words, difficulty) {
 /**
  * 使用DeepSeek生成故事（专门优化中文，更便宜）
  */
-async function generateWithDeepSeek(words, difficulty) {
+async function generateWithDeepSeek(targetWords, knownWords, difficulty) {
   try {
-    const prompt = buildPrompt(words, difficulty);
+    const prompt = buildPrompt(targetWords, knownWords, difficulty);
     
     console.log('🤖 Calling DeepSeek API to generate story...');
     
@@ -118,7 +119,7 @@ async function generateWithDeepSeek(words, difficulty) {
 /**
  * 构建AI提示词 - 优化版，让AI真正理解每个词并创作自然的故事
  */
-function buildPrompt(words, difficulty) {
+function buildPrompt(targetWords, knownWords, difficulty) {
   const difficultyGuides = {
     beginner: {
       level: '初级（HSK 1-2级）',
@@ -141,12 +142,17 @@ function buildPrompt(words, difficulty) {
   };
 
   const guide = difficultyGuides[difficulty] || difficultyGuides.intermediate;
-  const wordsWithComma = words.join('、');
+  const targetWordsStr = targetWords.join('、');
+  const knownWordsStr = knownWords.length > 0 ? knownWords.join('、') : '无';
 
-  return `作为一名专业的中文教师，请根据以下词汇创作一个自然流畅的中文学习故事。
+  return `作为一名专业的中文教师，请根据学生的词汇掌握情况创作一个自然流畅的中文学习故事。
 
-【目标词汇】
-${wordsWithComma}
+【学生的词汇情况】
+1. **必须学习的新词汇**（必须全部使用）：
+   ${targetWordsStr}
+
+2. **学生已经学过的词汇**（建议尽量使用）：
+   ${knownWordsStr}
 
 【难度级别】
 ${guide.level}
@@ -154,11 +160,14 @@ ${guide.level}
 【创作要求】
 1. **理解词义**：请先理解每个词的真实含义、词性（动词/名词/形容词等）和常见用法
 2. **创作故事**：根据这些词的实际含义，创作一个完整、连贯、有趣的故事
-3. **自然融入**：让每个词在故事中的使用都符合中文语法和语境，读起来自然流畅
-4. **不要机械**：不要简单地列举词汇或使用固定模板，要像真正写作一样
-5. **句子结构**：${guide.structure}
-6. **词汇要求**：除了目标词汇，其他词汇应该是${guide.vocabulary}
-7. **故事长度**：${guide.length}左右
+3. **复习+学习**：
+   - **新词汇**必须全部在故事中出现（每个词只用一次）
+   - **已学词汇**请尽量多使用，这样可以帮助学生复习巩固
+4. **自然融入**：让每个词在故事中的使用都符合中文语法和语境，读起来自然流畅
+5. **不要机械**：不要简单地列举词汇或使用固定模板，要像真正写作一样
+6. **句子结构**：${guide.structure}
+7. **词汇要求**：除了上述词汇，其他词汇应该是${guide.vocabulary}
+8. **故事长度**：${guide.length}左右
 
 【格式要求】
 - 第一行：英文标题（如 "A Trip to Beijing" 或 "Weekend Coffee Time"）
@@ -168,10 +177,11 @@ ${guide.level}
 - 最后一行：英文鼓励语（如 "Great work! Keep practicing!"）
 
 【重要提示】
-- 每个目标词汇必须使用，但只使用一次
+- 每个新词汇必须使用，但只使用一次
+- 尽量多使用已学词汇来巩固学习效果
 - 故事要有情节、有画面感
 - 确保语法正确、语言通顺
-- 让读者在享受故事的同时自然地学习这些词
+- 让读者在享受故事的同时自然地学习新词、复习旧词
 
 请现在开始创作：`;
 }
