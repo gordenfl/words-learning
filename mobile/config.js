@@ -15,7 +15,7 @@ const Config = {
     // 如果在Android模拟器运行，使用 '10.0.2.2'
     // 如果在物理设备运行，使用你的电脑局域网IP
     HOST: '192.168.101.95',
-    PORT: '3000',
+    PORT: '3003',
     
     // 自动生成完整的BASE_URL
     get BASE_URL() {

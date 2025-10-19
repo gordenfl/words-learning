@@ -15,7 +15,7 @@ const articleRoutes = require('./routes/articles');
 const ocrRoutes = require('./routes/ocr');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 
 // Middleware
 app.use(cors());

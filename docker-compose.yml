@@ -1,21 +1,6 @@
 version: "3.8"
 
 services:
-  mongodb:
-    image: mongo:7.0
-    container_name: words-learning-mongodb
-    restart: always
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: words-learning
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - words-learning-network
-
   backend:
     build:
       context: ./backend
@@ -23,22 +8,26 @@ services:
     container_name: words-learning-backend
     restart: always
     ports:
-      - "3000:3000"
+      - "3003:3003"
     environment:
-      PORT: 3000
-      MONGODB_URI: mongodb://admin:password123@mongodb:27017/words-learning?authSource=admin
-      JWT_SECRET: your_jwt_secret_key_change_this
-    depends_on:
-      - mongodb
+      PORT: ${PORT:-3003}
+      MONGODB_URI: ${MONGODB_URI}
+      JWT_SECRET: ${JWT_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      USE_DEEPSEEK: ${USE_DEEPSEEK:-true}
+      GOOGLE_VISION_API_KEY: ${GOOGLE_VISION_API_KEY}
+      BAIDU_OCR_API_KEY: ${BAIDU_OCR_API_KEY}
+      BAIDU_OCR_SECRET_KEY: ${BAIDU_OCR_SECRET_KEY}
+      USE_GOOGLE_VISION: ${USE_GOOGLE_VISION:-true}
     volumes:
       - ./backend:/app
       - /app/node_modules
     networks:
-      - words-learning-network
+      - photoshare-network # 使用外部 MongoDB 所在的网络
 
-volumes:
-  mongodb_data:
-
+# 使用外部已存在的网络
 networks:
-  words-learning-network:
-    driver: bridge
+  photoshare-network:
+    external: true
+    name: docker_photoshare-network
