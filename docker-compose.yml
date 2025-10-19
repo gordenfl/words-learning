@@ -23,11 +23,5 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    networks:
-      - photoshare-network # 使用外部 MongoDB 所在的网络
-
-# 使用外部已存在的网络
-networks:
-  photoshare-network:
-    external: true
-    name: docker_photoshare-network
+    # 连接远程服务器的 MongoDB，使用默认 bridge 网络
+    network_mode: bridge
