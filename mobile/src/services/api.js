@@ -83,6 +83,9 @@ export const wordsAPI = {
   
   deleteWord: (wordId) =>
     api.delete(`/words/${wordId}`),
+  
+  generateDetails: (wordId) =>
+    api.post(`/words/${wordId}/generate-details`),
 };
 
 // Articles API

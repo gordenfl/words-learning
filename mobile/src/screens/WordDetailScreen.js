@@ -17,6 +17,7 @@ export default function WordDetailScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [generatingDetails, setGeneratingDetails] = useState(false);
 
   useEffect(() => {
     loadWordDetail();
@@ -28,6 +29,15 @@ export default function WordDetailScreen({ route, navigation }) {
       const response = await wordsAPI.getAll();
       const foundWord = response.data.words.find(w => w._id === wordId);
       setWord(foundWord);
+      
+      // 检查是否需要自动生成组词和例句
+      if ((!foundWord.compounds || foundWord.compounds.length === 0) ||
+          (!foundWord.examples || foundWord.examples.length === 0)) {
+        // 自动生成
+        setTimeout(() => {
+          generateDetails();
+        }, 500); // 延迟500ms开始生成，让界面先显示出来
+      }
     } catch (error) {
       console.error('Error loading word:', error);
       Alert.alert('Error', 'Could not load word details');
@@ -70,6 +80,20 @@ export default function WordDetailScreen({ route, navigation }) {
       showToastMessage(statusLabel);
     } catch (error) {
       showToastMessage('❌ Update failed');
+    }
+  };
+
+  const generateDetails = async () => {
+    setGeneratingDetails(true);
+    try {
+      const response = await wordsAPI.generateDetails(wordId);
+      setWord(response.data.word);
+      // 成功后不显示提示，直接更新界面
+    } catch (error) {
+      console.error('Error generating details:', error);
+      showToastMessage('❌ Failed to generate');
+    } finally {
+      setGeneratingDetails(false);
     }
   };
 
@@ -139,7 +163,7 @@ export default function WordDetailScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* 主要内容 */}
+        {/* 主要内容 - 只显示大字 */}
         <View style={styles.mainContent}>
           {word.pinyin && (
             <View style={styles.pinyinWithSpeaker}>
@@ -160,24 +184,88 @@ export default function WordDetailScreen({ route, navigation }) {
           <Text style={styles.tapHint}>Tap 🔊 to hear pronunciation</Text>
         </View>
 
+        {/* 组词模块 - 独立卡片 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📚 Word Compounds</Text>
+          {generatingDetails && (!word.compounds || word.compounds.length === 0) ? (
+            <View style={styles.generatingContainer}>
+              <ActivityIndicator color="#4A90E2" size="small" />
+              <Text style={styles.generatingText}>Generating compounds...</Text>
+            </View>
+          ) : word.compounds && word.compounds.length > 0 ? (
+            <>
+              {word.compounds.map((compound, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.compoundItemInline}
+                  onPress={() => speakWord(compound.word)}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.compoundLeftInline}>
+                    <Text style={styles.compoundWordInline}>{compound.word}</Text>
+                    {compound.pinyin && (
+                      <Text style={styles.compoundPinyinInline}>{compound.pinyin}</Text>
+                    )}
+                  </View>
+                  {compound.meaning && (
+                    <Text style={styles.compoundMeaningInline}>{compound.meaning}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </>
+          ) : (
+            <Text style={styles.emptyText}>No compounds yet</Text>
+          )}
+        </View>
+
+        {/* 例句模块 - 独立卡片 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💬 Example Sentences</Text>
+          {generatingDetails && (!word.examples || word.examples.length === 0) ? (
+            <View style={styles.generatingContainer}>
+              <ActivityIndicator color="#4A90E2" size="small" />
+              <Text style={styles.generatingText}>Generating examples...</Text>
+            </View>
+          ) : word.examples && word.examples.length > 0 ? (
+            <>
+              {word.examples.map((example, index) => {
+                // 兼容旧格式（字符串）和新格式（对象）
+                const sentenceText = typeof example === 'string' ? example : example.chinese;
+                
+                return (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={styles.exampleItemInline}
+                    onPress={() => speakWord(sentenceText)}
+                    activeOpacity={0.6}
+                  >
+                    {typeof example === 'string' ? (
+                      <Text style={styles.exampleText}>{example}</Text>
+                    ) : (
+                      <>
+                        <Text style={styles.exampleChineseInline}>{example.chinese}</Text>
+                        {example.pinyin && (
+                          <Text style={styles.examplePinyinInline}>{example.pinyin}</Text>
+                        )}
+                        {example.english && (
+                          <Text style={styles.exampleEnglishInline}>{example.english}</Text>
+                        )}
+                      </>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </>
+          ) : (
+            <Text style={styles.emptyText}>No examples yet</Text>
+          )}
+        </View>
+
         {/* 定义 */}
         {word.definition && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Definition</Text>
             <Text style={styles.definition}>{word.definition}</Text>
-          </View>
-        )}
-
-        {/* 例句 */}
-        {word.examples && word.examples.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Examples</Text>
-            {word.examples.map((example, index) => (
-              <View key={index} style={styles.exampleItem}>
-                <Text style={styles.exampleBullet}>•</Text>
-                <Text style={styles.exampleText}>{example}</Text>
-              </View>
-            ))}
           </View>
         )}
 
@@ -266,8 +354,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 25,
     borderRadius: 15,
-    alignItems: 'center',
     marginBottom: 20,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -279,6 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+    alignSelf: 'center',
   },
   pinyin: {
     fontSize: 32,
@@ -300,18 +389,92 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
     marginBottom: 12,
+    alignSelf: 'center',
   },
   translation: {
     fontSize: 24,
     color: '#666',
     textAlign: 'center',
     marginBottom: 8,
+    alignSelf: 'center',
   },
   tapHint: {
     fontSize: 13,
     color: '#999',
     textAlign: 'center',
     fontStyle: 'italic',
+    alignSelf: 'center',
+  },
+  generatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    gap: 10,
+  },
+  generatingText: {
+    fontSize: 14,
+    color: '#4A90E2',
+    fontStyle: 'italic',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  compoundItemInline: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  compoundLeftInline: {
+    flex: 1,
+    marginRight: 10,
+  },
+  compoundWordInline: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 3,
+  },
+  compoundPinyinInline: {
+    fontSize: 13,
+    color: '#4A90E2',
+    fontStyle: 'italic',
+  },
+  compoundMeaningInline: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'right',
+    maxWidth: '40%',
+  },
+  exampleItemInline: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  exampleChineseInline: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    lineHeight: 24,
+    marginBottom: 4,
+  },
+  examplePinyinInline: {
+    fontSize: 13,
+    color: '#4A90E2',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  exampleEnglishInline: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
   section: {
     backgroundColor: '#fff',
@@ -335,9 +498,62 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 24,
   },
-  exampleItem: {
+  compoundItem: {
     flexDirection: 'row',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  compoundLeft: {
+    flex: 1,
+  },
+  compoundWord: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  compoundPinyin: {
+    fontSize: 14,
+    color: '#4A90E2',
+    fontStyle: 'italic',
+  },
+  compoundMeaning: {
+    fontSize: 15,
+    color: '#666',
+    marginLeft: 12,
+    flex: 1,
+    textAlign: 'right',
+  },
+  exampleItem: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  exampleContent: {
+    flex: 1,
+  },
+  exampleChinese: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    lineHeight: 26,
+    marginBottom: 6,
+  },
+  examplePinyin: {
+    fontSize: 14,
+    color: '#4A90E2',
+    fontStyle: 'italic',
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  exampleEnglish: {
+    fontSize: 15,
+    color: '#666',
+    lineHeight: 22,
   },
   exampleBullet: {
     fontSize: 16,
@@ -349,6 +565,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#666',
     lineHeight: 22,
+  },
+  generateButton: {
+    backgroundColor: '#50C878',
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   statusActions: {
     backgroundColor: '#fff',

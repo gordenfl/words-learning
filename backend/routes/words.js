@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Word = require('../models/Word');
 const authMiddleware = require('../middleware/auth');
+const { generateWordDetails } = require('../services/aiService');
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -166,6 +167,48 @@ router.delete('/:wordId', async (req, res) => {
     res.json({ message: 'Word deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete word', message: error.message });
+  }
+});
+
+// Generate compounds and examples for a word using AI
+router.post('/:wordId/generate-details', async (req, res) => {
+  try {
+    const { wordId } = req.params;
+    const word = await Word.findOne({ _id: wordId, userId: req.userId });
+    
+    if (!word) {
+      return res.status(404).json({ error: 'Word not found' });
+    }
+
+    // 检查是否已有组词和例句
+    if (word.compounds && word.compounds.length > 0 && 
+        word.examples && word.examples.length > 0) {
+      return res.json({ 
+        message: 'Word details already exist',
+        word 
+      });
+    }
+
+    // 使用AI生成组词和例句
+    console.log(`🎯 Generating details for word: ${word.word}`);
+    const details = await generateWordDetails(word.word, word.pinyin, word.translation);
+    
+    // 更新单词
+    word.compounds = details.compounds || [];
+    word.examples = details.examples || [];
+    await word.save();
+
+    console.log(`✅ Generated ${word.compounds.length} compounds and ${word.examples.length} examples`);
+    res.json({ 
+      message: 'Word details generated successfully',
+      word 
+    });
+  } catch (error) {
+    console.error('❌ Failed to generate word details:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate word details', 
+      message: error.message 
+    });
   }
 });
 
