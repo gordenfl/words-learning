@@ -68,7 +68,7 @@ export default function LearningPlanScreen({ navigation }) {
       setDifficulty(plan.difficulty || 'intermediate');
       setStudyTimes(plan.preferredStudyTime || []);
     } catch (error) {
-      console.error('Error loading learning plan:', error);
+      console.log('Error loading learning plan:', error);
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ export default function LearningPlanScreen({ navigation }) {
       setShowSavedToast(true);
       setTimeout(() => setShowSavedToast(false), 1500);
     } catch (error) {
-      console.error('Auto-save failed:', error);
+      console.log('Auto-save failed:', error);
     }
   };
 

@@ -151,7 +151,7 @@ export default function WordsListScreen({ navigation, route }) {
       setHasMore(end < sortedWords.length);
       setPage(pageNum);
     } catch (error) {
-      console.error('Error loading words:', error);
+      console.log('Error loading words:', error);
       if (isRefresh) {
         Alert.alert('Oops!', 'Could not load your words. Please try again.');
       }

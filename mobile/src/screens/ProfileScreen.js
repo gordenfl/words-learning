@@ -43,7 +43,7 @@ export default function ProfileScreen({ navigation }) {
         setUser(fullUser);
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.log('Error loading profile:', error);
     } finally {
       setLoading(false);
     }

@@ -18,6 +18,13 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('authToken');
+    if (__DEV__) {
+      console.log('🔐 API Request:', config.method.toUpperCase(), config.url);
+      console.log('   Token exists:', !!token);
+      if (token) {
+        console.log('   Token preview:', token.substring(0, 20) + '...');
+      }
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -32,9 +39,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 只在开发时打印错误
+    // 只在开发时打印简洁的错误信息（不显示堆栈）
     if (__DEV__) {
-      console.error('API Error:', error.message);
+      const status = error.response?.status;
+      const message = error.response?.data?.error || error.message;
+      console.log(`❌ API Error (${status}):`, message);
     }
     return Promise.reject(error);
   }
