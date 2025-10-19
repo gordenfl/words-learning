@@ -8,14 +8,23 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { wordsAPI, articlesAPI, usersAPI } from '../services/api';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { wordsAPI, articlesAPI, usersAPI, ocrAPI } from '../services/api';
 
 export default function HomeScreen({ navigation }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generatingArticle, setGeneratingArticle] = useState(false);
+  const [processingImage, setProcessingImage] = useState(false);
+  const [showWordsConfirm, setShowWordsConfirm] = useState(false);
+  const [scannedImage, setScannedImage] = useState(null);
+  const [extractedWords, setExtractedWords] = useState([]);
+  const [knownWords, setKnownWords] = useState([]);
+  const [selectedWords, setSelectedWords] = useState([]);
   const [user, setUser] = useState(null);
   const [learningPlan, setLearningPlan] = useState(null);
 
@@ -82,6 +91,151 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const compressImage = async (imageUri) => {
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.warn('Image compression failed:', error);
+      return imageUri;
+    }
+  };
+
+  const processImage = async (imageUri) => {
+    setProcessingImage(true);
+    try {
+      const compressedUri = await compressImage(imageUri);
+      
+      const response = await fetch(compressedUri);
+      const blob = await response.blob();
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      
+      const ocrResponse = await ocrAPI.extractText(base64);
+      const { newWords, knownWords: known, stats: ocrStats } = ocrResponse.data;
+      
+      if (newWords.length === 0 && known.length === 0) {
+        Alert.alert('No Words Found', 'No Chinese characters detected in the image.');
+        return;
+      }
+      
+      // 显示确认界面
+      setScannedImage(imageUri);
+      setExtractedWords(newWords);
+      setKnownWords(known);
+      setSelectedWords(newWords.map(w => w.word)); // 默认全选新单词
+      setShowWordsConfirm(true);
+    } catch (error) {
+      console.error('OCR error:', error);
+      Alert.alert('Oops!', 'Could not extract text from the image. Please try another image.');
+    } finally {
+      setProcessingImage(false);
+    }
+  };
+
+  const toggleWordSelection = (word) => {
+    if (selectedWords.includes(word)) {
+      setSelectedWords(selectedWords.filter(w => w !== word));
+    } else {
+      setSelectedWords([...selectedWords, word]);
+    }
+  };
+
+  const handleConfirmAddWords = async () => {
+    if (selectedWords.length === 0) {
+      Alert.alert('No Words Selected', 'Please select at least one word to add');
+      return;
+    }
+
+    try {
+      const wordsToAdd = extractedWords.filter(w => selectedWords.includes(w.word));
+      await wordsAPI.addWords(wordsToAdd);
+      
+      setShowWordsConfirm(false);
+      setScannedImage(null);
+      setExtractedWords([]);
+      setKnownWords([]);
+      setSelectedWords([]);
+      
+      Alert.alert('Success! ✨', `Added ${wordsToAdd.length} new words to your list!`);
+      loadData(); // 刷新统计
+    } catch (error) {
+      Alert.alert('Oops!', 'Could not add words. Please try again.');
+    }
+  };
+
+  const handleCancelAddWords = () => {
+    setShowWordsConfirm(false);
+    setScannedImage(null);
+    setExtractedWords([]);
+    setKnownWords([]);
+    setSelectedWords([]);
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Needed', 'Please allow camera access to take photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      processImage(result.assets[0].uri);
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Needed', 'Please allow photo access to select images');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      processImage(result.assets[0].uri);
+    }
+  };
+
+  const handleScanBook = () => {
+    Alert.alert(
+      'Scan Book 📸',
+      'Choose how to import Chinese words',
+      [
+        {
+          text: 'Take Photo',
+          onPress: takePhoto
+        },
+        {
+          text: 'Choose from Gallery',
+          onPress: pickImage
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
   const handleGenerateArticle = async () => {
     try {
       setGeneratingArticle(true);
@@ -122,16 +276,24 @@ export default function HomeScreen({ navigation }) {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.welcomeText}>Welcome back, {user?.username}!</Text>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Profile')} 
-          style={styles.avatarButton}
-        >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.username?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            onPress={handleScanBook} 
+            style={styles.cameraButton}
+          >
+            <Text style={styles.cameraIcon}>📸</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Profile')} 
+            style={styles.avatarButton}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user?.username?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Learning Plan Info */}
@@ -200,13 +362,6 @@ export default function HomeScreen({ navigation }) {
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.primaryButton]}
-          onPress={() => navigation.navigate('Camera')}
-        >
-          <Text style={styles.actionButtonText}>📸 Scan Book</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={[styles.actionButton, styles.secondaryButton]}
           onPress={() => navigation.navigate('AddWord')}
         >
@@ -256,6 +411,128 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* 图片识别时的加载overlay */}
+      <Modal
+        transparent={true}
+        visible={processingImage}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color="#50C878" />
+            <Text style={styles.modalTitle}>Extracting Text...</Text>
+            <Text style={styles.modalSubtitle}>
+              Recognizing Chinese characters from image
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 确认添加单词的界面 */}
+      <Modal
+        visible={showWordsConfirm}
+        animationType="slide"
+        onRequestClose={handleCancelAddWords}
+      >
+        <View style={styles.confirmContainer}>
+          <View style={styles.confirmHeader}>
+            <Text style={styles.confirmTitle}>Confirm Words to Add</Text>
+            <TouchableOpacity onPress={handleCancelAddWords}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.confirmContent}>
+            {/* 显示扫描的图片 */}
+            {scannedImage && (
+              <View style={styles.imagePreview}>
+                <Image source={{ uri: scannedImage }} style={styles.previewImage} />
+              </View>
+            )}
+
+            {/* 新单词部分 */}
+            {extractedWords.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>
+                  🆕 New Words ({selectedWords.length}/{extractedWords.length} selected)
+                </Text>
+                <Text style={styles.confirmHint}>
+                  Tap to deselect words you don't want to add
+                </Text>
+                <View style={styles.wordChipsContainer}>
+                  {extractedWords.map((item, index) => {
+                    const isSelected = selectedWords.includes(item.word);
+                    return (
+                      <TouchableOpacity
+                        key={`new-${index}`}
+                        style={[
+                          styles.wordChip,
+                          isSelected ? styles.wordChipSelected : styles.wordChipUnselected
+                        ]}
+                        onPress={() => toggleWordSelection(item.word)}
+                      >
+                        <Text style={styles.wordChipPinyin}>{item.pinyin}</Text>
+                        <Text style={[
+                          styles.wordChipText,
+                          !isSelected && styles.wordChipTextUnselected
+                        ]}>
+                          {item.word}
+                        </Text>
+                        {!isSelected && (
+                          <View style={styles.strikethrough} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            {/* 已学单词部分 */}
+            {knownWords.length > 0 && (
+              <>
+                <Text style={styles.sectionTitleKnown}>
+                  ✓ Already Learned ({knownWords.length})
+                </Text>
+                <Text style={styles.confirmHint}>
+                  These words are already in your vocabulary
+                </Text>
+                <View style={styles.wordChipsContainer}>
+                  {knownWords.map((item, index) => (
+                    <View
+                      key={`known-${index}`}
+                      style={styles.wordChipKnown}
+                    >
+                      <Text style={styles.wordChipPinyinKnown}>{item.pinyin}</Text>
+                      <Text style={styles.wordChipTextKnown}>✓ {item.word}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+          </ScrollView>
+
+          {/* 底部按钮 */}
+          <View style={styles.confirmActions}>
+            <TouchableOpacity
+              style={[styles.confirmButton, styles.cancelButton]}
+              onPress={handleCancelAddWords}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmButton, styles.addButton]}
+              onPress={handleConfirmAddWords}
+              disabled={selectedWords.length === 0}
+            >
+              <Text style={styles.addButtonText}>
+                Add {selectedWords.length} Words
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -281,6 +558,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
+    flex: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cameraButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#50C878',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  cameraIcon: {
+    fontSize: 24,
   },
   avatarButton: {
     padding: 0,
@@ -425,6 +724,164 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  confirmContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  confirmHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    fontSize: 28,
+    color: '#999',
+    fontWeight: '300',
+  },
+  confirmContent: {
+    flex: 1,
+    padding: 15,
+  },
+  imagePreview: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    resizeMode: 'contain',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  sectionTitleKnown: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#50C878',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  confirmHint: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 15,
+  },
+  wordChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 20,
+  },
+  wordChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    margin: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
+    position: 'relative',
+  },
+  wordChipSelected: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 2,
+    borderColor: '#4A90E2',
+  },
+  wordChipUnselected: {
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    opacity: 0.6,
+  },
+  wordChipPinyin: {
+    fontSize: 11,
+    color: '#4A90E2',
+    marginBottom: 2,
+  },
+  wordChipText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  wordChipTextUnselected: {
+    color: '#999',
+  },
+  strikethrough: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#ff0000',
+  },
+  wordChipKnown: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    margin: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
+    backgroundColor: '#E0F8E0',
+    borderWidth: 2,
+    borderColor: '#50C878',
+  },
+  wordChipPinyinKnown: {
+    fontSize: 11,
+    color: '#50C878',
+    marginBottom: 2,
+  },
+  wordChipTextKnown: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#50C878',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    padding: 15,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  confirmButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addButton: {
+    backgroundColor: '#50C878',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

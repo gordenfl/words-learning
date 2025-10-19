@@ -10,7 +10,6 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import WordsListScreen from './src/screens/WordsListScreen';
 import AddWordScreen from './src/screens/AddWordScreen';
-import CameraScreen from './src/screens/CameraScreen';
 import ArticleScreen from './src/screens/ArticleScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import LearningPlanScreen from './src/screens/LearningPlanScreen';
@@ -86,11 +85,6 @@ export default function App() {
           name="AddWord" 
           component={AddWordScreen}
           options={{ title: 'Add Word' }}
-        />
-        <Stack.Screen 
-          name="Camera" 
-          component={CameraScreen}
-          options={{ title: 'Scan Text' }}
         />
         <Stack.Screen 
           name="Article" 
