@@ -42,7 +42,7 @@ export default function WordDetailScreen({ route, navigation }) {
         }, 500); // 延迟500ms开始生成，让界面先显示出来
       }
     } catch (error) {
-      console.error('Error loading word:', error);
+      console.log('Error loading word:', error);
       Alert.alert('Error', 'Could not load word details');
     } finally {
       setLoading(false);
@@ -93,7 +93,7 @@ export default function WordDetailScreen({ route, navigation }) {
       setWord(response.data.word);
       // 成功后不显示提示，直接更新界面
     } catch (error) {
-      console.error('Error generating details:', error);
+      console.log('Error generating details:', error);
       showToastMessage('❌ Failed to generate');
     } finally {
       setGeneratingDetails(false);
@@ -521,7 +521,7 @@ export default function WordDetailScreen({ route, navigation }) {
                             }, 500);
                           } catch (error) {
                             setStatus('Error: ' + error.message);
-                            console.error('Init error:', error);
+                            console.log('Init error:', error);
                           }
                         }
                         

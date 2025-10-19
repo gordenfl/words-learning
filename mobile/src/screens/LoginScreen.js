@@ -27,12 +27,24 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       const response = await authAPI.login(email, password);
+      console.log('📝 Login response received');
+      console.log('   Token exists:', !!response.data.token);
+      console.log('   Token length:', response.data.token?.length);
+      
       await AsyncStorage.setItem('authToken', response.data.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // 验证 token 是否保存成功
+      const savedToken = await AsyncStorage.getItem('authToken');
+      console.log('✅ Token saved successfully:', !!savedToken);
+      console.log('   Saved token matches:', savedToken === response.data.token);
       
       // Navigate to Home
       navigation.navigate('Home');
     } catch (error) {
+      if (__DEV__) {
+        console.log('❌ Login error:', error.response?.data?.error || error.message);
+      }
       Alert.alert('Login Failed', error.response?.data?.error || 'Something went wrong');
     } finally {
       setLoading(false);

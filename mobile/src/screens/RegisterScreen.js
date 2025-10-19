@@ -47,6 +47,9 @@ export default function RegisterScreen({ navigation }) {
       Alert.alert('Success', 'Account created successfully!');
       navigation.navigate('Home');
     } catch (error) {
+      if (__DEV__) {
+        console.log('❌ Register error:', error.response?.data?.error || error.message);
+      }
       Alert.alert('Registration Failed', error.response?.data?.error || 'Something went wrong');
     } finally {
       setLoading(false);

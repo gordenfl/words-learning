@@ -74,7 +74,7 @@ export default function ArticleScreen({ route, navigation }) {
       await articlesAPI.markAsRead(article._id);
       navigation.navigate('Home');
     } catch (error) {
-      console.error('Failed to mark article as read:', error);
+      console.log('Failed to mark article as read:', error);
       // 即使失败也返回首页
       navigation.navigate('Home');
     }

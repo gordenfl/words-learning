@@ -49,7 +49,9 @@ export default function HomeScreen({ navigation }) {
 
       const [statsResponse, planResponse] = await Promise.all([
         wordsAPI.getStats().catch(err => {
-          console.error('Stats error:', err);
+          if (__DEV__) {
+            console.log('Stats error:', err.response?.data?.error || err.message);
+          }
           // 如果是401错误，需要重新登录
           if (err.response?.status === 401) {
             Alert.alert(
@@ -65,7 +67,9 @@ export default function HomeScreen({ navigation }) {
           return { data: { total: 0, known: 0, unknown: 0, learning: 0, todayLearned: 0 } };
         }),
         usersAPI.getLearningPlan().catch(err => {
-          console.error('Learning plan error:', err);
+          if (__DEV__) {
+            console.log('Learning plan error:', err.response?.data?.error || err.message);
+          }
           // 401错误会被上面的stats捕获
           return { 
             data: { 
@@ -84,7 +88,9 @@ export default function HomeScreen({ navigation }) {
       setStats(statsResponse.data);
       setLearningPlan(planResponse.data.learningPlan);
     } catch (error) {
-      console.error('Error loading data:', error);
+      if (__DEV__) {
+        console.log('Error loading data:', error.message);
+      }
       // 401错误已经处理，其他错误使用默认值
     } finally {
       setLoading(false);
@@ -134,7 +140,9 @@ export default function HomeScreen({ navigation }) {
       setSelectedWords(newWords.map(w => w.word)); // 默认全选新单词
       setShowWordsConfirm(true);
     } catch (error) {
-      console.error('OCR error:', error);
+      if (__DEV__) {
+        console.log('OCR error:', error.message);
+      }
       Alert.alert('Oops!', 'Could not extract text from the image. Please try another image.');
     } finally {
       setProcessingImage(false);
@@ -200,7 +208,9 @@ export default function HomeScreen({ navigation }) {
         processImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('❌ takePhoto error:', error);
+      if (__DEV__) {
+        console.log('❌ takePhoto error:', error.message);
+      }
       Alert.alert('Error', 'Camera failed: ' + error.message);
     }
   };
@@ -226,7 +236,9 @@ export default function HomeScreen({ navigation }) {
         processImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('❌ pickImage error:', error);
+      if (__DEV__) {
+        console.log('❌ pickImage error:', error.message);
+      }
       Alert.alert('Error', 'Gallery failed: ' + error.message);
     }
   };
