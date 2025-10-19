@@ -33,7 +33,7 @@ const wordSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['unknown', 'learning', 'known'],
+    enum: ['unknown', 'known'],
     default: 'unknown'
   },
   sourceImage: {
