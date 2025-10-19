@@ -7,7 +7,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import * as Speech from 'expo-speech';
 import { wordsAPI } from '../services/api';
 
@@ -18,6 +20,7 @@ export default function WordDetailScreen({ route, navigation }) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [generatingDetails, setGeneratingDetails] = useState(false);
+  const [showStrokeOrder, setShowStrokeOrder] = useState(false);
 
   useEffect(() => {
     loadWordDetail();
@@ -177,11 +180,16 @@ export default function WordDetailScreen({ route, navigation }) {
               </TouchableOpacity>
             </View>
           )}
-          <Text style={styles.wordText}>{word.word}</Text>
+          <TouchableOpacity 
+            onPress={() => setShowStrokeOrder(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.wordText}>{word.word}</Text>
+          </TouchableOpacity>
           {word.translation && (
             <Text style={styles.translation}>{word.translation}</Text>
           )}
-          <Text style={styles.tapHint}>Tap 🔊 to hear pronunciation</Text>
+          <Text style={styles.tapHint}>Tap 🔊 to hear • Tap 字 to see strokes</Text>
         </View>
 
         {/* 组词模块 - 独立卡片 */}
@@ -308,6 +316,298 @@ export default function WordDetailScreen({ route, navigation }) {
           <Text style={styles.deleteButtonText}>🗑️ Delete Word</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 笔顺动画 Modal */}
+      <Modal
+        visible={showStrokeOrder}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowStrokeOrder(false)}
+      >
+        <View style={styles.strokeModalOverlay}>
+          <View style={styles.strokeModalContent}>
+            <View style={styles.strokeModalHeader}>
+              <Text style={styles.strokeModalTitle}>Stroke Order • 笔顺</Text>
+              <TouchableOpacity 
+                onPress={() => setShowStrokeOrder(false)}
+                style={styles.strokeModalClose}
+              >
+                <Text style={styles.strokeModalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.strokeWebViewContainer}>
+              <WebView
+                source={{
+                  html: `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <meta charset="UTF-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+                      <style>
+                        * {
+                          -webkit-tap-highlight-color: transparent;
+                          -webkit-touch-callout: none;
+                          -webkit-user-select: none;
+                          user-select: none;
+                        }
+                        body {
+                          margin: 0;
+                          padding: 20px;
+                          display: flex;
+                          flex-direction: column;
+                          align-items: center;
+                          justify-content: center;
+                          min-height: 100vh;
+                          background: #fff;
+                          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                          overflow-x: hidden;
+                        }
+                        #character-target {
+                          margin: 20px auto;
+                          display: block;
+                        }
+                        .controls {
+                          display: flex;
+                          gap: 12px;
+                          margin-top: 25px;
+                          flex-wrap: wrap;
+                          justify-content: center;
+                          width: 100%;
+                          padding: 0 20px;
+                          box-sizing: border-box;
+                        }
+                        button {
+                          padding: 14px 28px;
+                          font-size: 17px;
+                          border: none;
+                          border-radius: 10px;
+                          background: #4A90E2;
+                          color: white;
+                          font-weight: 600;
+                          cursor: pointer;
+                          box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+                          transition: all 0.2s;
+                          flex: 1;
+                          min-width: 140px;
+                          max-width: 200px;
+                        }
+                        button:active {
+                          transform: scale(0.96);
+                          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        }
+                        button:hover {
+                          background: #3A7BC8;
+                        }
+                        .info {
+                          text-align: center;
+                          color: #666;
+                          margin-top: 18px;
+                          font-size: 15px;
+                          padding: 0 20px;
+                        }
+                        #status {
+                          color: #4A90E2;
+                          font-size: 14px;
+                          margin-top: 10px;
+                          min-height: 20px;
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <svg id="character-target" width="280" height="280"></svg>
+                      <div class="controls">
+                        <button id="animateBtn" ontouchstart="animate()" onclick="animate()">▶️ Animate</button>
+                        <button id="practiceBtn" ontouchstart="practice()" onclick="practice()">✏️ Practice</button>
+                      </div>
+                      <div class="info">Tap buttons to animate or practice</div>
+                      <div id="status"></div>
+                      
+                      <script>
+                        let writer = null;
+                        let isAnimating = false;
+                        let scriptLoaded = false;
+                        
+                        function setStatus(msg) {
+                          const statusEl = document.getElementById('status');
+                          if (statusEl) {
+                            statusEl.textContent = msg;
+                          }
+                        }
+                        
+                        let loopCount = 0;
+                        let maxLoops = 3; // 循环 3 次
+                        
+                        function animate() {
+                          if (!writer) return;
+                          
+                          if (!isAnimating) {
+                            loopCount = 0;
+                          }
+                          
+                          isAnimating = true;
+                          setStatus('Playing animation... (Loop ' + (loopCount + 1) + '/' + maxLoops + ')');
+                          
+                          writer.animateCharacter({
+                            onComplete: function() {
+                              loopCount++;
+                              if (loopCount < maxLoops) {
+                                // 继续下一次循环
+                                setTimeout(() => {
+                                  animate();
+                                }, 800); // 每次循环之间暂停 800ms
+                              } else {
+                                // 完成所有循环
+                                isAnimating = false;
+                                loopCount = 0;
+                                setStatus('Animation complete!');
+                                setTimeout(() => setStatus('Tap Animate to replay'), 2000);
+                              }
+                            }
+                          });
+                        }
+                        
+                        function practice() {
+                          if (!writer) return;
+                          setStatus('Starting practice mode...');
+                          writer.quiz({
+                            onMistake: function(strokeData) {
+                              setStatus('Try again!');
+                            },
+                            onCorrectStroke: function(strokeData) {
+                              setStatus('Good! Stroke ' + (strokeData.strokeNum + 1));
+                            },
+                            onComplete: function() {
+                              setStatus('Perfect! 完成！');
+                              setTimeout(() => setStatus(''), 3000);
+                            }
+                          });
+                        }
+                        
+                        function initWriter() {
+                          try {
+                            setStatus('Initializing...');
+                            
+                            if (typeof HanziWriter === 'undefined') {
+                              setStatus('Loading library...');
+                              setTimeout(initWriter, 500);
+                              return;
+                            }
+                            
+                            writer = HanziWriter.create('character-target', '${word.word}', {
+                              width: 280,
+                              height: 280,
+                              padding: 15,
+                              showOutline: true,
+                              strokeAnimationSpeed: 0.5, // 减慢速度（原来 1.2，越小越慢）
+                              delayBetweenStrokes: 600,   // 增加笔画间隔（原来 200ms，现在 600ms）
+                              delayBetweenLoops: 1000,    // 循环之间的延迟
+                              strokeColor: '#333',
+                              radicalColor: '#4A90E2',
+                              outlineColor: '#DDD',
+                              drawingColor: '#4A90E2',
+                              drawingWidth: 6,
+                              showCharacter: true
+                            });
+                            
+                            setStatus('Ready!');
+                            
+                            // 自动播放一次
+                            setTimeout(() => {
+                              if (writer) {
+                                animate();
+                              }
+                            }, 500);
+                          } catch (error) {
+                            setStatus('Error: ' + error.message);
+                            console.error('Init error:', error);
+                          }
+                        }
+                        
+                        // 加载 HanziWriter 库（尝试多个 CDN 源）
+                        (function() {
+                          setStatus('Loading HanziWriter...');
+                          
+                          const cdnSources = [
+                            'https://unpkg.com/hanzi-writer@3.5.0/dist/hanzi-writer.min.js',
+                            'https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js',
+                            'https://unpkg.com/hanzi-writer@latest/dist/hanzi-writer.min.js',
+                            'https://cdn.jsdelivr.net/npm/hanzi-writer@latest/dist/hanzi-writer.min.js'
+                          ];
+                          
+                          let currentIndex = 0;
+                          
+                          function tryLoadScript() {
+                            if (currentIndex >= cdnSources.length) {
+                              setStatus('All CDN sources failed. Network issue?');
+                              return;
+                            }
+                            
+                            const source = cdnSources[currentIndex];
+                            setStatus('Trying CDN ' + (currentIndex + 1) + '...');
+                            
+                            const script = document.createElement('script');
+                            script.src = source;
+                            script.timeout = 5000;
+                            
+                            const timeout = setTimeout(() => {
+                              setStatus('Timeout, trying next...');
+                              script.remove();
+                              currentIndex++;
+                              tryLoadScript();
+                            }, 5000);
+                            
+                            script.onload = function() {
+                              clearTimeout(timeout);
+                              scriptLoaded = true;
+                              setStatus('Library loaded from CDN ' + (currentIndex + 1) + '!');
+                              setTimeout(initWriter, 200);
+                            };
+                            
+                            script.onerror = function() {
+                              clearTimeout(timeout);
+                              setStatus('CDN ' + (currentIndex + 1) + ' failed, trying next...');
+                              currentIndex++;
+                              setTimeout(tryLoadScript, 500);
+                            };
+                            
+                            document.head.appendChild(script);
+                          }
+                          
+                          tryLoadScript();
+                        })();
+                      </script>
+                    </body>
+                    </html>
+                  `
+                }}
+                style={styles.strokeWebView}
+                originWhitelist={['*']}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                startInLoadingState={true}
+                scalesPageToFit={false}
+                scrollEnabled={false}
+                bounces={false}
+                allowsInlineMediaPlayback={true}
+                mediaPlaybackRequiresUserAction={false}
+                mixedContentMode="always"
+                renderLoading={() => (
+                  <View style={styles.strokeLoadingContainer}>
+                    <ActivityIndicator size="large" color="#4A90E2" />
+                    <Text style={styles.strokeLoadingText}>Loading stroke order...</Text>
+                  </View>
+                )}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.warn('WebView error: ', nativeEvent);
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -654,6 +954,74 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  strokeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  strokeModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  strokeModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  strokeModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  strokeModalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  strokeModalCloseText: {
+    fontSize: 20,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  strokeWebViewContainer: {
+    height: 550,
+    width: '100%',
+  },
+  strokeWebView: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  strokeLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  strokeLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#4A90E2',
   },
 });
 
