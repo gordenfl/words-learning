@@ -7,14 +7,15 @@
 // macOS/Linux: ifconfig | grep "inet " | grep -v 127.0.0.1
 // Windows: ipconfig
 
+// 环境配置：开发 vs 生产
+const IS_DEVELOPMENT = __DEV__; // Expo 自动设置
+
 const Config = {
   // API配置
   API: {
-    // 修改这里的IP地址为你的电脑IP
-    // 如果在iOS模拟器运行，使用 'localhost'
-    // 如果在Android模拟器运行，使用 '10.0.2.2'
-    // 如果在物理设备运行，使用你的电脑局域网IP
-    HOST: '192.168.101.95',
+    // 开发环境：本地 IP
+    // 生产环境：外网服务器
+    HOST: IS_DEVELOPMENT ? '192.168.101.95' : 'gordenfl.com',
     PORT: '3003',
     
     // 自动生成完整的BASE_URL

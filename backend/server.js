@@ -2,10 +2,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
-
+const path = require('path');
 
 // Load environment variables
-dotenv.config();
+// 如果在 Docker 中运行，环境变量已经由 docker-compose 传入
+// 如果本地运行，从根目录加载 .env
+if (!process.env.MONGODB_URI) {
+  dotenv.config({ path: path.join(__dirname, '../.env') });
+}
 
 // Import routes
 const authRoutes = require('./routes/auth');
