@@ -35,20 +35,13 @@ router.get('/search/query', async (req, res) => {
 // Get learning plan (must be before /:userId)
 router.get('/learning-plan', async (req, res) => {
   try {
-    console.log('📋 GET /learning-plan - User ID:', req.userId);
-    
     const user = await User.findById(req.userId);
     if (!user) {
-      console.log('❌ User not found:', req.userId);
       return res.status(404).json({ error: 'User not found' });
     }
 
-    console.log('👤 User found:', user.username);
-    console.log('📚 Current learningPlan:', user.learningPlan);
-
     // 确保learningPlan存在，如果不存在则初始化
     if (!user.learningPlan) {
-      console.log('⚠️  No learningPlan found, initializing...');
       user.learningPlan = {
         dailyWordGoal: 10,
         weeklyWordGoal: 50,
@@ -58,17 +51,14 @@ router.get('/learning-plan', async (req, res) => {
         startDate: new Date()
       };
       await user.save();
-      console.log('✅ LearningPlan initialized and saved');
     }
 
-    console.log('✅ Returning learningPlan');
     res.json({ 
       learningPlan: user.learningPlan
     });
   } catch (error) {
     console.error('❌ Error in GET /learning-plan:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ error: 'Failed to get learning plan', message: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Failed to get learning plan', message: error.message });
   }
 });
 

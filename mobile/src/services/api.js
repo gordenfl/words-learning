@@ -20,9 +20,6 @@ api.interceptors.request.use(
     const token = await AsyncStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log(`📤 Request: ${config.method.toUpperCase()} ${config.url} (Token: ${token.substring(0, 15)}...)`);
-    } else {
-      console.log(`📤 Request: ${config.method.toUpperCase()} ${config.url} (No token)`);
     }
     return config;
   },
@@ -31,17 +28,13 @@ api.interceptors.request.use(
   }
 );
 
-// Log responses
+// Handle response errors
 api.interceptors.response.use(
-  (response) => {
-    console.log(`✅ Response: ${response.config.url} - ${response.status}`);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    if (error.response) {
-      console.error(`❌ Response: ${error.config.url} - ${error.response.status}`, error.response.data);
-    } else {
-      console.error(`❌ Request failed: ${error.config.url}`, error.message);
+    // 只在开发时打印错误
+    if (__DEV__) {
+      console.error('API Error:', error.message);
     }
     return Promise.reject(error);
   }
@@ -125,17 +118,8 @@ export const usersAPI = {
     api.delete('/users/account'),
   
   // Learning Plan APIs
-  getLearningPlan: async () => {
-    console.log('🔍 Calling GET /users/learning-plan');
-    try {
-      const response = await api.get('/users/learning-plan');
-      console.log('✅ Learning plan response:', response.status);
-      return response;
-    } catch (error) {
-      console.error('❌ Learning plan request failed:', error.response?.status, error.response?.data);
-      throw error;
-    }
-  },
+  getLearningPlan: () =>
+    api.get('/users/learning-plan'),
   
   updateLearningPlan: (plan) =>
     api.patch('/users/learning-plan', plan),
