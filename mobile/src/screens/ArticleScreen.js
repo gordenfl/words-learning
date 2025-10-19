@@ -7,37 +7,76 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { articlesAPI, wordsAPI } from '../services/api';
 
 export default function ArticleScreen({ route, navigation }) {
   const [article, setArticle] = useState(route.params?.article);
   const [completedWords, setCompletedWords] = useState(new Set());
+  const [isReading, setIsReading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const speakWord = (word) => {
+    Speech.speak(word, {
+      language: 'zh-CN',
+      pitch: 1.0,
+      rate: 0.1,
+    });
+  };
+
+  const speakArticle = () => {
+    if (isReading) {
+      // 如果正在朗读，停止朗读
+      Speech.stop();
+      setIsReading(false);
+    } else {
+      // 开始朗读文章
+      setIsReading(true);
+      
+      // 提取文章中的中文内容（去掉英文标题和鼓励语）
+      const lines = article.content.split('\n');
+      const chineseLines = lines.filter(line => {
+        // 过滤掉英文行（标题和鼓励语）
+        return line.trim() && /[\u4e00-\u9fa5]/.test(line);
+      });
+      const chineseContent = chineseLines.join(' '); // 用空格连接段落
+      
+      Speech.speak(chineseContent, {
+        language: 'zh-CN',
+        pitch: 1.0,
+        rate: 0.3, // 比单词稍快一点
+        onDone: () => setIsReading(false),
+        onStopped: () => setIsReading(false),
+        onError: () => setIsReading(false),
+      });
+    }
+  };
+
+  const showToastMessage = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+  };
 
   const markWordAsKnown = async (wordId, wordText) => {
     try {
       await wordsAPI.updateWordStatus(wordId, 'known');
       setCompletedWords(prev => new Set([...prev, wordId]));
-      Alert.alert('Great!', `You've learned "${wordText}"!`);
+      showToastMessage(`✓ Learned "${wordText}"`);
     } catch (error) {
-      Alert.alert('Oops!', 'Could not update the word status. Please try again.');
+      showToastMessage('❌ Update failed');
     }
   };
 
   const markArticleAsRead = async () => {
     try {
       await articlesAPI.markAsRead(article._id);
-      Alert.alert(
-        'Article Completed!',
-        'Great job! Keep learning more words.',
-        [
-          {
-            text: 'Back to Home',
-            onPress: () => navigation.navigate('Home'),
-          },
-        ]
-      );
+      navigation.navigate('Home');
     } catch (error) {
-      Alert.alert('Oops!', 'Could not mark the article as completed. Please try again.');
+      console.error('Failed to mark article as read:', error);
+      // 即使失败也返回首页
+      navigation.navigate('Home');
     }
   };
 
@@ -114,23 +153,43 @@ export default function ArticleScreen({ route, navigation }) {
           {targetWords.map((tw, index) => {
             const wordId = tw.word?._id || tw.word;
             const wordText = tw.word?.word || tw.wordText;
+            const wordPinyin = tw.word?.pinyin || '';
             const isCompleted = completedWords.has(wordId);
 
             return (
-              <View key={index} style={styles.wordItem}>
-                <Text style={styles.wordItemText}>{wordText}</Text>
-                {!isCompleted ? (
-                  <TouchableOpacity
-                    style={styles.markKnownBtn}
-                    onPress={() => markWordAsKnown(wordId, wordText)}
-                  >
-                    <Text style={styles.markKnownText}>Mark as Known</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.completedBadge}>
-                    <Text style={styles.completedText}>✓ Known</Text>
+              <View key={index} style={styles.wordCard}>
+                <View style={styles.wordCardContent}>
+                  <View style={styles.wordInfoArea}>
+                    {wordPinyin && (
+                      <View style={styles.pinyinWithSpeaker}>
+                        <Text style={styles.pinyin}>{wordPinyin}</Text>
+                        <TouchableOpacity 
+                          onPress={() => speakWord(wordText)}
+                          activeOpacity={0.6}
+                          style={styles.speakerButton}
+                        >
+                          <Text style={styles.speakerIcon}>🔊</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    <Text style={styles.wordText}>{wordText}</Text>
                   </View>
-                )}
+                  
+                  <View style={styles.wordActions}>
+                    {!isCompleted ? (
+                      <TouchableOpacity
+                        style={styles.markKnownBtn}
+                        onPress={() => markWordAsKnown(wordId, wordText)}
+                      >
+                        <Text style={styles.markKnownText}>✓</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.completedBadge}>
+                        <Text style={styles.completedText}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
               </View>
             );
           })}
@@ -149,8 +208,28 @@ export default function ArticleScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Toast 提示 */}
+      {showToast && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+      
       <View style={styles.content}>
-        <Text style={styles.title}>{article.title}</Text>
+        {/* 标题和朗读按钮 */}
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{article.title}</Text>
+          <TouchableOpacity
+            onPress={speakArticle}
+            style={styles.readAloudBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.readAloudIcon}>
+              {isReading ? '⏸' : '🔊'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
         <View style={styles.meta}>
           <Text style={styles.metaText}>
             Difficulty: {article.difficulty}
@@ -183,11 +262,34 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
   title: {
+    flex: 1,
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 15,
+  },
+  readAloudBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#4A90E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  readAloudIcon: {
+    fontSize: 24,
   },
   meta: {
     flexDirection: 'row',
@@ -213,7 +315,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   wordsSection: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f5f5',
     padding: 15,
     borderRadius: 10,
     marginBottom: 20,
@@ -224,39 +326,82 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
-  wordItem: {
+  wordCard: {
+    backgroundColor: '#fff',
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  wordCardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
-  wordItemText: {
-    fontSize: 16,
+  wordInfoArea: {
+    flex: 1,
+    marginRight: 15,
+  },
+  pinyinWithSpeaker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  pinyin: {
+    fontSize: 20,
+    color: '#4A90E2',
+    fontStyle: 'italic',
+  },
+  speakerButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  speakerIcon: {
+    fontSize: 20,
+  },
+  wordText: {
+    fontSize: 48,
+    fontWeight: 'bold',
     color: '#333',
-    fontWeight: '500',
+    marginBottom: 6,
+  },
+  wordActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   markKnownBtn: {
-    backgroundColor: '#4A90E2',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 5,
+    backgroundColor: '#50C878',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   markKnownText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '600',
   },
   completedBadge: {
     backgroundColor: '#E0F8E0',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   completedText: {
     color: '#50C878',
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '600',
   },
   completeButton: {
@@ -277,6 +422,28 @@ const styles = StyleSheet.create({
     marginTop: 50,
     fontSize: 16,
     color: '#666',
+  },
+  toast: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#50C878',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

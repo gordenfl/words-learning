@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Animated,
 } from 'react-native';
 import * as Speech from 'expo-speech';
 import { wordsAPI } from '../services/api';
@@ -19,7 +20,11 @@ export default function WordsListScreen({ navigation, route }) {
   const [filter, setFilter] = useState(initialFilter);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [removingWordIds, setRemovingWordIds] = useState(new Set());
   const PAGE_SIZE = 50;
+  
+  // 为每个单词存储动画值
+  const fadeAnims = useRef({});
 
   useEffect(() => {
     // 监听路由参数变化
@@ -37,34 +42,81 @@ export default function WordsListScreen({ navigation, route }) {
   }, [filter]);
 
   useEffect(() => {
-    // 监听页面焦点，当从详情页返回时重新获取单词数据
-    const unsubscribe = navigation.addListener('focus', async () => {
-      // 只在已经加载过数据后才刷新（避免初次加载时重复请求）
-      if (words.length > 0) {
-        // 重新获取数据但保持滚动位置
-        try {
-          const status = filter === 'all' ? undefined : filter;
-          const response = await wordsAPI.getWords(status);
-          const allWords = response.data.words;
+    // 监听从详情页返回的更新
+    const unsubscribe = navigation.addListener('focus', () => {
+      // 检查是否有单词更新（通过 route params 传递）
+      if (route.params?.wordUpdated) {
+        const { wordId, newStatus, deleted } = route.params.wordUpdated;
+        
+        if (deleted) {
+          // 标记为正在移除
+          setRemovingWordIds(prev => new Set([...prev, wordId]));
           
-          // 按创建时间倒序排列（最新的在前）
-          const sortedWords = allWords.sort((a, b) => 
-            new Date(b.createdAt) - new Date(a.createdAt)
-          );
+          // 初始化动画值（如果不存在）
+          if (!fadeAnims.current[wordId]) {
+            fadeAnims.current[wordId] = new Animated.Value(1);
+          }
           
-          // 更新已加载的单词数据
-          const currentPageCount = words.length;
-          const updatedWords = sortedWords.slice(0, currentPageCount);
-          setWords(updatedWords);
-          setHasMore(currentPageCount < sortedWords.length);
-        } catch (error) {
-          console.error('Error refreshing words:', error);
+          // 淡出动画
+          Animated.timing(fadeAnims.current[wordId], {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+            setRemovingWordIds(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(wordId);
+              return newSet;
+            });
+            delete fadeAnims.current[wordId];
+          });
+        } else if (newStatus) {
+          // 检查新状态是否符合当前过滤条件
+          const shouldRemove = 
+            (filter === 'unknown' && newStatus !== 'unknown') ||
+            (filter === 'known' && newStatus !== 'known');
+          
+          if (shouldRemove) {
+            // 标记为正在移除
+            setRemovingWordIds(prev => new Set([...prev, wordId]));
+            
+            // 初始化动画值（如果不存在）
+            if (!fadeAnims.current[wordId]) {
+              fadeAnims.current[wordId] = new Animated.Value(1);
+            }
+            
+            // 淡出动画
+            Animated.timing(fadeAnims.current[wordId], {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }).start(() => {
+              setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+              setRemovingWordIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(wordId);
+                return newSet;
+              });
+              delete fadeAnims.current[wordId];
+            });
+          } else {
+            // 如果符合过滤条件，更新状态
+            setWords(prevWords => 
+              prevWords.map(word => 
+                word._id === wordId ? { ...word, status: newStatus } : word
+              )
+            );
+          }
         }
+        
+        // 清除参数
+        navigation.setParams({ wordUpdated: undefined });
       }
     });
 
     return unsubscribe;
-  }, [navigation, words.length, filter]);
+  }, [navigation, route.params?.wordUpdated, filter]);
 
   const loadWords = async (pageNum = page, isRefresh = false) => {
     if (!hasMore && !isRefresh) return;
@@ -127,12 +179,43 @@ export default function WordsListScreen({ navigation, route }) {
     try {
       await wordsAPI.updateWordStatus(wordId, newStatus);
       
-      // 本地更新状态，不重新加载列表（保持滚动位置）
-      setWords(prevWords => 
-        prevWords.map(word => 
-          word._id === wordId ? { ...word, status: newStatus } : word
-        )
-      );
+      // 检查新状态是否符合当前过滤条件
+      const shouldRemove = 
+        (filter === 'unknown' && newStatus !== 'unknown') ||
+        (filter === 'known' && newStatus !== 'known');
+      
+      if (shouldRemove) {
+        // 标记为正在移除
+        setRemovingWordIds(prev => new Set([...prev, wordId]));
+        
+        // 初始化动画值（如果不存在）
+        if (!fadeAnims.current[wordId]) {
+          fadeAnims.current[wordId] = new Animated.Value(1);
+        }
+        
+        // 淡出动画
+        Animated.timing(fadeAnims.current[wordId], {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          // 动画结束后从列表中移除
+          setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+          setRemovingWordIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(wordId);
+            return newSet;
+          });
+          delete fadeAnims.current[wordId];
+        });
+      } else {
+        // 如果符合过滤条件，更新状态
+        setWords(prevWords => 
+          prevWords.map(word => 
+            word._id === wordId ? { ...word, status: newStatus } : word
+          )
+        );
+      }
     } catch (error) {
       Alert.alert('Oops!', 'Could not update the word status. Please try again.');
     }
@@ -151,8 +234,29 @@ export default function WordsListScreen({ navigation, route }) {
             try {
               await wordsAPI.deleteWord(wordId);
               
-              // 本地删除单词，不重新加载列表（保持滚动位置）
-              setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+              // 标记为正在移除
+              setRemovingWordIds(prev => new Set([...prev, wordId]));
+              
+              // 初始化动画值（如果不存在）
+              if (!fadeAnims.current[wordId]) {
+                fadeAnims.current[wordId] = new Animated.Value(1);
+              }
+              
+              // 淡出动画
+              Animated.timing(fadeAnims.current[wordId], {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              }).start(() => {
+                // 动画结束后从列表中移除
+                setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+                setRemovingWordIds(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(wordId);
+                  return newSet;
+                });
+                delete fadeAnims.current[wordId];
+              });
             } catch (error) {
               Alert.alert('Oops!', 'Could not delete the word. Please try again.');
             }
@@ -162,12 +266,22 @@ export default function WordsListScreen({ navigation, route }) {
     );
   };
 
-  const renderWord = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.wordCard}
-      onPress={() => navigation.navigate('WordDetail', { wordId: item._id })}
-      activeOpacity={0.9}
-    >
+  const renderWord = ({ item }) => {
+    // 初始化动画值
+    if (!fadeAnims.current[item._id]) {
+      fadeAnims.current[item._id] = new Animated.Value(1);
+    }
+    
+    const isRemoving = removingWordIds.has(item._id);
+    
+    return (
+      <Animated.View style={{ opacity: fadeAnims.current[item._id] }}>
+        <TouchableOpacity 
+          style={styles.wordCard}
+          onPress={() => navigation.navigate('WordDetail', { wordId: item._id })}
+          activeOpacity={0.9}
+          disabled={isRemoving}
+        >
       <View style={styles.cardHeader}>
         <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
           <Text style={styles.statusText}>{item.status}</Text>
@@ -230,8 +344,10 @@ export default function WordsListScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
-  );
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   return (
     <View style={styles.container}>

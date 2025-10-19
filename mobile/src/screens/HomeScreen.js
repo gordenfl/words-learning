@@ -270,9 +270,9 @@ export default function HomeScreen({ navigation }) {
         setGeneratingArticle(false);
         Alert.alert(
           response.data.message || 'Great job! 🎉',
-          response.data.suggestion || 'Add more words to continue learning.',
+          response.data.suggestion || 'Scan books or photos to add more Chinese words.',
           [
-            { text: 'Add Words', onPress: () => navigation.navigate('AddWord') },
+            { text: 'Scan Now', onPress: handleScanBook },
             { text: 'OK', style: 'cancel' }
           ]
         );
@@ -385,13 +385,6 @@ export default function HomeScreen({ navigation }) {
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.secondaryButton]}
-          onPress={() => navigation.navigate('AddWord')}
-        >
-          <Text style={styles.actionButtonText}>➕ Add Word</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.actionButton, styles.secondaryButton]}
           onPress={() => navigation.navigate('WordsList')}

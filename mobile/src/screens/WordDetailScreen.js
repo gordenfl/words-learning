@@ -15,6 +15,8 @@ export default function WordDetailScreen({ route, navigation }) {
   const { wordId } = route.params;
   const [word, setWord] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     loadWordDetail();
@@ -42,14 +44,32 @@ export default function WordDetailScreen({ route, navigation }) {
     });
   };
 
+  const showToastMessage = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+  };
+
   const updateWordStatus = async (status) => {
     try {
       await wordsAPI.updateStatus(wordId, status);
       const updatedWord = { ...word, status };
       setWord(updatedWord);
-      Alert.alert('Success', `Word marked as ${status}`);
+      
+      // 通知列表页面更新（不刷新整个列表，只更新这个单词）
+      const routes = navigation.getState().routes;
+      const wordsListRoute = routes.find(r => r.name === 'WordsList');
+      if (wordsListRoute) {
+        navigation.navigate('WordsList', {
+          ...wordsListRoute.params,
+          wordUpdated: { wordId, newStatus: status }
+        });
+      }
+      
+      const statusLabel = status === 'known' ? '✓ Marked as Known' : '📖 Marked as Learning';
+      showToastMessage(statusLabel);
     } catch (error) {
-      Alert.alert('Error', 'Could not update word status');
+      showToastMessage('❌ Update failed');
     }
   };
 
@@ -65,7 +85,18 @@ export default function WordDetailScreen({ route, navigation }) {
           onPress: async () => {
             try {
               await wordsAPI.delete(wordId);
-              navigation.goBack();
+              
+              // 通知列表页面删除这个单词
+              const routes = navigation.getState().routes;
+              const wordsListRoute = routes.find(r => r.name === 'WordsList');
+              if (wordsListRoute) {
+                navigation.navigate('WordsList', {
+                  ...wordsListRoute.params,
+                  wordUpdated: { wordId, deleted: true }
+                });
+              } else {
+                navigation.goBack();
+              }
             } catch (error) {
               Alert.alert('Error', 'Could not delete word');
             }
@@ -93,6 +124,13 @@ export default function WordDetailScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Toast 提示 */}
+      {showToast && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+      
       <View style={styles.content}>
         {/* 状态标签 */}
         <View style={styles.statusContainer}>
@@ -361,6 +399,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  toast: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#50C878',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

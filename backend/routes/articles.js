@@ -34,18 +34,29 @@ router.post('/generate', async (req, res) => {
     const { wordCount = dailyGoal } = req.body;
 
     // Get unknown words matching difficulty (or all unknown if not enough)
-    let unknownWords = await Word.find({ 
-      userId: req.userId, 
-      status: 'unknown',
-      difficulty: difficulty
-    }).limit(wordCount);
+    // 使用 MongoDB 的 $sample 聚合管道随机选择单词
+    let unknownWords = await Word.aggregate([
+      { 
+        $match: { 
+          userId: req.userId, 
+          status: 'unknown',
+          difficulty: difficulty 
+        } 
+      },
+      { $sample: { size: wordCount } }
+    ]);
 
-    // If not enough words at this difficulty, get any unknown words
+    // If not enough words at this difficulty, get any unknown words (randomly)
     if (unknownWords.length < 3) {
-      unknownWords = await Word.find({ 
-        userId: req.userId, 
-        status: 'unknown' 
-      }).limit(wordCount);
+      unknownWords = await Word.aggregate([
+        { 
+          $match: { 
+            userId: req.userId, 
+            status: 'unknown' 
+          } 
+        },
+        { $sample: { size: wordCount } }
+      ]);
     }
 
     if (unknownWords.length === 0) {
@@ -66,10 +77,13 @@ router.post('/generate', async (req, res) => {
     .limit(30);
 
     console.log(`📚 Generating article with ${unknownWords.length} unknown words and ${knownWords.length} known words`);
-
+    
     // Generate article based on difficulty using AI service
     const targetWords = unknownWords.map(w => w.word);
     const knownWordTexts = knownWords.map(w => w.word);
+    
+    console.log(`🎯 Target words for this article: ${targetWords.join('、')}`);
+    console.log(`📖 Known words to use: ${knownWordTexts.join('、')}`);
     const content = await generateChineseStory(targetWords, knownWordTexts, difficulty);
 
     const article = new Article({
