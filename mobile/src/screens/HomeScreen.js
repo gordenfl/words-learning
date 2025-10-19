@@ -386,13 +386,6 @@ export default function HomeScreen({ navigation }) {
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.secondaryButton]}
-          onPress={() => navigation.navigate('WordsList')}
-        >
-          <Text style={styles.actionButtonText}>📚 My Words</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={[
             styles.actionButton, 
             styles.primaryButton,

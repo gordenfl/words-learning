@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usersAPI, authAPI } from '../services/api';
@@ -18,6 +19,11 @@ export default function ProfileScreen({ navigation }) {
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -61,38 +67,43 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleChangePassword = () => {
-    Alert.prompt(
-      'Change Password',
-      'Enter your current password',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Next',
-          onPress: (currentPassword) => {
-            Alert.prompt(
-              'Change Password',
-              'Enter new password',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Change',
-                  onPress: async (newPassword) => {
-                    try {
-                      await authAPI.changePassword(currentPassword, newPassword);
-                      Alert.alert('Success', 'Password changed successfully');
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to change password');
-                    }
-                  },
-                },
-              ],
-              'secure-text'
-            );
-          },
-        },
-      ],
-      'secure-text'
-    );
+    setShowPasswordModal(true);
+  };
+
+  const handleCancelPasswordChange = () => {
+    setShowPasswordModal(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleConfirmPasswordChange = async () => {
+    // 验证输入
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await authAPI.changePassword(currentPassword, newPassword);
+      Alert.alert('Success', 'Password changed successfully');
+      handleCancelPasswordChange();
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -202,38 +213,80 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.settingButton}
+            style={[styles.settingButton, styles.lastButton]}
             onPress={handleLogout}
           >
             <Text style={styles.settingButtonText}>Logout</Text>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingButton, styles.dangerButton]}
-            onPress={handleDeleteAccount}
-          >
-            <Text style={[styles.settingButtonText, styles.dangerText]}>
-              Delete Account
-            </Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.achievements}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          {user?.achievements?.length > 0 ? (
-            user.achievements.map((achievement, index) => (
-              <View key={index} style={styles.achievementCard}>
-                <Text style={styles.achievementTitle}>{achievement.title}</Text>
-                <Text style={styles.achievementDesc}>{achievement.description}</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No achievements yet. Keep learning!</Text>
-          )}
         </View>
       </View>
+
+      {/* 修改密码 Modal */}
+      <Modal
+        visible={showPasswordModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelPasswordChange}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Change Password</Text>
+
+            <Text style={styles.modalLabel}>Current Password</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter current password"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.modalLabel}>New Password</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter new password"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.modalLabel}>Confirm New Password</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={handleCancelPasswordChange}
+                disabled={changingPassword}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={handleConfirmPasswordChange}
+                disabled={changingPassword}
+              >
+                {changingPassword ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Change</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -348,39 +401,77 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#999',
   },
-  dangerButton: {
+  lastButton: {
     borderBottomWidth: 0,
   },
-  dangerText: {
-    color: '#FF3B30',
-  },
-  achievements: {
-    backgroundColor: '#fff',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
-    borderRadius: 10,
-    marginBottom: 20,
   },
-  achievementCard: {
-    backgroundColor: '#f9f9f9',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 25,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  achievementTitle: {
-    fontSize: 16,
+  modalTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
-  },
-  achievementDesc: {
-    fontSize: 14,
-    color: '#666',
-  },
-  emptyText: {
+    marginBottom: 20,
     textAlign: 'center',
-    color: '#999',
+  },
+  modalLabel: {
     fontSize: 14,
-    marginTop: 10,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  modalInput: {
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    marginTop: 25,
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  modalCancelText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalConfirmButton: {
+    backgroundColor: '#4A90E2',
+  },
+  modalConfirmText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
