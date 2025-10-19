@@ -183,7 +183,131 @@ ${guide.level}
 请现在开始创作：`;
 }
 
+/**
+ * 生成单词的组词和例句
+ * @param {String} word - 中文单字
+ * @param {String} pinyin - 拼音
+ * @param {String} translation - 英文翻译
+ * @returns {Promise<Object>} { compounds: Array, examples: Array }
+ */
+async function generateWordDetails(word, pinyin, translation) {
+  try {
+    const prompt = `请为中文字"${word}"（拼音：${pinyin}，英文：${translation}）生成学习材料。
+
+【要求】
+1. **组词（3-5个）**：用这个字组成常用词汇
+   - 每个词组包含2-3个字
+   - 提供拼音（用空格分隔音节，带声调符号）
+   - 提供英文释义
+   
+2. **例句（2个）**：简单实用的句子
+   - 每个句子10-15个字
+   - 句子要简单、实用、生活化
+   - 提供拼音（用空格分隔每个字的音节）
+   - 提供英文翻译
+
+【输出格式】（严格JSON格式，不要其他内容）
+{
+  "compounds": [
+    {"word": "学生", "pinyin": "xué shēng", "meaning": "student"},
+    {"word": "学习", "pinyin": "xué xí", "meaning": "to study"}
+  ],
+  "examples": [
+    {
+      "chinese": "我在学校学习中文。",
+      "pinyin": "wǒ zài xué xiào xué xí zhōng wén",
+      "english": "I study Chinese at school."
+    }
+  ]
+}
+
+请生成：`;
+
+    let response;
+    if (USE_DEEPSEEK && DEEPSEEK_API_KEY) {
+      console.log(`🤖 Calling DeepSeek to generate details for "${word}"...`);
+      response = await axios.post(
+        'https://api.deepseek.com/v1/chat/completions',
+        {
+          model: 'deepseek-chat',
+          messages: [
+            {
+              role: 'system',
+              content: '你是一位专业的中文教师。请严格按照JSON格式返回数据，不要添加任何其他文字说明。'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 800
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+    } else if (OPENAI_API_KEY && OPENAI_API_KEY !== 'your_openai_api_key_here') {
+      console.log(`🤖 Calling OpenAI to generate details for "${word}"...`);
+      response = await axios.post(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: '你是一位专业的中文教师。请严格按照JSON格式返回数据，不要添加任何其他文字说明。'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 800
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+    } else {
+      throw new Error('No AI API configured');
+    }
+
+    const content = response.data.choices[0].message.content.trim();
+    
+    // 尝试提取JSON（去除可能的markdown代码块标记）
+    let jsonContent = content;
+    if (content.includes('```json')) {
+      jsonContent = content.split('```json')[1].split('```')[0].trim();
+    } else if (content.includes('```')) {
+      jsonContent = content.split('```')[1].split('```')[0].trim();
+    }
+    
+    const result = JSON.parse(jsonContent);
+    console.log(`✅ Generated ${result.compounds?.length || 0} compounds and ${result.examples?.length || 0} examples for "${word}"`);
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Failed to generate word details:', error.response?.data || error.message);
+    // 返回空结果而不是抛出错误
+    return {
+      compounds: [],
+      examples: []
+    };
+  }
+}
+
 module.exports = {
-  generateChineseStory
+  generateChineseStory,
+  generateWordDetails
 };
 

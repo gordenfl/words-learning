@@ -22,8 +22,17 @@ const wordSchema = new mongoose.Schema({
   definition: {
     type: String
   },
+  // 组词 (3-5个词组)
+  compounds: [{
+    word: String,      // 组词，如："学习"
+    pinyin: String,    // 拼音，如："xué xí"
+    meaning: String    // 英文释义，如："to study"
+  }],
+  // 例句 (1-2个简单句子)
   examples: [{
-    type: String
+    chinese: String,   // 中文例句
+    pinyin: String,    // 拼音
+    english: String    // 英文翻译
   }],
   // 难度级别
   difficulty: {
