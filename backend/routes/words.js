@@ -28,7 +28,6 @@ router.get('/stats', async (req, res) => {
   try {
     const totalWords = await Word.countDocuments({ userId: req.userId });
     const knownWords = await Word.countDocuments({ userId: req.userId, status: 'known' });
-    const learningWords = await Word.countDocuments({ userId: req.userId, status: 'learning' });
     const unknownWords = await Word.countDocuments({ userId: req.userId, status: 'unknown' });
 
     // Get today's learned words
@@ -43,7 +42,6 @@ router.get('/stats', async (req, res) => {
     res.json({
       total: totalWords,
       known: knownWords,
-      learning: learningWords,
       unknown: unknownWords,
       todayLearned
     });
@@ -134,7 +132,7 @@ router.patch('/:wordId/status', async (req, res) => {
     const { wordId } = req.params;
     const { status } = req.body;
 
-    if (!['unknown', 'learning', 'known'].includes(status)) {
+    if (!['unknown', 'known'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
 

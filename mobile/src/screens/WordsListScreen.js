@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Animated,
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { wordsAPI } from '../services/api';
 
 export default function WordsListScreen({ navigation, route }) {
@@ -18,7 +20,11 @@ export default function WordsListScreen({ navigation, route }) {
   const [filter, setFilter] = useState(initialFilter);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [removingWordIds, setRemovingWordIds] = useState(new Set());
   const PAGE_SIZE = 50;
+  
+  // 为每个单词存储动画值
+  const fadeAnims = useRef({});
 
   useEffect(() => {
     // 监听路由参数变化
@@ -34,6 +40,83 @@ export default function WordsListScreen({ navigation, route }) {
     setHasMore(true);
     loadWords(1, true);
   }, [filter]);
+
+  useEffect(() => {
+    // 监听从详情页返回的更新
+    const unsubscribe = navigation.addListener('focus', () => {
+      // 检查是否有单词更新（通过 route params 传递）
+      if (route.params?.wordUpdated) {
+        const { wordId, newStatus, deleted } = route.params.wordUpdated;
+        
+        if (deleted) {
+          // 标记为正在移除
+          setRemovingWordIds(prev => new Set([...prev, wordId]));
+          
+          // 初始化动画值（如果不存在）
+          if (!fadeAnims.current[wordId]) {
+            fadeAnims.current[wordId] = new Animated.Value(1);
+          }
+          
+          // 淡出动画
+          Animated.timing(fadeAnims.current[wordId], {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+            setRemovingWordIds(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(wordId);
+              return newSet;
+            });
+            delete fadeAnims.current[wordId];
+          });
+        } else if (newStatus) {
+          // 检查新状态是否符合当前过滤条件
+          const shouldRemove = 
+            (filter === 'unknown' && newStatus !== 'unknown') ||
+            (filter === 'known' && newStatus !== 'known');
+          
+          if (shouldRemove) {
+            // 标记为正在移除
+            setRemovingWordIds(prev => new Set([...prev, wordId]));
+            
+            // 初始化动画值（如果不存在）
+            if (!fadeAnims.current[wordId]) {
+              fadeAnims.current[wordId] = new Animated.Value(1);
+            }
+            
+            // 淡出动画
+            Animated.timing(fadeAnims.current[wordId], {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }).start(() => {
+              setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+              setRemovingWordIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(wordId);
+                return newSet;
+              });
+              delete fadeAnims.current[wordId];
+            });
+          } else {
+            // 如果符合过滤条件，更新状态
+            setWords(prevWords => 
+              prevWords.map(word => 
+                word._id === wordId ? { ...word, status: newStatus } : word
+              )
+            );
+          }
+        }
+        
+        // 清除参数
+        navigation.setParams({ wordUpdated: undefined });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route.params?.wordUpdated, filter]);
 
   const loadWords = async (pageNum = page, isRefresh = false) => {
     if (!hasMore && !isRefresh) return;
@@ -84,16 +167,55 @@ export default function WordsListScreen({ navigation, route }) {
     }
   };
 
+  const speakWord = (word) => {
+    Speech.speak(word, {
+      language: 'zh-CN', // 中文（普通话）
+      pitch: 1.0,
+      rate: 0.1, // 极慢速播放，便于初学者
+    });
+  };
+
   const updateWordStatus = async (wordId, newStatus) => {
     try {
       await wordsAPI.updateWordStatus(wordId, newStatus);
       
-      // 本地更新状态，不重新加载列表（保持滚动位置）
-      setWords(prevWords => 
-        prevWords.map(word => 
-          word._id === wordId ? { ...word, status: newStatus } : word
-        )
-      );
+      // 检查新状态是否符合当前过滤条件
+      const shouldRemove = 
+        (filter === 'unknown' && newStatus !== 'unknown') ||
+        (filter === 'known' && newStatus !== 'known');
+      
+      if (shouldRemove) {
+        // 标记为正在移除
+        setRemovingWordIds(prev => new Set([...prev, wordId]));
+        
+        // 初始化动画值（如果不存在）
+        if (!fadeAnims.current[wordId]) {
+          fadeAnims.current[wordId] = new Animated.Value(1);
+        }
+        
+        // 淡出动画
+        Animated.timing(fadeAnims.current[wordId], {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          // 动画结束后从列表中移除
+          setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+          setRemovingWordIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(wordId);
+            return newSet;
+          });
+          delete fadeAnims.current[wordId];
+        });
+      } else {
+        // 如果符合过滤条件，更新状态
+        setWords(prevWords => 
+          prevWords.map(word => 
+            word._id === wordId ? { ...word, status: newStatus } : word
+          )
+        );
+      }
     } catch (error) {
       Alert.alert('Oops!', 'Could not update the word status. Please try again.');
     }
@@ -112,8 +234,29 @@ export default function WordsListScreen({ navigation, route }) {
             try {
               await wordsAPI.deleteWord(wordId);
               
-              // 本地删除单词，不重新加载列表（保持滚动位置）
-              setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+              // 标记为正在移除
+              setRemovingWordIds(prev => new Set([...prev, wordId]));
+              
+              // 初始化动画值（如果不存在）
+              if (!fadeAnims.current[wordId]) {
+                fadeAnims.current[wordId] = new Animated.Value(1);
+              }
+              
+              // 淡出动画
+              Animated.timing(fadeAnims.current[wordId], {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              }).start(() => {
+                // 动画结束后从列表中移除
+                setWords(prevWords => prevWords.filter(word => word._id !== wordId));
+                setRemovingWordIds(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(wordId);
+                  return newSet;
+                });
+                delete fadeAnims.current[wordId];
+              });
             } catch (error) {
               Alert.alert('Oops!', 'Could not delete the word. Please try again.');
             }
@@ -123,8 +266,22 @@ export default function WordsListScreen({ navigation, route }) {
     );
   };
 
-  const renderWord = ({ item }) => (
-    <View style={styles.wordCard}>
+  const renderWord = ({ item }) => {
+    // 初始化动画值
+    if (!fadeAnims.current[item._id]) {
+      fadeAnims.current[item._id] = new Animated.Value(1);
+    }
+    
+    const isRemoving = removingWordIds.has(item._id);
+    
+    return (
+      <Animated.View style={{ opacity: fadeAnims.current[item._id] }}>
+        <TouchableOpacity 
+          style={styles.wordCard}
+          onPress={() => navigation.navigate('WordDetail', { wordId: item._id })}
+          activeOpacity={0.9}
+          disabled={isRemoving}
+        >
       <View style={styles.cardHeader}>
         <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
           <Text style={styles.statusText}>{item.status}</Text>
@@ -132,50 +289,65 @@ export default function WordsListScreen({ navigation, route }) {
       </View>
 
       <View style={styles.cardContent}>
-        <TouchableOpacity 
-          style={styles.wordInfo}
-          onPress={() => navigation.navigate('WordDetail', { wordId: item._id })}
-          activeOpacity={0.7}
-        >
+        <View style={styles.wordInfo}>
           {item.pinyin && (
-            <Text style={styles.pinyin}>{item.pinyin}</Text>
+            <View style={styles.pinyinWithSpeaker}>
+              <Text style={styles.pinyin}>{item.pinyin}</Text>
+              <TouchableOpacity 
+                onPress={() => speakWord(item.word)}
+                activeOpacity={0.6}
+                style={styles.speakerButton}
+              >
+                <Text style={styles.speakerIcon}>🔊</Text>
+              </TouchableOpacity>
+            </View>
           )}
+          
           <Text style={styles.wordText}>{item.word}</Text>
+          
           {item.translation && (
             <Text style={styles.translation}>{item.translation}</Text>
           )}
           {item.definition && (
             <Text style={styles.definition}>{item.definition}</Text>
           )}
-        </TouchableOpacity>
+        </View>
 
         <View style={styles.actions}>
-          {item.status !== 'known' && (
+          {item.status === 'unknown' && (
             <TouchableOpacity
               style={[styles.actionBtn, styles.knownBtn]}
-              onPress={() => updateWordStatus(item._id, 'known')}
+              onPress={(e) => {
+                updateWordStatus(item._id, 'known');
+              }}
             >
               <Text style={styles.actionBtnText}>✓</Text>
             </TouchableOpacity>
           )}
-          {item.status !== 'learning' && (
+          {item.status === 'known' && (
             <TouchableOpacity
-              style={[styles.actionBtn, styles.learningBtn]}
-              onPress={() => updateWordStatus(item._id, 'learning')}
+              style={[styles.actionBtn, styles.unknownBtn]}
+              onPress={(e) => {
+                updateWordStatus(item._id, 'unknown');
+              }}
             >
-              <Text style={styles.actionBtnText}>📖</Text>
+              <Text style={styles.actionBtnText}>↺</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={[styles.actionBtn, styles.deleteBtn]}
-            onPress={() => deleteWord(item._id)}
+            onPress={(e) => {
+              deleteWord(item._id);
+            }}
           >
             <Text style={styles.actionBtnText}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
-  );
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -193,14 +365,6 @@ export default function WordsListScreen({ navigation, route }) {
           onPress={() => setFilter('unknown')}
         >
           <Text style={[styles.filterText, filter === 'unknown' && styles.filterTextActive]}>
-            Unknown
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterBtn, filter === 'learning' && styles.filterBtnActive]}
-          onPress={() => setFilter('learning')}
-        >
-          <Text style={[styles.filterText, filter === 'learning' && styles.filterTextActive]}>
             Learning
           </Text>
         </TouchableOpacity>
@@ -308,16 +472,29 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 15,
   },
-  wordText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#333',
+  pinyinWithSpeaker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   pinyin: {
     fontSize: 20,
     color: '#4A90E2',
-    marginBottom: 6,
     fontStyle: 'italic',
+  },
+  speakerButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  speakerIcon: {
+    fontSize: 20,
+  },
+  wordText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
   },
   translation: {
     fontSize: 18,
@@ -332,9 +509,6 @@ const styles = StyleSheet.create({
   },
   status_unknown: {
     backgroundColor: '#FFE4E1',
-  },
-  status_learning: {
-    backgroundColor: '#FFF4E0',
   },
   status_known: {
     backgroundColor: '#E0F8E0',
@@ -367,8 +541,8 @@ const styles = StyleSheet.create({
   knownBtn: {
     backgroundColor: '#50C878',
   },
-  learningBtn: {
-    backgroundColor: '#FFD700',
+  unknownBtn: {
+    backgroundColor: '#FFA500',
   },
   deleteBtn: {
     backgroundColor: '#FF6347',

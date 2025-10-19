@@ -8,12 +8,15 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { wordsAPI } from '../services/api';
 
 export default function WordDetailScreen({ route, navigation }) {
   const { wordId } = route.params;
   const [word, setWord] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     loadWordDetail();
@@ -33,13 +36,40 @@ export default function WordDetailScreen({ route, navigation }) {
     }
   };
 
+  const speakWord = (text) => {
+    Speech.speak(text, {
+      language: 'zh-CN', // 中文（普通话）
+      pitch: 1.0,
+      rate: 0.1, // 极慢速播放，便于初学者
+    });
+  };
+
+  const showToastMessage = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+  };
+
   const updateWordStatus = async (status) => {
     try {
       await wordsAPI.updateStatus(wordId, status);
-      setWord({ ...word, status });
-      Alert.alert('Success', `Word marked as ${status}`);
+      const updatedWord = { ...word, status };
+      setWord(updatedWord);
+      
+      // 通知列表页面更新（不刷新整个列表，只更新这个单词）
+      const routes = navigation.getState().routes;
+      const wordsListRoute = routes.find(r => r.name === 'WordsList');
+      if (wordsListRoute) {
+        navigation.navigate('WordsList', {
+          ...wordsListRoute.params,
+          wordUpdated: { wordId, newStatus: status }
+        });
+      }
+      
+      const statusLabel = status === 'known' ? '✓ Marked as Known' : '📖 Marked as Learning';
+      showToastMessage(statusLabel);
     } catch (error) {
-      Alert.alert('Error', 'Could not update word status');
+      showToastMessage('❌ Update failed');
     }
   };
 
@@ -55,7 +85,18 @@ export default function WordDetailScreen({ route, navigation }) {
           onPress: async () => {
             try {
               await wordsAPI.delete(wordId);
-              navigation.goBack();
+              
+              // 通知列表页面删除这个单词
+              const routes = navigation.getState().routes;
+              const wordsListRoute = routes.find(r => r.name === 'WordsList');
+              if (wordsListRoute) {
+                navigation.navigate('WordsList', {
+                  ...wordsListRoute.params,
+                  wordUpdated: { wordId, deleted: true }
+                });
+              } else {
+                navigation.goBack();
+              }
             } catch (error) {
               Alert.alert('Error', 'Could not delete word');
             }
@@ -83,6 +124,13 @@ export default function WordDetailScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Toast 提示 */}
+      {showToast && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+      
       <View style={styles.content}>
         {/* 状态标签 */}
         <View style={styles.statusContainer}>
@@ -94,12 +142,22 @@ export default function WordDetailScreen({ route, navigation }) {
         {/* 主要内容 */}
         <View style={styles.mainContent}>
           {word.pinyin && (
-            <Text style={styles.pinyin}>{word.pinyin}</Text>
+            <View style={styles.pinyinWithSpeaker}>
+              <Text style={styles.pinyin}>{word.pinyin}</Text>
+              <TouchableOpacity 
+                onPress={() => speakWord(word.word)}
+                activeOpacity={0.6}
+                style={styles.speakerButton}
+              >
+                <Text style={styles.speakerIcon}>🔊</Text>
+              </TouchableOpacity>
+            </View>
           )}
           <Text style={styles.wordText}>{word.word}</Text>
           {word.translation && (
             <Text style={styles.translation}>{word.translation}</Text>
           )}
+          <Text style={styles.tapHint}>Tap 🔊 to hear pronunciation</Text>
         </View>
 
         {/* 定义 */}
@@ -134,16 +192,10 @@ export default function WordDetailScreen({ route, navigation }) {
               ]}
               onPress={() => updateWordStatus('unknown')}
             >
-              <Text style={styles.statusBtnText}>❓ Unknown</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.statusBtn,
-                word.status === 'learning' && styles.statusBtnActive,
-              ]}
-              onPress={() => updateWordStatus('learning')}
-            >
-              <Text style={styles.statusBtnText}>📖 Learning</Text>
+              <Text style={[
+                styles.statusBtnText,
+                word.status === 'unknown' && styles.statusBtnTextActive,
+              ]}>📖 Learning</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -152,7 +204,10 @@ export default function WordDetailScreen({ route, navigation }) {
               ]}
               onPress={() => updateWordStatus('known')}
             >
-              <Text style={styles.statusBtnText}>✓ Known</Text>
+              <Text style={[
+                styles.statusBtnText,
+                word.status === 'known' && styles.statusBtnTextActive,
+              ]}>✓ Known</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -199,9 +254,6 @@ const styles = StyleSheet.create({
   status_unknown: {
     backgroundColor: '#FFE4E1',
   },
-  status_learning: {
-    backgroundColor: '#FFF4E0',
-  },
   status_known: {
     backgroundColor: '#E0F8E0',
   },
@@ -222,23 +274,44 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  pinyinWithSpeaker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
   pinyin: {
     fontSize: 32,
     color: '#4A90E2',
-    marginBottom: 10,
     fontStyle: 'italic',
     fontWeight: '500',
+  },
+  speakerButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 10,
+  },
+  speakerIcon: {
+    fontSize: 28,
   },
   wordText: {
     fontSize: 96,
     fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
     marginBottom: 12,
   },
   translation: {
     fontSize: 24,
     color: '#666',
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  tapHint: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   section: {
     backgroundColor: '#fff',
@@ -312,6 +385,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
   },
+  statusBtnTextActive: {
+    color: '#fff',
+  },
   deleteButton: {
     backgroundColor: '#FF6347',
     padding: 15,
@@ -323,6 +399,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  toast: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#50C878',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
