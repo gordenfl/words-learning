@@ -6,7 +6,15 @@
         "development": {
             "developmentClient": true,
             "distribution": "internal",
-            "node": "20.18.1"
+            "node": "20.18.1",
+            "ios": {
+                "simulator": true,
+                "image": "stable"
+            },
+            "env": {
+                "EXPO_USE_NPM": "1",
+                "NPM_CONFIG_PACKAGE_MANAGER": "npm"
+            }
         },
         "preview": {
             "distribution": "internal",
@@ -15,7 +23,12 @@
                 "buildType": "apk"
             },
             "ios": {
-                "simulator": true
+                "simulator": true,
+                "image": "stable"
+            },
+            "env": {
+                "EXPO_USE_NPM": "1",
+                "NPM_CONFIG_PACKAGE_MANAGER": "npm"
             }
         },
         "production": {
@@ -24,8 +37,8 @@
                 "buildType": "apk"
             },
             "ios": {
-                "bundleIdentifier": "com.gordenfl.wordslearning",
-                "buildConfiguration": "Release"
+                "buildConfiguration": "Release",
+                "image": "stable"
             },
             "env": {
                 "EXPO_USE_NPM": "1",
