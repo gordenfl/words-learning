@@ -5,17 +5,34 @@
     "build": {
         "development": {
             "developmentClient": true,
-            "distribution": "internal"
+            "distribution": "internal",
+            "node": "20.18.1"
         },
         "preview": {
             "distribution": "internal",
+            "node": "20.18.1",
             "android": {
                 "buildType": "apk"
+            },
+            "ios": {
+                "simulator": true
             }
         },
         "production": {
+            "node": "20.18.1",
             "android": {
                 "buildType": "apk"
+            },
+            "ios": {
+                "bundleIdentifier": "com.gordenfl.wordslearning",
+                "buildConfiguration": "Release"
+            },
+            "env": {
+                "EXPO_USE_NPM": "1",
+                "NPM_CONFIG_PACKAGE_MANAGER": "npm"
+            },
+            "cache": {
+                "disabled": false
             }
         }
     },

@@ -199,7 +199,8 @@ export default function HomeScreen({ navigation }) {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: false,  // 禁用编辑界面，避免按钮不可见
+        allowsEditing: true,  // 启用编辑界面，允许裁剪选择范围
+        aspect: [1, 1],       // 正方形裁剪
         quality: 1,
       });
       console.log('📷 Camera result:', result.canceled ? 'Cancelled' : 'Got image');
@@ -227,7 +228,8 @@ export default function HomeScreen({ navigation }) {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,  // 禁用编辑界面，避免按钮不可见
+        allowsEditing: true,  // 启用编辑界面，允许裁剪选择范围
+        aspect: [1, 1],       // 正方形裁剪
         quality: 1,
       });
       console.log('🖼️ Gallery result:', result.canceled ? 'Cancelled' : 'Got image');
