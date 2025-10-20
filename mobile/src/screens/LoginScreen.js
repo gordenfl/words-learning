@@ -42,10 +42,22 @@ export default function LoginScreen({ navigation }) {
       // Navigate to Home
       navigation.navigate('Home');
     } catch (error) {
-      if (__DEV__) {
-        console.log('❌ Login error:', error.response?.data?.error || error.message);
+      console.log('❌ Login error:', error.message);
+      console.log('   Error type:', error.name);
+      console.log('   Response status:', error.response?.status);
+      console.log('   Response data:', error.response?.data);
+      
+      let errorMessage = 'Something went wrong';
+      
+      if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
+        errorMessage = `Cannot connect to server. Please check:\n\n• Internet connection\n• Server: gordenfl.com:3003\n• Error: ${error.message}`;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else {
+        errorMessage = `${error.message}\n\nServer: gordenfl.com:3003`;
       }
-      Alert.alert('Login Failed', error.response?.data?.error || 'Something went wrong');
+      
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }

@@ -199,7 +199,7 @@ export default function HomeScreen({ navigation }) {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
+        allowsEditing: false,  // 禁用编辑界面，避免按钮不可见
         quality: 1,
       });
       console.log('📷 Camera result:', result.canceled ? 'Cancelled' : 'Got image');
@@ -227,7 +227,7 @@ export default function HomeScreen({ navigation }) {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        allowsEditing: false,  // 禁用编辑界面，避免按钮不可见
         quality: 1,
       });
       console.log('🖼️ Gallery result:', result.canceled ? 'Cancelled' : 'Got image');

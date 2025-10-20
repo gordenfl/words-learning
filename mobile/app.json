@@ -1,44 +1,56 @@
 {
-  "expo": {
-    "name": "Words Learning",
-    "slug": "words-learning",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#4A90E2"
-    },
-    "updates": {
-      "fallbackToCacheTimeout": 0
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.wordslearning.app"
-    },
-    "android": {
-      "package": "com.wordslearning.app",
-      "versionCode": 1,
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4A90E2"
-      },
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.INTERNET"
-      ]
-    },
-    "extra": {
-      "eas": {
-        "projectId": "43b56fd3-62b6-4de8-8872-0e7cca605ed3"
-      }
+    "expo": {
+        "name": "Words Learning",
+        "slug": "words-learning",
+        "version": "1.0.0",
+        "orientation": "portrait",
+        "userInterfaceStyle": "light",
+        "icon": "./assets/icon.png",
+        "splash": {
+            "image": "./assets/splash.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#4A90E2"
+        },
+        "updates": {
+            "fallbackToCacheTimeout": 0
+        },
+        "assetBundlePatterns": [
+            "**/*"
+        ],
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.wordslearning.app"
+        },
+        "android": {
+            "package": "com.wordslearning.app",
+            "versionCode": 3,
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/adaptive-icon.png",
+                "backgroundColor": "#4A90E2"
+            },
+            "permissions": [
+                "android.permission.CAMERA",
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.WRITE_EXTERNAL_STORAGE",
+                "android.permission.INTERNET",
+                "android.permission.ACCESS_NETWORK_STATE"
+            ],
+            "usesCleartextTraffic": true
+        },
+        "plugins": [
+            [
+                "expo-build-properties",
+                {
+                    "android": {
+                        "usesCleartextTraffic": true
+                    }
+                }
+            ]
+        ],
+        "extra": {
+            "eas": {
+                "projectId": "43b56fd3-62b6-4de8-8872-0e7cca605ed3"
+            }
+        }
     }
-  }
 }

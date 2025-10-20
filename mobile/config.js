@@ -8,19 +8,24 @@
 // Windows: ipconfig
 
 // 环境配置：开发 vs 生产
-const IS_DEVELOPMENT = __DEV__; // Expo 自动设置
-
+// 直接使用生产服务器（APK 打包后使用）
 const Config = {
   // API配置
   API: {
-    // 开发环境：本地 IP
     // 生产环境：外网服务器
-    HOST: IS_DEVELOPMENT ? '192.168.101.95' : 'gordenfl.com',
+    HOST: 'gordenfl.com',
     PORT: '3003',
     
     // 自动生成完整的BASE_URL
     get BASE_URL() {
-      return `http://${this.HOST}:${this.PORT}/api`;
+      const url = `http://${this.HOST}:${this.PORT}/api`;
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🌐 API Configuration:');
+      console.log('   HOST:', this.HOST);
+      console.log('   PORT:', this.PORT);
+      console.log('   Full URL:', url);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return url;
     }
   },
   

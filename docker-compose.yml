@@ -23,5 +23,10 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    # 连接远程服务器的 MongoDB，使用默认 bridge 网络
-    network_mode: bridge
+    networks:
+      - photoshare-network
+
+networks:
+  photoshare-network:
+    external: true
+    name: photoshare_photoshare-network
