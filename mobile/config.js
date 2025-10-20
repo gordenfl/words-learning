@@ -13,7 +13,7 @@ const Config = {
   // API配置
   API: {
     // 生产环境：外网服务器
-    HOST: 'gordenfl.com',
+    HOST: '54.187.165.95',
     PORT: '3003',
     
     // 自动生成完整的BASE_URL
