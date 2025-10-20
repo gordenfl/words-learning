@@ -14,6 +14,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { wordsAPI, articlesAPI, usersAPI, ocrAPI } from '../services/api';
+import cnchar from 'cnchar';
+import order from 'cnchar-order';
+
+// 初始化 cnchar 笔画插件
+cnchar.use(order);
 
 export default function HomeScreen({ navigation }) {
   const [stats, setStats] = useState(null);
@@ -135,9 +140,9 @@ export default function HomeScreen({ navigation }) {
       
       // 显示确认界面
       setScannedImage(imageUri);
-      setExtractedWords(newWords);
-      setKnownWords(known);
-      setSelectedWords(newWords.map(w => w.word)); // 默认全选新单词
+      setExtractedWords(sortByStrokeCount(newWords)); // 按笔画排序
+      setKnownWords(sortByStrokeCount(known)); // 已学单词也排序
+      setSelectedWords([]); // 默认不选中，让用户自己选择
       setShowWordsConfirm(true);
     } catch (error) {
       if (__DEV__) {
@@ -147,6 +152,70 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setProcessingImage(false);
     }
+  };
+
+  // 获取汉字笔画数（使用 cnchar 库获取准确笔画数）
+  const getStrokeCount = (char) => {
+    try {
+      // 检查是否为空或非字符串
+      if (!char || typeof char !== 'string' || char.length === 0) {
+        return 999;
+      }
+      
+      // 使用 cnchar 获取笔画数
+      const strokeCount = cnchar.stroke(char);
+      
+      // cnchar.stroke() 返回的可能是数字或数组
+      // 如果是数组（多个字符），取第一个字符的笔画数
+      const count = Array.isArray(strokeCount) ? strokeCount[0] : strokeCount;
+      
+      // 如果获取失败（返回 undefined 或 0），使用备用方案
+      if (!count || count === 0) {
+        const code = char.charCodeAt(0);
+        // 不是汉字，排到最后
+        if (code < 0x4E00 || code > 0x9FFF) {
+          return 999;
+        }
+        // 简单估算
+        return 10;
+      }
+      
+      if (__DEV__) {
+        console.log(`✍️ ${char} 的笔画数: ${count}`);
+      }
+      
+      return count;
+    } catch (error) {
+      if (__DEV__) {
+        console.error(`❌ 获取笔画数失败 (${char}):`, error.message);
+      }
+      return 999; // 出错时排到最后
+    }
+  };
+
+  // 按笔画数排序单词
+  const sortByStrokeCount = (words) => {
+    const sorted = [...words].sort((a, b) => {
+      const strokesA = getStrokeCount(a.word.charAt(0));
+      const strokesB = getStrokeCount(b.word.charAt(0));
+      
+      if (__DEV__) {
+        console.log(`📊 排序: ${a.word}(${strokesA}画) vs ${b.word}(${strokesB}画)`);
+      }
+      
+      // 如果笔画数相同，按拼音排序
+      if (strokesA === strokesB) {
+        return (a.pinyin || '').localeCompare(b.pinyin || '');
+      }
+      
+      return strokesA - strokesB;
+    });
+    
+    if (__DEV__) {
+      console.log('📋 排序后的单词:', sorted.map(w => `${w.word}(${getStrokeCount(w.word.charAt(0))}画)`).join(', '));
+    }
+    
+    return sorted;
   };
 
   const toggleWordSelection = (word) => {
@@ -482,7 +551,7 @@ export default function HomeScreen({ navigation }) {
                   🆕 New Words ({selectedWords.length}/{extractedWords.length} selected)
                 </Text>
                 <Text style={styles.confirmHint}>
-                  Tap to deselect words you don't want to add
+                  Tap to select words you want to add
                 </Text>
                 <View style={styles.wordChipsContainer}>
                   {extractedWords.map((item, index) => {
@@ -496,16 +565,18 @@ export default function HomeScreen({ navigation }) {
                         ]}
                         onPress={() => toggleWordSelection(item.word)}
                       >
-                        <Text style={styles.wordChipPinyin}>{item.pinyin}</Text>
+                        <Text style={[
+                          styles.wordChipPinyin,
+                          !isSelected && styles.wordChipTextUnselected
+                        ]}>
+                          {item.pinyin}
+                        </Text>
                         <Text style={[
                           styles.wordChipText,
                           !isSelected && styles.wordChipTextUnselected
                         ]}>
                           {item.word}
                         </Text>
-                        {!isSelected && (
-                          <View style={styles.strikethrough} />
-                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -846,14 +917,6 @@ const styles = StyleSheet.create({
   },
   wordChipTextUnselected: {
     color: '#999',
-  },
-  strikethrough: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: '#ff0000',
   },
   wordChipKnown: {
     paddingHorizontal: 12,
