@@ -24,7 +24,7 @@
             },
             "ios": {
                 "simulator": true,
-                "image": "stable"
+                "image": "macos-ventura-13.6-xcode-15.2"
             },
             "env": {
                 "EXPO_USE_NPM": "1",
