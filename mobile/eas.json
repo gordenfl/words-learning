@@ -24,7 +24,7 @@
             },
             "ios": {
                 "simulator": true,
-                "image": "macos-ventura-13.6-xcode-15.2"
+                "image": "sdk-54"
             },
             "env": {
                 "EXPO_USE_NPM": "1",
@@ -38,7 +38,7 @@
             },
             "ios": {
                 "buildConfiguration": "Release",
-                "image": "stable"
+                "image": "sdk-54"
             },
             "env": {
                 "EXPO_USE_NPM": "1",
