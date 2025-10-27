@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Config from "../config.js";
-import GoogleAuthConfig from "../config/googleAuth.js";
 import { authAPI } from "../services/api";
 import * as WebBrowser from "expo-web-browser";
 
@@ -39,7 +38,7 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
 
   const handleGoogleSignIn = async () => {
     if (!isConfigured) {
-      Alert.alert("错误", GoogleAuthConfig.ERROR_MESSAGES.CONFIGURATION_ERROR);
+      Alert.alert("错误", "Google Sign-In 未正确配置");
       return;
     }
 
@@ -50,13 +49,13 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
       if (Config.GOOGLE_OAUTH.CLIENT_ID.includes("xxxxxx")) {
         Alert.alert(
           "配置未完成",
-          "请先在 Google Cloud Console 中创建 OAuth 客户端，然后更新配置文件中的 CLIENT_ID 和 CLIENT_SECRET。\n\n步骤：\n1. 访问 Google Cloud Console\n2. 创建 OAuth 2.0 客户端\n3. 更新 mobile/src/config/googleAuth.js 文件\n4. 重新启动应用"
+          "请先在 Google Cloud Console 中创建 OAuth 客户端，然后更新配置文件中的 CLIENT_ID。\n\n步骤：\n1. 访问 Google Cloud Console\n2. 创建 OAuth 2.0 客户端\n3. 更新 mobile/config.js 文件\n4. 重新启动应用"
         );
         setLoading(false);
         return;
       }
 
-      // 使用WebBrowser方案
+      // 直接使用WebBrowser方案
       console.log("🔄 Using WebBrowser...");
       const authUrl = buildGoogleAuthUrl();
       console.log("🔗 Opening Google OAuth URL:", authUrl);
@@ -260,9 +259,26 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
         // 用户取消登录，不显示错误
         setLoading(false);
         return;
+      } else if (result.type === "dismiss") {
+        console.log("❌ Google OAuth dismissed");
+        Alert.alert("Google登录失败", "登录被取消，请重试");
+        onSignInError && onSignInError("Google OAuth dismissed");
+      } else if (result.type === "error") {
+        console.log("❌ Google OAuth error:", result.error);
+        Alert.alert(
+          "Google登录失败",
+          `OAuth错误: ${result.error?.message || "未知错误"}`
+        );
+        onSignInError && onSignInError(result.error);
       } else {
         console.log("❌ Google OAuth failed:", result.type);
-        Alert.alert("Google登录失败", `OAuth流程失败: ${result.type}`);
+        console.log("❌ Full result object:", JSON.stringify(result, null, 2));
+        Alert.alert(
+          "Google登录失败",
+          `OAuth流程失败: ${result.type}\n错误: ${
+            result.error?.message || "未知错误"
+          }`
+        );
         onSignInError && onSignInError("Google OAuth failed");
       }
     } catch (error) {
@@ -274,29 +290,62 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
     }
   };
 
+  // 按钮样式
+  const buttonStyle = {
+    backgroundColor: "#4285F4",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  };
+
+  const disabledStyle = {
+    backgroundColor: "#CCCCCC",
+    opacity: 0.6,
+  };
+
+  const contentStyle = {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+  const iconStyle = {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
+  };
+
+  const textStyle = {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  };
+
   return (
     <TouchableOpacity
-      style={[
-        GoogleAuthConfig.UI.BUTTON_STYLE,
-        loading && GoogleAuthConfig.UI.BUTTON_DISABLED_STYLE,
-      ]}
+      style={[buttonStyle, loading && disabledStyle]}
       onPress={handleGoogleSignIn}
       disabled={loading || !isConfigured}
     >
-      <View style={GoogleAuthConfig.UI.BUTTON_CONTENT_STYLE}>
+      <View style={contentStyle}>
         {loading ? (
-          <ActivityIndicator
-            color={GoogleAuthConfig.UI.BUTTON_LOADING_COLOR}
-            size="small"
-          />
+          <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
           <>
-            <Text style={GoogleAuthConfig.UI.BUTTON_ICON_STYLE}>
-              {GoogleAuthConfig.UI.BUTTON_ICON}
-            </Text>
-            <Text style={GoogleAuthConfig.UI.BUTTON_TEXT_STYLE}>
-              {GoogleAuthConfig.UI.BUTTON_TEXT}
-            </Text>
+            <Text style={iconStyle}>G</Text>
+            <Text style={textStyle}>使用 Google 登录</Text>
           </>
         )}
       </View>
