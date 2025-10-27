@@ -5,7 +5,7 @@
 
 // 环境控制变量
 // 设置为 true 使用生产环境，false 使用开发环境
-const IS_PRODUCTION = true; // 开发时设为 false，生产时设为 true
+const IS_PRODUCTION = false; // 开发时设为 false，生产时设为 true
 
 // 环境配置
 const ENV_CONFIG = {

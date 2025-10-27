@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Config from "../config";
+import Config from "../config.js";
+import GoogleAuthConfig from "../config/googleAuth.js";
 import { authAPI } from "../services/api";
 import * as WebBrowser from "expo-web-browser";
 
