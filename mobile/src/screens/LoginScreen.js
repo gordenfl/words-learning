@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,63 +9,78 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authAPI } from '../services/api';
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authAPI } from "../services/api";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     setLoading(true);
     try {
       const response = await authAPI.login(email, password);
-      console.log('📝 Login response received');
-      console.log('   Token exists:', !!response.data.token);
-      console.log('   Token length:', response.data.token?.length);
-      
-      await AsyncStorage.setItem('authToken', response.data.token);
-      await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
-      
+      console.log("📝 Login response received");
+      console.log("   Token exists:", !!response.data.token);
+      console.log("   Token length:", response.data.token?.length);
+
+      await AsyncStorage.setItem("authToken", response.data.token);
+      await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
+
       // 验证 token 是否保存成功
-      const savedToken = await AsyncStorage.getItem('authToken');
-      console.log('✅ Token saved successfully:', !!savedToken);
-      console.log('   Saved token matches:', savedToken === response.data.token);
-      
+      const savedToken = await AsyncStorage.getItem("authToken");
+      console.log("✅ Token saved successfully:", !!savedToken);
+      console.log(
+        "   Saved token matches:",
+        savedToken === response.data.token
+      );
+
       // Navigate to Home
-      navigation.navigate('Home');
+      navigation.navigate("Home");
     } catch (error) {
-      console.log('❌ Login error:', error.message);
-      console.log('   Error type:', error.name);
-      console.log('   Response status:', error.response?.status);
-      console.log('   Response data:', error.response?.data);
-      
-      let errorMessage = 'Something went wrong';
-      
-      if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
+      console.log("❌ Login error:", error.message);
+      console.log("   Error type:", error.name);
+      console.log("   Response status:", error.response?.status);
+      console.log("   Response data:", error.response?.data);
+
+      let errorMessage = "Something went wrong";
+
+      if (error.message === "Network Error" || error.code === "ECONNABORTED") {
         errorMessage = `Cannot connect to server. Please check:\n\n• Internet connection\n• Server: gordenfl.com:3003\n• Error: ${error.message}`;
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       } else {
         errorMessage = `${error.message}\n\nServer: gordenfl.com:3003`;
       }
-      
-      Alert.alert('Login Failed', errorMessage);
+
+      Alert.alert("Login Failed", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleSignInSuccess = (data) => {
+    console.log("✅ Google Sign-In successful:", data);
+    // Navigate to Home
+    navigation.navigate("Home");
+  };
+
+  const handleGoogleSignInError = (error) => {
+    console.log("❌ Google Sign-In error:", error);
+    // Error handling is already done in GoogleSignInButton component
+  };
+
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <View style={styles.content}>
@@ -103,13 +118,24 @@ export default function LoginScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
+        {/* 分隔线 */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>或</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Google登录按钮 */}
+        <GoogleSignInButton
+          onSignInSuccess={handleGoogleSignInSuccess}
+          onSignInError={handleGoogleSignInError}
+        />
+
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => navigation.navigate('Register')}
+          onPress={() => navigation.navigate("Register")}
         >
-          <Text style={styles.linkText}>
-            Don't have an account? Sign up
-          </Text>
+          <Text style={styles.linkText}>Don't have an account? Sign up</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -119,54 +145,68 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 20,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#4A90E2',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#4A90E2",
+    textAlign: "center",
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginBottom: 40,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 15,
     borderRadius: 10,
     marginBottom: 15,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
   },
   button: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: "#4A90E2",
     padding: 15,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   linkButton: {
     marginTop: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   linkText: {
-    color: '#4A90E2',
+    color: "#4A90E2",
     fontSize: 16,
   },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#ddd",
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    color: "#666",
+    fontSize: 14,
+  },
 });
-

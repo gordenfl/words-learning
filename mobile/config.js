@@ -12,37 +12,36 @@
 const Config = {
   // API配置
   API: {
-    // 生产环境：外网服务器
-    HOST: '54.187.165.95',
-    PORT: '3003',
-    
+    // 开发环境：本地服务器
+    HOST: "192.168.101.97",
+    PORT: "3003",
+
     // 自动生成完整的BASE_URL
     get BASE_URL() {
       const url = `http://${this.HOST}:${this.PORT}/api`;
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🌐 API Configuration:');
-      console.log('   HOST:', this.HOST);
-      console.log('   PORT:', this.PORT);
-      console.log('   Full URL:', url);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🌐 API Configuration:");
+      console.log("   HOST:", this.HOST);
+      console.log("   PORT:", this.PORT);
+      console.log("   Full URL:", url);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
       return url;
-    }
+    },
   },
-  
+
   // OCR配置
   OCR: {
     TIMEOUT: 30000, // 30秒超时
     MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   },
-  
+
   // 学习配置
   LEARNING: {
     DEFAULT_DAILY_GOAL: 10,
     DEFAULT_WEEKLY_GOAL: 50,
     DEFAULT_MONTHLY_GOAL: 200,
-    DEFAULT_DIFFICULTY: 'intermediate',
-  }
+    DEFAULT_DIFFICULTY: "intermediate",
+  },
 };
 
 export default Config;
-
