@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import GoogleAuthConfig from "../config/googleAuth";
+import Config from "../config";
 import { authAPI } from "../services/api";
 import * as WebBrowser from "expo-web-browser";
 
@@ -17,15 +17,16 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
   const [loading, setLoading] = useState(false);
   const [isConfigured, setIsConfigured] = useState(true);
 
-  // 强制使用Expo代理的重定向URI
-  const redirectUri = "https://auth.expo.io/@gordenfl/words-learning";
+  // 使用配置中的重定向URI
+  const redirectUri = Config.GOOGLE_OAUTH.REDIRECT_URI;
 
   console.log("🔗 Using redirect URI:", redirectUri);
+  console.log("🔗 Environment:", Config.ENVIRONMENT);
 
   // 构建Google OAuth URL
   const buildGoogleAuthUrl = () => {
     const params = new URLSearchParams({
-      client_id: GoogleAuthConfig.OAuth.CLIENT_ID.WEB,
+      client_id: Config.GOOGLE_OAUTH.CLIENT_ID,
       redirect_uri: redirectUri,
       response_type: "code",
       scope: "openid profile email",
@@ -45,7 +46,7 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
 
     try {
       // 检查配置是否已更新
-      if (GoogleAuthConfig.OAuth.CLIENT_ID.WEB.includes("xxxxxx")) {
+      if (Config.GOOGLE_OAUTH.CLIENT_ID.includes("xxxxxx")) {
         Alert.alert(
           "配置未完成",
           "请先在 Google Cloud Console 中创建 OAuth 客户端，然后更新配置文件中的 CLIENT_ID 和 CLIENT_SECRET。\n\n步骤：\n1. 访问 Google Cloud Console\n2. 创建 OAuth 2.0 客户端\n3. 更新 mobile/src/config/googleAuth.js 文件\n4. 重新启动应用"
@@ -111,10 +112,7 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
             // 使用真实的Google OAuth流程
             try {
               console.log("🔄 Starting token exchange...");
-              console.log(
-                "   Client ID:",
-                GoogleAuthConfig.OAuth.CLIENT_ID.WEB
-              );
+              console.log("   Client ID:", Config.GOOGLE_OAUTH.CLIENT_ID);
               console.log("   Redirect URI:", redirectUri);
               console.log("   Code length:", code.length);
 
@@ -127,8 +125,8 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
                     "Content-Type": "application/x-www-form-urlencoded",
                   },
                   body: new URLSearchParams({
-                    client_id: GoogleAuthConfig.OAuth.CLIENT_ID.WEB,
-                    client_secret: GoogleAuthConfig.OAuth.CLIENT_SECRET.WEB,
+                    client_id: Config.GOOGLE_OAUTH.CLIENT_ID,
+                    client_secret: "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", // Web Client Secret
                     code: code,
                     grant_type: "authorization_code",
                     redirect_uri: redirectUri,
