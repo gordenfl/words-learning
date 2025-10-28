@@ -1,6 +1,6 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Config from "../../config.js";
+import Config from "../../config";
 
 // 从配置文件读取API地址
 // 如需修改IP地址，请编辑 mobile/config.js 文件
@@ -60,6 +60,9 @@ export const authAPI = {
 
   changePassword: (oldPassword, newPassword) =>
     api.post("/auth/change-password", { oldPassword, newPassword }),
+
+  googleSignIn: (idToken, userInfo) =>
+    api.post("/auth/google", { idToken, userInfo }),
 };
 
 // Words API
