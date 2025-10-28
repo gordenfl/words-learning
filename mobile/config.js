@@ -19,7 +19,7 @@ const ENV_CONFIG = {
     GOOGLE_OAUTH: {
       CLIENT_ID:
         "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com", // Web Client ID
-      REDIRECT_URI: "https://auth.expo.io/@gordenfl/words-learning",
+      REDIRECT_URI: "com.gordenfl.wordslearning://oauth2redirect", // 原生重定向URI
     },
   },
 
@@ -28,12 +28,12 @@ const ENV_CONFIG = {
     API: {
       HOST: "gordenfl.com",
       PORT: "3003",
-      PROTOCOL: "https",
+      PROTOCOL: "http",
     },
     GOOGLE_OAUTH: {
       CLIENT_ID:
         "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com", // Web Client ID
-      REDIRECT_URI: "https://auth.expo.io/@gordenfl/words-learning",
+      REDIRECT_URI: "com.gordenfl.wordslearning://oauth2redirect", // 原生重定向URI
     },
   },
 };
