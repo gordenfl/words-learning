@@ -17,9 +17,16 @@ const ENV_CONFIG = {
       PROTOCOL: "http",
     },
     GOOGLE_OAUTH: {
-      CLIENT_ID:
-        "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com", // Web Client ID
-      REDIRECT_URI: "com.gordenfl.wordslearning://oauth2redirect", // 原生重定向URI
+      // Web Client ID (用于服务器端验证)
+      WEB_CLIENT_ID:
+        "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com",
+      // iOS Client ID (用于原生SDK)
+      IOS_CLIENT_ID:
+        "123044373895-h042aqgmij6a60hee8gm239fd71kihkn.apps.googleusercontent.com",
+      // Android Client ID (用于原生SDK)
+      ANDROID_CLIENT_ID:
+        "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
+      // 不再需要重定向URI - 原生SDK自动处理
     },
   },
 
@@ -31,9 +38,16 @@ const ENV_CONFIG = {
       PROTOCOL: "http",
     },
     GOOGLE_OAUTH: {
-      CLIENT_ID:
-        "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com", // Web Client ID
-      REDIRECT_URI: "com.gordenfl.wordslearning://oauth2redirect", // 原生重定向URI
+      // Web Client ID (用于服务器端验证)
+      WEB_CLIENT_ID:
+        "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com",
+      // iOS Client ID (用于原生SDK)
+      IOS_CLIENT_ID:
+        "123044373895-h042aqgmij6a60hee8gm239fd71kihkn.apps.googleusercontent.com",
+      // Android Client ID (用于原生SDK)
+      ANDROID_CLIENT_ID:
+        "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
+      // 不再需要重定向URI - 原生SDK自动处理
     },
   },
 };
@@ -72,6 +86,9 @@ const Config = {
   GOOGLE_OAUTH: {
     CLIENT_ID: envConfig.GOOGLE_OAUTH.CLIENT_ID,
     REDIRECT_URI: envConfig.GOOGLE_OAUTH.REDIRECT_URI,
+    WEB_CLIENT_ID: envConfig.GOOGLE_OAUTH.WEB_CLIENT_ID,
+    IOS_CLIENT_ID: envConfig.GOOGLE_OAUTH.IOS_CLIENT_ID,
+    ANDROID_CLIENT_ID: envConfig.GOOGLE_OAUTH.ANDROID_CLIENT_ID,
   },
 
   // OCR配置
