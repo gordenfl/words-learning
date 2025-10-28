@@ -26,7 +26,8 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
 
   // 构建Google OAuth URL
   const buildGoogleAuthUrl = () => {
-    const webClientId = Config.GOOGLE_OAUTH?.WEB_CLIENT_ID || Config.GOOGLE_OAUTH?.CLIENT_ID;
+    const webClientId =
+      Config.GOOGLE_OAUTH?.WEB_CLIENT_ID || Config.GOOGLE_OAUTH?.CLIENT_ID;
     const params = new URLSearchParams({
       client_id: webClientId,
       redirect_uri: redirectUri,
@@ -48,11 +49,12 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
 
     try {
       // 检查配置是否已更新 - 修复undefined错误
-      const webClientId = Config.GOOGLE_OAUTH?.WEB_CLIENT_ID || Config.GOOGLE_OAUTH?.CLIENT_ID;
+      const webClientId =
+        Config.GOOGLE_OAUTH?.WEB_CLIENT_ID || Config.GOOGLE_OAUTH?.CLIENT_ID;
       console.log("🔍 Config check:", {
         GOOGLE_OAUTH: !!Config.GOOGLE_OAUTH,
         WEB_CLIENT_ID: webClientId,
-        isUndefined: webClientId === undefined
+        isUndefined: webClientId === undefined,
       });
 
       if (!webClientId || webClientId.includes("xxxxxx")) {
@@ -168,7 +170,10 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
                 `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenData.access_token}`
               );
 
-              console.log("🔍 User info response status:", userInfoResponse.status);
+              console.log(
+                "🔍 User info response status:",
+                userInfoResponse.status
+              );
               const userInfo = await userInfoResponse.json();
               console.log("🔍 User info data:", {
                 id: userInfo.id,
@@ -179,7 +184,10 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
 
               if (userInfo.error) {
                 console.error("❌ User info fetch failed:", userInfo.error);
-                Alert.alert("Google登录失败", `获取用户信息失败: ${userInfo.error}`);
+                Alert.alert(
+                  "Google登录失败",
+                  `获取用户信息失败: ${userInfo.error}`
+                );
                 onSignInError && onSignInError(userInfo.error);
                 return;
               }
@@ -210,12 +218,14 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
               });
 
               await AsyncStorage.setItem("authToken", response.data.token);
-              await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
+              await AsyncStorage.setItem(
+                "user",
+                JSON.stringify(response.data.user)
+              );
               await AsyncStorage.setItem("authProvider", "google");
 
               console.log("✅ Google Sign-In completed successfully");
               onSignInSuccess && onSignInSuccess(response.data);
-
             } catch (apiError) {
               console.error("❌ API call failed:", apiError);
               let errorMessage = "与服务器通信失败，请检查网络连接";
