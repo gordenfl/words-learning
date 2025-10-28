@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -63,6 +64,17 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const handleGoogleSignInSuccess = (data) => {
+    console.log('✅ Google Sign-In successful:', data);
+    // Navigate to Home
+    navigation.navigate('Home');
+  };
+
+  const handleGoogleSignInError = (error) => {
+    console.log('❌ Google Sign-In error:', error);
+    // Error handling is already done in GoogleSignInButton component
+  };
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -102,6 +114,19 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.buttonText}>Login</Text>
           )}
         </TouchableOpacity>
+
+        {/* 分隔线 */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>或</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Google登录按钮 */}
+        <GoogleSignInButton
+          onSignInSuccess={handleGoogleSignInSuccess}
+          onSignInError={handleGoogleSignInError}
+        />
 
         <TouchableOpacity
           style={styles.linkButton}
@@ -167,6 +192,21 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#4A90E2',
     fontSize: 16,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    color: '#666',
+    fontSize: 14,
   },
 });
 

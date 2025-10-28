@@ -44,6 +44,7 @@ api.interceptors.response.use(
       const status = error.response?.status;
       const message = error.response?.data?.error || error.message;
       console.log(`❌ API Error (${status}):`, message);
+      console.log(`❌ Full error response:`, error.response?.data);
     }
     return Promise.reject(error);
   }
@@ -62,6 +63,9 @@ export const authAPI = {
   
   changePassword: (oldPassword, newPassword) =>
     api.post('/auth/change-password', { oldPassword, newPassword }),
+
+  googleSignIn: (userInfo) =>
+    api.post('/auth/google', { userInfo }),
 };
 
 // Words API

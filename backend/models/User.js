@@ -18,8 +18,20 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function() {
+      return !this.authProvider || this.authProvider === 'email';
+    },
     minlength: 6
+  },
+  authProvider: {
+    type: String,
+    enum: ['email', 'google'],
+    default: 'email'
+  },
+  googleId: {
+    type: String,
+    sparse: true,
+    unique: true
   },
   profile: {
     displayName: String,
@@ -85,7 +97,7 @@ const userSchema = new mongoose.Schema({
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || this.authProvider === 'google') return next();
   
   try {
     const salt = await bcrypt.genSalt(10);

@@ -28,11 +28,25 @@
                 "ITSAppUsesNonExemptEncryption": false,
                 "NSAppTransportSecurity": {
                     "NSAllowsArbitraryLoads": true
-                }
+                },
+                "CFBundleURLTypes": [
+                    {
+                        "CFBundleURLName": "com.gordenfl.wordslearning.oauth",
+                        "CFBundleURLSchemes": [
+                            "com.gordenfl.wordslearning"
+                        ]
+                    },
+                    {
+                        "CFBundleURLName": "com.googleusercontent.apps.123044373895-h042aqgmij6a60hee8gm239fd71kihkn.oauth",
+                        "CFBundleURLSchemes": [
+                            "com.googleusercontent.apps.123044373895-h042aqgmij6a60hee8gm239fd71kihkn"
+                        ]
+                    }
+                ]
             }
         },
         "android": {
-            "package": "com.wordslearning.app",
+            "package": "com.gordenfl.wordslearning",
             "versionCode": 3,
             "adaptiveIcon": {
                 "foregroundImage": "./assets/adaptive-icon.png",
@@ -44,9 +58,25 @@
                 "android.permission.WRITE_EXTERNAL_STORAGE",
                 "android.permission.INTERNET",
                 "android.permission.ACCESS_NETWORK_STATE"
+            ],
+            "intentFilters": [
+                {
+                    "action": "VIEW",
+                    "autoVerify": true,
+                    "data": [
+                        {
+                            "scheme": "com.gordenfl.wordslearning"
+                        }
+                    ],
+                    "category": [
+                        "BROWSABLE",
+                        "DEFAULT"
+                    ]
+                }
             ]
         },
         "plugins": [
+            "expo-dev-client",
             [
                 "expo-build-properties",
                 {
