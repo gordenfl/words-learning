@@ -93,6 +93,86 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// Google Sign-In (原生SDK版本)
+router.post('/google', async (req, res) => {
+  const { userInfo } = req.body; // 原生SDK直接提供用户信息
+
+  if (!userInfo || !userInfo.id || !userInfo.email) {
+    return res.status(400).json({ message: 'User information not provided' });
+  }
+
+  try {
+    console.log('🔍 UserInfo from native SDK:', userInfo);
+    
+    const { id: googleId, email, name, photo } = userInfo;
+
+    // 在数据库中查找或创建用户
+    let user = await User.findOne({ googleId: googleId });
+
+    if (!user) {
+      // 如果找不到，尝试用邮箱链接已有账户
+      user = await User.findOne({ email: email });
+      if (user) {
+        // 找到了邮箱匹配的用户，但没有 googleId，说明是老用户
+        // 更新他的 googleId 以便下次直接登录
+        user.googleId = googleId;
+        user.authProvider = 'google';
+        if (!user.profile.avatar) {
+          user.profile.avatar = photo;
+        }
+        if (name) {
+          user.profile.displayName = name;
+        }
+        await user.save();
+      } else {
+        // 完全新的用户，创建新账户
+        // 生成一个临时的、唯一的 username
+        const tempUsername = email.split('@')[0] + Math.floor(100 + Math.random() * 900);
+        user = new User({
+          googleId,
+          email,
+          username: tempUsername,
+          authProvider: 'google',
+          profile: {
+            displayName: name || email.split('@')[0],
+            avatar: photo,
+          },
+        });
+        await user.save();
+      }
+    }
+
+    // 为该用户生成 JWT
+    const appToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET || 'default_secret_key',
+      { expiresIn: '7d' }
+    );
+
+    // 返回 JWT 和用户信息
+    res.status(200).json({
+      message: 'Google Sign-In successful',
+      token: appToken,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        name: user.profile.displayName,
+        avatar: user.profile.avatar,
+        authProvider: 'google',
+      },
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res
+      .status(500)
+      .json({
+        error: 'Google authentication failed',
+        message: error.message,
+      });
+  }
+});
+
 // Change password
 router.post('/change-password', authMiddleware, async (req, res) => {
   try {

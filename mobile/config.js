@@ -3,46 +3,93 @@
  * 所有可配置的参数集中管理
  */
 
-// 获取本机IP地址的帮助信息
-// macOS/Linux: ifconfig | grep "inet " | grep -v 127.0.0.1
-// Windows: ipconfig
+// 环境控制变量
+// 设置为 true 使用生产环境，false 使用开发环境
+const IS_PRODUCTION = false; // 开发时设为 false，生产时设为 true
 
-// 环境配置：开发 vs 生产
-// 直接使用生产服务器（APK 打包后使用）
+// 环境配置
+const ENV_CONFIG = {
+  // 开发环境配置
+  development: {
+    API: {
+      HOST: "gordenfl.com", // 统一使用远程服务器
+      PORT: "3003",
+      PROTOCOL: "http",
+    },
+    GOOGLE_OAUTH: {
+      // iOS Client ID (用于原生SDK)
+      IOS_CLIENT_ID:
+        "123044373895-h042aqgmij6a60hee8gm239fd71kihkn.apps.googleusercontent.com",
+      // Android Client ID (用于原生SDK)
+      ANDROID_CLIENT_ID:
+        "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
+    },
+  },
+
+  // 生产环境配置
+  production: {
+    API: {
+      HOST: "gordenfl.com",
+      PORT: "3003",
+      PROTOCOL: "http",
+    },
+    GOOGLE_OAUTH: {
+      // iOS Client ID (用于原生SDK)
+      IOS_CLIENT_ID:
+        "123044373895-h042aqgmij6a60hee8gm239fd71kihkn.apps.googleusercontent.com",
+      // Android Client ID (用于原生SDK)
+      ANDROID_CLIENT_ID:
+        "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
+    },
+  },
+};
+
+// 根据环境变量选择配置
+const currentEnv = IS_PRODUCTION ? "production" : "development";
+const envConfig = ENV_CONFIG[currentEnv];
+
 const Config = {
+  // 当前环境
+  ENVIRONMENT: currentEnv,
+  IS_PRODUCTION: IS_PRODUCTION,
+
   // API配置
   API: {
-    // 生产环境：外网服务器
-    HOST: '54.187.165.95',
-    PORT: '3003',
-    
+    HOST: envConfig.API.HOST,
+    PORT: envConfig.API.PORT,
+    PROTOCOL: envConfig.API.PROTOCOL,
+
     // 自动生成完整的BASE_URL
     get BASE_URL() {
-      const url = `http://${this.HOST}:${this.PORT}/api`;
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🌐 API Configuration:');
-      console.log('   HOST:', this.HOST);
-      console.log('   PORT:', this.PORT);
-      console.log('   Full URL:', url);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      const url = `${this.PROTOCOL}://${this.HOST}:${this.PORT}/api`;
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      console.log("🌐 API Configuration:");
+      console.log("   Environment:", currentEnv.toUpperCase());
+      console.log("   HOST:", this.HOST);
+      console.log("   PORT:", this.PORT);
+      console.log("   PROTOCOL:", this.PROTOCOL);
+      console.log("   Full URL:", url);
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━");
       return url;
-    }
+    },
   },
-  
+
+  // Google OAuth配置 - 直接使用环境配置
+  GOOGLE_OAUTH: envConfig.GOOGLE_OAUTH,
+
   // OCR配置
   OCR: {
     TIMEOUT: 30000, // 30秒超时
     MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   },
-  
+
   // 学习配置
   LEARNING: {
     DEFAULT_DAILY_GOAL: 10,
     DEFAULT_WEEKLY_GOAL: 50,
     DEFAULT_MONTHLY_GOAL: 200,
-    DEFAULT_DIFFICULTY: 'intermediate',
-  }
+    DEFAULT_DIFFICULTY: "intermediate",
+  },
 };
 
 export default Config;
-
