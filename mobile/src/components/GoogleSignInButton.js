@@ -71,15 +71,30 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
       console.log("✅ Google Sign-In successful:", userInfo);
       console.log("🔍 UserInfo.user:", userInfo.user);
       console.log("🔍 UserInfo.user keys:", Object.keys(userInfo.user || {}));
+      console.log("🔍 UserInfo.data:", userInfo.data);
+      console.log("🔍 UserInfo.data keys:", Object.keys(userInfo.data || {}));
       console.log(
         "🔍 Full userInfo structure:",
         JSON.stringify(userInfo, null, 2)
       );
 
+      // 检查是否是用户取消的情况
+      if (userInfo.type === "cancelled" || userInfo.data === null) {
+        console.log("❌ User cancelled Google Sign-In");
+        return; // 直接返回，不显示错误
+      }
+
       // 检查userInfo结构并提取正确的用户数据
       // Google Sign-In SDK返回的结构可能是 {type: "...", data: {...}} 或 {user: {...}}
-      const userData = userInfo.user || userInfo.data || userInfo;
-      console.log("🔍 Extracted userData:", userData);
+      let userData = userInfo.user || userInfo.data || userInfo;
+
+      // 如果userData仍然只有type和data字段，说明需要进一步提取
+      if (userData && userData.type && userData.data) {
+        userData = userData.data;
+        console.log("🔍 Extracted from data field:", userData);
+      }
+
+      console.log("🔍 Final userData:", userData);
       console.log("🔍 userData keys:", Object.keys(userData || {}));
       console.log("🔍 userData values:", Object.values(userData || {}));
 
@@ -154,13 +169,21 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
 
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         console.log("❌ User cancelled Google Sign-In");
-        // 用户取消登录，不显示错误
+        // 用户取消登录，不显示错误，直接返回
+        return;
       } else if (error.code === statusCodes.IN_PROGRESS) {
         console.log("❌ Google Sign-In already in progress");
         Alert.alert("Google登录", "登录正在进行中，请稍候...");
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         console.log("❌ Play Services not available");
         Alert.alert("Google登录失败", "Google Play服务不可用");
+      } else if (
+        error.message &&
+        error.message.includes("Missing required user data")
+      ) {
+        console.log("❌ Data extraction error:", error.message);
+        Alert.alert("Google登录失败", "无法获取用户信息，请重试");
+        onSignInError && onSignInError(error);
       } else {
         console.log("❌ Unknown Google Sign-In error:", error);
         Alert.alert("Google登录失败", `错误: ${error.message || "未知错误"}`);
