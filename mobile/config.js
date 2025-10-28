@@ -17,21 +17,12 @@ const ENV_CONFIG = {
       PROTOCOL: "http",
     },
     GOOGLE_OAUTH: {
-      // Web Client ID (用于服务器端验证)
-      WEB_CLIENT_ID:
-        "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com",
       // iOS Client ID (用于原生SDK)
       IOS_CLIENT_ID:
         "123044373895-h042aqgmij6a60hee8gm239fd71kihkn.apps.googleusercontent.com",
       // Android Client ID (用于原生SDK)
       ANDROID_CLIENT_ID:
         "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
-      // 开发环境重定向URI
-      REDIRECT_URI: "https://auth.expo.io/@gordenfl/words-learning",
-      // Web Client Secret
-      CLIENT_SECRET: {
-        WEB: "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",
-      },
     },
   },
 
@@ -43,21 +34,12 @@ const ENV_CONFIG = {
       PROTOCOL: "http",
     },
     GOOGLE_OAUTH: {
-      // Web Client ID (用于服务器端验证)
-      WEB_CLIENT_ID:
-        "123044373895-bf1p23r83kdcabs4frpvtq9o38k2uo9m.apps.googleusercontent.com",
       // iOS Client ID (用于原生SDK)
       IOS_CLIENT_ID:
         "123044373895-h042aqgmij6a60hee8gm239fd71kihkn.apps.googleusercontent.com",
       // Android Client ID (用于原生SDK)
       ANDROID_CLIENT_ID:
         "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
-      // 生产环境重定向URI
-      REDIRECT_URI: "https://auth.expo.io/@gordenfl/words-learning",
-      // Web Client Secret
-      CLIENT_SECRET: {
-        WEB: "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",
-      },
     },
   },
 };

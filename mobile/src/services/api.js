@@ -61,8 +61,7 @@ export const authAPI = {
   changePassword: (oldPassword, newPassword) =>
     api.post("/auth/change-password", { oldPassword, newPassword }),
 
-  googleSignIn: (idToken, userInfo) =>
-    api.post("/auth/google", { idToken, userInfo }),
+  googleSignIn: (userInfo) => api.post("/auth/google", { userInfo }),
 };
 
 // Words API
