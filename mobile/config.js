@@ -26,7 +26,12 @@ const ENV_CONFIG = {
       // Android Client ID (用于原生SDK)
       ANDROID_CLIENT_ID:
         "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
-      // 不再需要重定向URI - 原生SDK自动处理
+      // 开发环境重定向URI
+      REDIRECT_URI: "https://auth.expo.io/@gordenfl/words-learning",
+      // Web Client Secret
+      CLIENT_SECRET: {
+        WEB: "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",
+      },
     },
   },
 
@@ -47,7 +52,12 @@ const ENV_CONFIG = {
       // Android Client ID (用于原生SDK)
       ANDROID_CLIENT_ID:
         "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
-      // 不再需要重定向URI - 原生SDK自动处理
+      // 生产环境重定向URI
+      REDIRECT_URI: "https://auth.expo.io/@gordenfl/words-learning",
+      // Web Client Secret
+      CLIENT_SECRET: {
+        WEB: "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",
+      },
     },
   },
 };
@@ -82,14 +92,8 @@ const Config = {
     },
   },
 
-  // Google OAuth配置
-  GOOGLE_OAUTH: {
-    CLIENT_ID: envConfig.GOOGLE_OAUTH.CLIENT_ID,
-    REDIRECT_URI: envConfig.GOOGLE_OAUTH.REDIRECT_URI,
-    WEB_CLIENT_ID: envConfig.GOOGLE_OAUTH.WEB_CLIENT_ID,
-    IOS_CLIENT_ID: envConfig.GOOGLE_OAUTH.IOS_CLIENT_ID,
-    ANDROID_CLIENT_ID: envConfig.GOOGLE_OAUTH.ANDROID_CLIENT_ID,
-  },
+  // Google OAuth配置 - 直接使用环境配置
+  GOOGLE_OAUTH: envConfig.GOOGLE_OAUTH,
 
   // OCR配置
   OCR: {

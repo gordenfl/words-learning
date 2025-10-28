@@ -2,7 +2,6 @@
     "expo": {
         "name": "Chinese Words Learning",
         "slug": "words-learning",
-        "scheme": "wordslearning",
         "version": "1.0.0",
         "orientation": "portrait",
         "userInterfaceStyle": "light",

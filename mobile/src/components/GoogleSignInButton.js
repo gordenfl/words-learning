@@ -18,16 +18,21 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
   const [isConfigured, setIsConfigured] = useState(true);
 
   // 使用WebBrowser方案（兼容Expo Go）
-  const redirectUri = "https://auth.expo.io/@gordenfl/words-learning";
+  const redirectUri = Config.GOOGLE_OAUTH.REDIRECT_URI;
 
   console.log("🔗 Using WebBrowser Google Sign-In");
   console.log("   Environment:", Config.ENVIRONMENT);
   console.log("   Redirect URI:", redirectUri);
+  console.log("   WEB_CLIENT_ID:", Config.GOOGLE_OAUTH?.WEB_CLIENT_ID);
+  console.log("   Config.GOOGLE_OAUTH:", Config.GOOGLE_OAUTH);
 
   // 构建Google OAuth URL
   const buildGoogleAuthUrl = () => {
-    const webClientId =
-      Config.GOOGLE_OAUTH?.WEB_CLIENT_ID || Config.GOOGLE_OAUTH?.CLIENT_ID;
+    const webClientId = Config.GOOGLE_OAUTH?.WEB_CLIENT_ID;
+    if (!webClientId) {
+      throw new Error("WEB_CLIENT_ID not configured");
+    }
+
     const params = new URLSearchParams({
       client_id: webClientId,
       redirect_uri: redirectUri,
@@ -48,15 +53,8 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
     setLoading(true);
 
     try {
-      // 检查配置是否已更新 - 修复undefined错误
-      const webClientId =
-        Config.GOOGLE_OAUTH?.WEB_CLIENT_ID || Config.GOOGLE_OAUTH?.CLIENT_ID;
-      console.log("🔍 Config check:", {
-        GOOGLE_OAUTH: !!Config.GOOGLE_OAUTH,
-        WEB_CLIENT_ID: webClientId,
-        isUndefined: webClientId === undefined,
-      });
-
+      // 检查配置是否已更新
+      const webClientId = Config.GOOGLE_OAUTH?.WEB_CLIENT_ID;
       if (!webClientId || webClientId.includes("xxxxxx")) {
         Alert.alert(
           "配置未完成",
@@ -70,7 +68,6 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
       console.log("🔄 Using WebBrowser...");
       const authUrl = buildGoogleAuthUrl();
       console.log("🔗 Opening Google OAuth URL:", authUrl);
-      console.log("   Web Client ID:", webClientId);
 
       const result = await WebBrowser.openAuthSessionAsync(
         authUrl,
@@ -131,7 +128,7 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
                   },
                   body: new URLSearchParams({
                     client_id: webClientId,
-                    client_secret: "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",
+                    client_secret: Config.GOOGLE_OAUTH.CLIENT_SECRET.WEB,
                     code: code,
                     grant_type: "authorization_code",
                     redirect_uri: redirectUri,
