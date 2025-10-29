@@ -26,10 +26,15 @@ const userSchema = new mongoose.Schema(
     },
     authProvider: {
       type: String,
-      enum: ["email", "google"],
+      enum: ["email", "google", "facebook"],
       default: "email",
     },
     googleId: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
+    facebookId: {
       type: String,
       sparse: true,
       unique: true,
@@ -110,7 +115,11 @@ const userSchema = new mongoose.Schema(
 
 // Hash password before saving
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password") || this.authProvider === "google")
+  if (
+    !this.isModified("password") ||
+    this.authProvider === "google" ||
+    this.authProvider === "facebook"
+  )
     return next();
 
   try {

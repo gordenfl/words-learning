@@ -24,6 +24,12 @@ const ENV_CONFIG = {
       ANDROID_CLIENT_ID:
         "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
     },
+    FACEBOOK_OAUTH: {
+      // Facebook App ID (iOS和Android共用)
+      APP_ID: "1142058210841677",
+      // Facebook App Name (用于显示)
+      APP_NAME: "Chinese Words Learning",
+    },
   },
 
   // 生产环境配置
@@ -40,6 +46,12 @@ const ENV_CONFIG = {
       // Android Client ID (用于原生SDK)
       ANDROID_CLIENT_ID:
         "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",
+    },
+    FACEBOOK_OAUTH: {
+      // Facebook App ID (iOS和Android共用)
+      APP_ID: "1142058210841677",
+      // Facebook App Name (用于显示)
+      APP_NAME: "Chinese Words Learning",
     },
   },
 };
@@ -76,6 +88,9 @@ const Config = {
 
   // Google OAuth配置 - 直接使用环境配置
   GOOGLE_OAUTH: envConfig.GOOGLE_OAUTH,
+
+  // Facebook OAuth配置 - 直接使用环境配置
+  FACEBOOK_OAUTH: envConfig.FACEBOOK_OAUTH,
 
   // OCR配置
   OCR: {

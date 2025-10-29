@@ -41,6 +41,12 @@
                         "CFBundleURLSchemes": [
                             "com.googleusercontent.apps.123044373895-h042aqgmij6a60hee8gm239fd71kihkn"
                         ]
+                    },
+                    {
+                        "CFBundleURLName": "facebook.oauth",
+                        "CFBundleURLSchemes": [
+                            "fb1142058210841677"
+                        ]
                     }
                 ]
             }
@@ -87,6 +93,19 @@
                         "deploymentTarget": "15.1",
                         "useFrameworks": "static"
                     }
+                }
+            ],
+            [
+                "react-native-fbsdk-next",
+                {
+                    "appID": "1142058210841677",
+                    "clientToken": "YOUR_FACEBOOK_CLIENT_TOKEN",
+                    "displayName": "Chinese Words Learning",
+                    "scheme": "fb1142058210841677",
+                    "advertiserIDCollectionEnabled": false,
+                    "autoLogAppEventsEnabled": false,
+                    "isAutoInitEnabled": true,
+                    "iosUserTrackingPermission": "This identifier will be used to deliver personalized ads to you."
                 }
             ]
         ],
