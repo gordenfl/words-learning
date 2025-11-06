@@ -326,12 +326,12 @@ export default function WordsListScreen({ navigation, route }) {
           )}
           {item.status === 'known' && (
             <TouchableOpacity
-              style={[styles.actionBtn, styles.unknownBtn]}
+              style={[styles.actionBtn, styles.unknownBtn, styles.learnAgainBtn]}
               onPress={(e) => {
                 updateWordStatus(item._id, 'unknown');
               }}
             >
-              <Text style={styles.actionBtnText}>↺</Text>
+              <Text style={styles.learnAgainBtnText}>Learn Again</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -544,6 +544,11 @@ const styles = StyleSheet.create({
   unknownBtn: {
     backgroundColor: '#FFA500',
   },
+  learnAgainBtn: {
+    width: undefined,
+    minWidth: 100,
+    paddingHorizontal: 12,
+  },
   deleteBtn: {
     backgroundColor: '#FF6347',
   },
@@ -551,6 +556,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 13,
+  },
+  learnAgainBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 12,
   },
   emptyText: {
     textAlign: 'center',
