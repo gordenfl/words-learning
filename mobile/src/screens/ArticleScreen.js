@@ -82,39 +82,66 @@ export default function ArticleScreen({ route, navigation }) {
 
   // 高亮显示目标单词的函数
   const highlightTargetWords = (content, targetWords) => {
-    // 提取所有目标单词
-    const wordTexts = targetWords.map(tw => tw.word?.word || tw.wordText);
+    // 提取所有目标单词（按长度从长到短排序，优先匹配长词）
+    const wordTexts = targetWords.map(tw => tw.word?.word || tw.wordText).filter(Boolean);
     
     if (wordTexts.length === 0) {
       return <Text style={styles.articleText}>{content}</Text>;
     }
 
-    // 将所有目标单词用正则匹配并分割文本
+    // 按长度从长到短排序，优先匹配长词（避免短词覆盖长词的一部分）
+    const sortedWords = [...wordTexts].sort((a, b) => b.length - a.length);
+
+    // 使用正则表达式匹配所有目标单词
     const parts = [];
     let lastIndex = 0;
     
-    // 为每个字符检查是否是目标单词
-    for (let i = 0; i < content.length; i++) {
-      const char = content[i];
-      
-      // 检查当前字符是否是目标单词
-      if (wordTexts.includes(char)) {
-        // 添加之前的普通文本
-        if (i > lastIndex) {
-          parts.push({
-            text: content.substring(lastIndex, i),
-            isTarget: false
-          });
-        }
-        
-        // 添加高亮的目标单词
-        parts.push({
-          text: char,
-          isTarget: true
-        });
-        
-        lastIndex = i + 1;
+    // 创建正则表达式，匹配所有目标单词（使用|分隔）
+    const escapedWords = sortedWords.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${escapedWords.join('|')})`, 'g');
+    
+    // 找到所有匹配的位置
+    const matches = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      matches.push({
+        index: match.index,
+        length: match[0].length,
+        word: match[0]
+      });
+    }
+    
+    // 按位置排序
+    matches.sort((a, b) => a.index - b.index);
+    
+    // 处理重叠的匹配（取第一个匹配，跳过重叠的部分）
+    const nonOverlappingMatches = [];
+    let lastMatchEnd = 0;
+    
+    for (const match of matches) {
+      if (match.index >= lastMatchEnd) {
+        nonOverlappingMatches.push(match);
+        lastMatchEnd = match.index + match.length;
       }
+    }
+    
+    // 构建文本片段
+    for (const match of nonOverlappingMatches) {
+      // 添加匹配前的普通文本
+      if (match.index > lastIndex) {
+        parts.push({
+          text: content.substring(lastIndex, match.index),
+          isTarget: false
+        });
+      }
+      
+      // 添加高亮的目标单词
+      parts.push({
+        text: match.word,
+        isTarget: true
+      });
+      
+      lastIndex = match.index + match.length;
     }
     
     // 添加剩余的文本
@@ -123,6 +150,11 @@ export default function ArticleScreen({ route, navigation }) {
         text: content.substring(lastIndex),
         isTarget: false
       });
+    }
+
+    // 如果没有匹配到任何单词，返回原始文本
+    if (parts.length === 0) {
+      return <Text style={styles.articleText}>{content}</Text>;
     }
 
     return (
@@ -144,13 +176,22 @@ export default function ArticleScreen({ route, navigation }) {
     let content = article.content;
     const targetWords = article.targetWords || [];
 
+    // 提取所有目标单词的文本
+    const targetWordTexts = targetWords.map(tw => tw.word?.word || tw.wordText).filter(Boolean);
+    
+    // 只显示在文章内容中实际出现的单词
+    const wordsInContent = targetWords.filter(tw => {
+      const wordText = tw.word?.word || tw.wordText;
+      return wordText && content.includes(wordText);
+    });
+
     return (
       <View>
         {highlightTargetWords(content, targetWords)}
         
         <View style={styles.wordsSection}>
           <Text style={styles.sectionTitle}>Target Words:</Text>
-          {targetWords.map((tw, index) => {
+          {wordsInContent.map((tw, index) => {
             const wordId = tw.word?._id || tw.word;
             const wordText = tw.word?.word || tw.wordText;
             const wordPinyin = tw.word?.pinyin || '';
