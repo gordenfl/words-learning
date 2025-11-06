@@ -99,7 +99,7 @@
                 "react-native-fbsdk-next",
                 {
                     "appID": "1142058210841677",
-                    "clientToken": "YOUR_FACEBOOK_CLIENT_TOKEN",
+                    "clientToken": "80fe820226405bb590def0e7f24fc4c7",
                     "displayName": "Chinese Words Learning",
                     "scheme": "fb1142058210841677",
                     "advertiserIDCollectionEnabled": false,

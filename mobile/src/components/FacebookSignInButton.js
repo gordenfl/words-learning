@@ -27,39 +27,77 @@ export default function FacebookSignInButton({
   useEffect(() => {
     // 检查Facebook配置
     const checkFacebookConfig = () => {
-      const appId = Config.FACEBOOK_OAUTH?.APP_ID;
+      try {
+        const appId = Config.FACEBOOK_OAUTH?.APP_ID;
 
-      if (!appId || appId === "YOUR_FACEBOOK_APP_ID") {
-        console.error("❌ Facebook App ID not configured");
+        if (!appId || appId === "YOUR_FACEBOOK_APP_ID") {
+          console.error("❌ Facebook App ID not configured");
+          setIsConfigured(false);
+          return;
+        }
+
+        console.log("✅ Facebook Sign-In configured successfully");
+        console.log("   App ID:", appId);
+        console.log("   Platform:", Platform.OS);
+
+        // 检查SDK是否可用
+        if (!LoginManager || !AccessToken) {
+          console.error("❌ Facebook SDK components not available");
+          setIsConfigured(false);
+          return;
+        }
+
+        console.log("✅ Facebook SDK components available");
+        console.log("✅ Facebook SDK should be auto-initialized");
+      } catch (error) {
+        console.error("❌ Facebook SDK initialization error:", error);
+        console.error("❌ Error details:", error.message, error.stack);
         setIsConfigured(false);
-        return;
       }
-
-      console.log("✅ Facebook Sign-In configured successfully");
-      console.log("   App ID:", appId);
-      console.log("   Platform:", Platform.OS);
     };
 
     checkFacebookConfig();
   }, []);
 
   const handleFacebookSignIn = async () => {
+    console.log("🚀 Facebook Sign-In button clicked");
+
     if (!isConfigured) {
+      console.log("❌ Facebook not configured, showing alert");
       Alert.alert("错误", "Facebook Sign-In 未正确配置");
       return;
     }
 
+    console.log("✅ Facebook is configured, starting login process");
     setLoading(true);
 
     try {
       console.log("🔄 Starting Facebook Sign-In...");
+      console.log("📱 Platform:", Platform.OS);
+      console.log("🔧 App ID:", Config.FACEBOOK_OAUTH?.APP_ID);
+
+      console.log("🔐 Calling LoginManager.logInWithPermissions...");
+
+      // 先检查LoginManager是否可用
+      console.log("🔍 LoginManager available:", !!LoginManager);
+      console.log(
+        "🔍 LoginManager.logInWithPermissions available:",
+        !!LoginManager.logInWithPermissions
+      );
 
       // 登录Facebook
-      const result = await LoginManager.logInWithPermissions([
+      console.log("📝 Creating login promise...");
+      const loginPromise = LoginManager.logInWithPermissions([
         "public_profile",
         "email",
       ]);
 
+      console.log("⏰ Waiting for Facebook login response...");
+
+      // 直接等待Facebook登录结果，不设置超时
+      const result = await loginPromise;
+
+      console.log("✅ LoginManager.logInWithPermissions completed");
       console.log("🔍 Facebook login result:", result);
 
       if (result.isCancelled) {
@@ -67,17 +105,25 @@ export default function FacebookSignInButton({
         return; // 直接返回，不显示错误
       }
 
+      console.log("✅ User did not cancel, proceeding to get access token");
+
       // 获取访问令牌
+      console.log("🔑 Calling AccessToken.getCurrentAccessToken...");
       const data = await AccessToken.getCurrentAccessToken();
 
+      console.log("🔑 AccessToken.getCurrentAccessToken result:", data);
+
       if (!data) {
+        console.log("❌ No access token found");
         throw new Error("No access token found");
       }
 
       console.log("✅ Facebook access token obtained:", data.accessToken);
 
       // 使用Graph API获取用户信息
+      console.log("📊 Starting Graph API request...");
       const userInfo = await new Promise((resolve, reject) => {
+        console.log("📊 Creating GraphRequest...");
         const infoRequest = new GraphRequest(
           "/me",
           {
@@ -88,6 +134,7 @@ export default function FacebookSignInButton({
             },
           },
           (error, result) => {
+            console.log("📊 Graph API callback triggered");
             if (error) {
               console.error("❌ Graph API error:", error);
               reject(error);
@@ -98,12 +145,16 @@ export default function FacebookSignInButton({
           }
         );
 
+        console.log("📊 Starting GraphRequestManager...");
         new GraphRequestManager().addRequest(infoRequest).start();
+        console.log("📊 GraphRequestManager started");
       });
 
+      console.log("✅ Graph API request completed");
       console.log("🔍 UserInfo from Facebook Graph API:", userInfo);
 
       // 格式化用户数据
+      console.log("🔄 Formatting user data...");
       const formattedUserData = {
         id: userInfo.id,
         email: userInfo.email || `${userInfo.id}@facebook.com`, // Facebook可能不提供邮箱
@@ -111,9 +162,11 @@ export default function FacebookSignInButton({
         photo: userInfo.picture?.data?.url,
       };
 
+      console.log("✅ User data formatted successfully");
       console.log("🔍 Formatted userData:", formattedUserData);
 
       // 验证必需字段
+      console.log("🔍 Validating required fields...");
       if (!formattedUserData.id || !formattedUserData.name) {
         console.error("❌ Missing required fields:");
         console.error("   id:", formattedUserData.id);
@@ -123,20 +176,29 @@ export default function FacebookSignInButton({
         );
       }
 
+      console.log("✅ Required fields validation passed");
+
       // 发送用户信息到后端
+      console.log("🌐 Sending user data to backend...");
       const response = await authAPI.facebookSignIn(formattedUserData);
 
+      console.log("✅ Backend response received");
       console.log("🔍 Backend response:", response.data);
 
       // 保存认证信息
+      console.log("💾 Saving authentication data...");
       await AsyncStorage.setItem("authToken", response.data.token);
       await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
       await AsyncStorage.setItem("authProvider", "facebook");
+      console.log("✅ Authentication data saved");
 
       console.log("✅ Facebook Sign-In completed successfully");
       onSignInSuccess && onSignInSuccess(response.data);
     } catch (error) {
-      console.error("❌ Facebook Sign-In error:", error);
+      console.error("❌ Facebook Sign-In error caught in catch block");
+      console.error("❌ Error details:", error);
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error stack:", error.stack);
 
       if (
         error.message &&
@@ -151,7 +213,9 @@ export default function FacebookSignInButton({
         onSignInError && onSignInError(error);
       }
     } finally {
+      console.log("🔄 Setting loading to false");
       setLoading(false);
+      console.log("✅ Facebook Sign-In process completed");
     }
   };
 
@@ -189,7 +253,10 @@ export default function FacebookSignInButton({
           opacity: 0.6,
         },
       ]}
-      onPress={handleFacebookSignIn}
+      onPress={() => {
+        console.log("👆 Facebook button pressed");
+        handleFacebookSignIn();
+      }}
       disabled={loading || !isConfigured}
     >
       <View

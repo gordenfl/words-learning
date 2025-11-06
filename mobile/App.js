@@ -13,10 +13,11 @@ import ArticleScreen from "./src/screens/ArticleScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import LearningPlanScreen from "./src/screens/LearningPlanScreen";
 import WordDetailScreen from "./src/screens/WordDetailScreen";
+import ErrorBoundary from "./src/components/ErrorBoundary";
 
 const Stack = createStackNavigator();
 
-export default function App() {
+function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -102,5 +103,13 @@ export default function App() {
         />
       </Stack.Navigator>
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }
