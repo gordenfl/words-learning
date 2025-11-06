@@ -174,33 +174,66 @@ router.delete('/:wordId', async (req, res) => {
 router.post('/:wordId/generate-details', async (req, res) => {
   try {
     const { wordId } = req.params;
+    const { force = false, updateType = 'both' } = req.body; // updateType: 'compounds', 'examples', 'both'
     const word = await Word.findOne({ _id: wordId, userId: req.userId });
     
     if (!word) {
       return res.status(404).json({ error: 'Word not found' });
     }
 
-    // 检查是否已有组词和例句
-    if (word.compounds && word.compounds.length > 0 && 
-        word.examples && word.examples.length > 0) {
-      return res.json({ 
-        message: 'Word details already exist',
-        word 
-      });
+    // 如果不是强制更新，检查是否已有组词和例句
+    if (!force) {
+      if (updateType === 'compounds' && word.compounds && word.compounds.length > 0) {
+        return res.json({ 
+          message: 'Word compounds already exist',
+          word 
+        });
+      }
+      if (updateType === 'examples' && word.examples && word.examples.length > 0) {
+        return res.json({ 
+          message: 'Word examples already exist',
+          word 
+        });
+      }
+      if (updateType === 'both' && word.compounds && word.compounds.length > 0 && 
+          word.examples && word.examples.length > 0) {
+        return res.json({ 
+          message: 'Word details already exist',
+          word 
+        });
+      }
     }
 
     // 使用AI生成组词和例句
-    console.log(`🎯 Generating details for word: ${word.word}`);
+    const action = force ? 'Updating' : 'Generating';
+    const target = updateType === 'compounds' ? 'compounds' : 
+                   updateType === 'examples' ? 'examples' : 'details';
+    console.log(`🎯 ${action} ${target} for word: ${word.word}`);
     const details = await generateWordDetails(word.word, word.pinyin, word.translation);
     
-    // 更新单词
-    word.compounds = details.compounds || [];
-    word.examples = details.examples || [];
+    // 根据 updateType 更新对应的数据
+    if (updateType === 'compounds') {
+      word.compounds = details.compounds || [];
+    } else if (updateType === 'examples') {
+      word.examples = details.examples || [];
+    } else {
+      // both - 更新全部
+      word.compounds = details.compounds || [];
+      word.examples = details.examples || [];
+    }
     await word.save();
 
-    console.log(`✅ Generated ${word.compounds.length} compounds and ${word.examples.length} examples`);
+    const actionCompleted = force ? 'Updated' : 'Generated';
+    if (updateType === 'compounds') {
+      console.log(`✅ ${actionCompleted} ${word.compounds.length} compounds`);
+    } else if (updateType === 'examples') {
+      console.log(`✅ ${actionCompleted} ${word.examples.length} examples`);
+    } else {
+      console.log(`✅ ${actionCompleted} ${word.compounds.length} compounds and ${word.examples.length} examples`);
+    }
+    
     res.json({ 
-      message: 'Word details generated successfully',
+      message: force ? 'Word details updated successfully' : 'Word details generated successfully',
       word 
     });
   } catch (error) {

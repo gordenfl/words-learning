@@ -20,6 +20,8 @@ export default function WordDetailScreen({ route, navigation }) {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [generatingDetails, setGeneratingDetails] = useState(false);
+  const [generatingCompounds, setGeneratingCompounds] = useState(false);
+  const [generatingExamples, setGeneratingExamples] = useState(false);
   const [showStrokeOrder, setShowStrokeOrder] = useState(false);
 
   useEffect(() => {
@@ -33,12 +35,14 @@ export default function WordDetailScreen({ route, navigation }) {
       const foundWord = response.data.words.find(w => w._id === wordId);
       setWord(foundWord);
       
-      // 检查是否需要自动生成组词和例句
-      if ((!foundWord.compounds || foundWord.compounds.length === 0) ||
-          (!foundWord.examples || foundWord.examples.length === 0)) {
-        // 自动生成
+      // 检查是否需要自动生成组词和例句（只在完全没有数据时才生成）
+      const hasCompounds = foundWord.compounds && foundWord.compounds.length > 0;
+      const hasExamples = foundWord.examples && foundWord.examples.length > 0;
+      
+      if (!hasCompounds || !hasExamples) {
+        // 自动生成（只在缺失数据时）
         setTimeout(() => {
-          generateDetails();
+          generateDetails(false); // false = 不强制更新
         }, 500); // 延迟500ms开始生成，让界面先显示出来
       }
     } catch (error) {
@@ -86,17 +90,40 @@ export default function WordDetailScreen({ route, navigation }) {
     }
   };
 
-  const generateDetails = async () => {
-    setGeneratingDetails(true);
+  const generateDetails = async (force = false, updateType = 'both') => {
+    // 设置对应的加载状态
+    if (updateType === 'compounds') {
+      setGeneratingCompounds(true);
+    } else if (updateType === 'examples') {
+      setGeneratingExamples(true);
+    } else {
+      setGeneratingDetails(true);
+    }
+
     try {
-      const response = await wordsAPI.generateDetails(wordId);
+      const response = await wordsAPI.generateDetails(wordId, force, updateType);
       setWord(response.data.word);
-      // 成功后不显示提示，直接更新界面
+      // 成功后显示提示
+      if (force) {
+        const message = updateType === 'compounds' ? '✅ Compounds updated' :
+                        updateType === 'examples' ? '✅ Examples updated' :
+                        '✅ Updated successfully';
+        showToastMessage(message);
+      } else {
+        // 自动生成时不显示提示，直接更新界面
+      }
     } catch (error) {
       console.log('Error generating details:', error);
-      showToastMessage('❌ Failed to generate');
+      const errorMessage = force ? '❌ Failed to update' : '❌ Failed to generate';
+      showToastMessage(errorMessage);
     } finally {
-      setGeneratingDetails(false);
+      if (updateType === 'compounds') {
+        setGeneratingCompounds(false);
+      } else if (updateType === 'examples') {
+        setGeneratingExamples(false);
+      } else {
+        setGeneratingDetails(false);
+      }
     }
   };
 
@@ -194,8 +221,21 @@ export default function WordDetailScreen({ route, navigation }) {
 
         {/* 组词模块 - 独立卡片 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📚 Word Compounds</Text>
-          {generatingDetails && (!word.compounds || word.compounds.length === 0) ? (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📚 Word Compounds</Text>
+            {(word.compounds && word.compounds.length > 0) && (
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={() => generateDetails(true, 'compounds')}
+                disabled={generatingCompounds}
+              >
+                <Text style={styles.updateButtonText}>
+                  {generatingCompounds ? '⏳' : 'Update'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {(generatingDetails || generatingCompounds) && (!word.compounds || word.compounds.length === 0) ? (
             <View style={styles.generatingContainer}>
               <ActivityIndicator color="#4A90E2" size="small" />
               <Text style={styles.generatingText}>Generating compounds...</Text>
@@ -228,8 +268,21 @@ export default function WordDetailScreen({ route, navigation }) {
 
         {/* 例句模块 - 独立卡片 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💬 Example Sentences</Text>
-          {generatingDetails && (!word.examples || word.examples.length === 0) ? (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>💬 Example Sentences</Text>
+            {(word.examples && word.examples.length > 0) && (
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={() => generateDetails(true, 'examples')}
+                disabled={generatingExamples}
+              >
+                <Text style={styles.updateButtonText}>
+                  {generatingExamples ? '⏳' : 'Update'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {(generatingDetails || generatingExamples) && (!word.examples || word.examples.length === 0) ? (
             <View style={styles.generatingContainer}>
               <ActivityIndicator color="#4A90E2" size="small" />
               <Text style={styles.generatingText}>Generating examples...</Text>
@@ -907,11 +960,30 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
+    flex: 1,
+  },
+  updateButton: {
+    backgroundColor: '#4A90E2',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  updateButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   definition: {
     fontSize: 16,
