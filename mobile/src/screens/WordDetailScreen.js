@@ -332,7 +332,7 @@ export default function WordDetailScreen({ route, navigation }) {
 
         {/* 状态更新按钮 */}
         <View style={styles.statusActions}>
-          <Text style={styles.sectionTitle}>Update Status</Text>
+          <Text style={styles.statusActionsTitle}>Update Status</Text>
           <View style={styles.statusButtons}>
             <TouchableOpacity
               style={[
@@ -1085,6 +1085,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+  },
+  statusActionsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
   },
   statusButtons: {
     flexDirection: 'row',
