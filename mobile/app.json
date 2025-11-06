@@ -2,7 +2,7 @@
     "expo": {
         "name": "Chinese Words Learning",
         "slug": "words-learning",
-        "version": "1.0.1",
+        "version": "1.0.0",
         "orientation": "portrait",
         "userInterfaceStyle": "light",
         "icon": "./assets/icon.png",
@@ -20,7 +20,7 @@
         "ios": {
             "supportsTablet": true,
             "bundleIdentifier": "com.gordenfl.wordslearning",
-            "buildNumber": "3",
+            "buildNumber": "4",
             "infoPlist": {
                 "NSCameraUsageDescription": "We need camera access to scan and recognize Chinese characters from books and images.",
                 "NSPhotoLibraryUsageDescription": "We need photo library access to select images for Chinese character recognition.",
