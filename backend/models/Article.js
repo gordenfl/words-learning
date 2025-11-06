@@ -14,6 +14,10 @@ const articleSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  englishContent: {
+    type: String,
+    default: ''
+  },
   targetWords: [{
     word: {
       type: mongoose.Schema.Types.ObjectId,
