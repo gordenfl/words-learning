@@ -59,3 +59,5 @@ mobile/android/gradle.properties
 mobile/android/key.properties
 mobile/android/app/google-services.json
 mobile/android/.DS_Store
+mobile/android/*
+mobile/ios
