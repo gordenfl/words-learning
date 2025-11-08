@@ -183,10 +183,11 @@ export default function HomeScreen({ navigation }) {
       setKnownWords(normalizedKnownWords); // 已学单词也排序
       setSelectedWords([]); // 默认不选中，让用户自己选择
       setShowWordsConfirm(false);
-      requestAnimationFrame(() => {
-        setConfirmModalSession((prev) => prev + 1);
+      setTimeout(() => {
+        const nextSession = confirmModalSession + 1;
+        setConfirmModalSession(nextSession);
         setShowWordsConfirm(true);
-      });
+      }, 0);
     } catch (error) {
       if (__DEV__) {
         console.log("OCR error:", error.message);
@@ -587,23 +588,6 @@ export default function HomeScreen({ navigation }) {
         {/* 生成文章时的加载overlay */}
         <Modal
           transparent={true}
-          visible={generatingArticle}
-          animationType="fade"
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <ActivityIndicator size="large" color="#4A90E2" />
-              <Text style={styles.modalTitle}>Generating Article...</Text>
-              <Text style={styles.modalSubtitle}>
-                AI is creating your personalized Chinese story
-              </Text>
-            </View>
-          </View>
-        </Modal>
-
-        {/* 图片识别时的加载overlay */}
-        <Modal
-          transparent={true}
           visible={processingImage}
           animationType="fade"
         >
@@ -617,14 +601,15 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
         </Modal>
+      </ScrollView>
 
-        {/* 确认添加单词的界面 */}
-        <Modal
-          key={confirmModalSession}
-          visible={showWordsConfirm}
-          animationType="slide"
-          onRequestClose={handleCancelAddWords}
-        >
+      {showWordsConfirm && (
+        <View style={[styles.confirmOverlay, { paddingTop: insets.top + 20 }]}>
+          <TouchableOpacity
+            style={styles.confirmOverlayBackdrop}
+            activeOpacity={1}
+            onPress={handleCancelAddWords}
+          />
           <View style={styles.confirmContainer}>
             <View style={styles.confirmHeader}>
               <Text style={styles.confirmTitle}>Confirm Words to Add</Text>
@@ -633,8 +618,20 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.confirmContent}>
-              {/* 显示扫描的图片 */}
+            <ScrollView
+              style={styles.confirmContent}
+              contentContainerStyle={{ paddingBottom: 24 }}
+            >
+              {extractedWords.length === 0 && knownWords.length > 0 && (
+                <View style={styles.infoBanner}>
+                  <Text style={styles.infoBannerTitle}>All Words Known 🎉</Text>
+                  <Text style={styles.infoBannerText}>
+                    Every character we found in this photo is already in your
+                    vocabulary list.
+                  </Text>
+                </View>
+              )}
+
               {scannedImage && (
                 <View style={styles.imagePreview}>
                   <Image
@@ -644,7 +641,6 @@ export default function HomeScreen({ navigation }) {
                 </View>
               )}
 
-              {/* 新单词部分 */}
               {extractedWords.length > 0 && (
                 <>
                   <Text style={styles.sectionTitle}>
@@ -691,7 +687,6 @@ export default function HomeScreen({ navigation }) {
                 </>
               )}
 
-              {/* 已学单词部分 */}
               {knownWords.length > 0 && (
                 <>
                   <Text style={styles.sectionTitleKnown}>
@@ -716,7 +711,6 @@ export default function HomeScreen({ navigation }) {
               )}
             </ScrollView>
 
-            {/* 底部按钮 */}
             <View style={styles.confirmActions}>
               <TouchableOpacity
                 style={[styles.confirmButton, styles.cancelButton]}
@@ -735,8 +729,8 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -932,9 +926,38 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
+  confirmOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    zIndex: 1000,
+  },
+  confirmOverlayBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   confirmContainer: {
-    flex: 1,
+    width: "100%",
+    maxWidth: 420,
+    maxHeight: "80%",
     backgroundColor: "#f5f5f5",
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 10,
   },
   confirmHeader: {
     flexDirection: "row",
@@ -956,8 +979,8 @@ const styles = StyleSheet.create({
     fontWeight: "300",
   },
   confirmContent: {
-    flex: 1,
-    padding: 15,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
   },
   imagePreview: {
     backgroundColor: "#fff",
@@ -1081,5 +1104,24 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  infoBanner: {
+    backgroundColor: "#E0F8E0",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    alignItems: "center",
+  },
+  infoBannerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#50C878",
+    marginBottom: 5,
+  },
+  infoBannerText: {
+    fontSize: 13,
+    color: "#50C878",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });
