@@ -33,6 +33,7 @@ export default function HomeScreen({ navigation }) {
   const [extractedWords, setExtractedWords] = useState([]);
   const [knownWords, setKnownWords] = useState([]);
   const [selectedWords, setSelectedWords] = useState([]);
+  const [confirmModalSession, setConfirmModalSession] = useState(0);
   const [user, setUser] = useState(null);
   const [learningPlan, setLearningPlan] = useState(null);
 
@@ -149,9 +150,26 @@ export default function HomeScreen({ navigation }) {
       });
 
       const ocrResponse = await ocrAPI.extractText(base64);
-      const { newWords, knownWords: known, stats: ocrStats } = ocrResponse.data;
+      const { newWords, knownWords: known } = ocrResponse.data;
 
-      if (newWords.length === 0 && known.length === 0) {
+      const normalizedNewWords = sortByStrokeCount(normalizeWordList(newWords));
+      const normalizedKnownWords = sortByStrokeCount(normalizeWordList(known));
+
+      if (__DEV__) {
+        console.log(
+          "New words:",
+          normalizedNewWords.map((w) => w.word)
+        );
+        console.log(
+          "Known words:",
+          normalizedKnownWords.map((w) => w.word)
+        );
+      }
+
+      if (
+        normalizedNewWords.length === 0 &&
+        normalizedKnownWords.length === 0
+      ) {
         Alert.alert(
           "No Words Found",
           "No Chinese characters detected in the image."
@@ -161,10 +179,14 @@ export default function HomeScreen({ navigation }) {
 
       // 显示确认界面
       setScannedImage(imageUri);
-      setExtractedWords(sortByStrokeCount(newWords)); // 按笔画排序
-      setKnownWords(sortByStrokeCount(known)); // 已学单词也排序
+      setExtractedWords(normalizedNewWords); // 按笔画排序
+      setKnownWords(normalizedKnownWords); // 已学单词也排序
       setSelectedWords([]); // 默认不选中，让用户自己选择
-      setShowWordsConfirm(true);
+      setShowWordsConfirm(false);
+      requestAnimationFrame(() => {
+        setConfirmModalSession((prev) => prev + 1);
+        setShowWordsConfirm(true);
+      });
     } catch (error) {
       if (__DEV__) {
         console.log("OCR error:", error.message);
@@ -177,6 +199,39 @@ export default function HomeScreen({ navigation }) {
       setProcessingImage(false);
     }
   };
+
+  function normalizeWordList(list) {
+    if (!Array.isArray(list)) {
+      return [];
+    }
+
+    return list
+      .map((item) => {
+        if (typeof item === "string") {
+          return {
+            word: item,
+            pinyin: "",
+          };
+        }
+
+        if (item && typeof item === "object") {
+          const normalizedWord =
+            item.word || item.character || item.text || item.value;
+          if (!normalizedWord) {
+            return null;
+          }
+
+          return {
+            ...item,
+            word: normalizedWord,
+            pinyin: item.pinyin || "",
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+  }
 
   // 获取汉字笔画数（使用 cnchar 库获取准确笔画数）
   const getStrokeCount = (char) => {
@@ -204,15 +259,8 @@ export default function HomeScreen({ navigation }) {
         return 10;
       }
 
-      if (__DEV__) {
-        console.log(`✍️ ${char} 的笔画数: ${count}`);
-      }
-
       return count;
     } catch (error) {
-      if (__DEV__) {
-        console.error(`❌ 获取笔画数失败 (${char}):`, error.message);
-      }
       return 999; // 出错时排到最后
     }
   };
@@ -223,12 +271,6 @@ export default function HomeScreen({ navigation }) {
       const strokesA = getStrokeCount(a.word.charAt(0));
       const strokesB = getStrokeCount(b.word.charAt(0));
 
-      if (__DEV__) {
-        console.log(
-          `📊 排序: ${a.word}(${strokesA}画) vs ${b.word}(${strokesB}画)`
-        );
-      }
-
       // 如果笔画数相同，按拼音排序
       if (strokesA === strokesB) {
         return (a.pinyin || "").localeCompare(b.pinyin || "");
@@ -236,15 +278,6 @@ export default function HomeScreen({ navigation }) {
 
       return strokesA - strokesB;
     });
-
-    if (__DEV__) {
-      console.log(
-        "📋 排序后的单词:",
-        sorted
-          .map((w) => `${w.word}(${getStrokeCount(w.word.charAt(0))}画)`)
-          .join(", ")
-      );
-    }
 
     return sorted;
   };
@@ -587,6 +620,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* 确认添加单词的界面 */}
         <Modal
+          key={confirmModalSession}
           visible={showWordsConfirm}
           animationType="slide"
           onRequestClose={handleCancelAddWords}

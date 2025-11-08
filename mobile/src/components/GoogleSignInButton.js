@@ -10,16 +10,38 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Config from "../../config";
 import { authAPI } from "../services/api";
-import {
-  GoogleSignin,
-  statusCodes,
-} from "@react-native-google-signin/google-signin";
+import { isExpoGo } from "../utils/runtime";
+
+let GoogleSignin = null;
+let statusCodes = {};
+
+if (!isExpoGo) {
+  try {
+    const googleSignInModule = require("@react-native-google-signin/google-signin");
+    GoogleSignin = googleSignInModule.GoogleSignin;
+    statusCodes = googleSignInModule.statusCodes || {};
+  } catch (error) {
+    console.warn("⚠️ Failed to load Google Sign-In native module:", error?.message);
+  }
+}
 
 export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
   const [loading, setLoading] = useState(false);
   const [isConfigured, setIsConfigured] = useState(true);
 
   useEffect(() => {
+    if (isExpoGo) {
+      console.warn("⚠️ Google Sign-In disabled in Expo Go runtime");
+      setIsConfigured(false);
+      return;
+    }
+
+    if (!GoogleSignin) {
+      console.warn("⚠️ Google Sign-In native module unavailable in this runtime");
+      setIsConfigured(false);
+      return;
+    }
+
     // 配置Google Sign-In
     const configureGoogleSignIn = async () => {
       try {
@@ -195,6 +217,10 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
   };
 
   const handleSignOut = async () => {
+    if (!GoogleSignin) {
+      return;
+    }
+
     try {
       await GoogleSignin.signOut();
       console.log("✅ Google Sign-Out successful");
@@ -223,7 +249,7 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
           shadowRadius: 3.84,
           elevation: 5,
         },
-        loading && {
+        (loading || !isConfigured) && {
           backgroundColor: "#CCCCCC",
           opacity: 0.6,
         },
