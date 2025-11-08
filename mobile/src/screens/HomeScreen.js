@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Modal,
   Image,
   StatusBar,
+  Animated,
+  Easing,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -22,6 +24,10 @@ import order from "cnchar-order";
 // 初始化 cnchar 笔画插件
 cnchar.use(order);
 
+const WORD_CELL_SIZE = 64;
+const WORD_CELL_MARGIN = 12;
+const WORD_ANIMATION_DURATION = 1200;
+
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState(null);
@@ -33,9 +39,10 @@ export default function HomeScreen({ navigation }) {
   const [extractedWords, setExtractedWords] = useState([]);
   const [knownWords, setKnownWords] = useState([]);
   const [selectedWords, setSelectedWords] = useState([]);
-  const [confirmModalSession, setConfirmModalSession] = useState(0);
+  const [gridWidth, setGridWidth] = useState(0);
   const [user, setUser] = useState(null);
   const [learningPlan, setLearningPlan] = useState(null);
+  const wordAnimationsRef = useRef({});
 
   useEffect(() => {
     loadData();
@@ -48,6 +55,54 @@ export default function HomeScreen({ navigation }) {
     });
     return unsubscribe;
   }, [navigation]);
+
+  useEffect(() => {
+    if (!showWordsConfirm) {
+      wordAnimationsRef.current = {};
+      return;
+    }
+
+    if (extractedWords.length === 0 || gridWidth === 0) {
+      return;
+    }
+
+    const columns = getGridColumns();
+    const safeColumns = Math.max(columns, 1);
+
+    extractedWords.forEach((item) => {
+      const anim =
+        wordAnimationsRef.current[item.id] ??
+        new Animated.ValueXY(getGridPosition(item.originalIndex, safeColumns));
+
+      anim.setValue(getGridPosition(item.originalIndex, safeColumns));
+      wordAnimationsRef.current[item.id] = anim;
+    });
+
+    const timeout = setTimeout(() => {
+      extractedWords.forEach((item, index) => {
+        const anim = wordAnimationsRef.current[item.id];
+        if (!anim) {
+          return;
+        }
+        Animated.timing(anim, {
+          toValue: getGridPosition(index, safeColumns),
+          duration: WORD_ANIMATION_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 200);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [
+    showWordsConfirm,
+    extractedWords,
+    gridWidth,
+    getGridColumns,
+    getGridPosition,
+  ]);
 
   const loadData = async () => {
     try {
@@ -152,24 +207,40 @@ export default function HomeScreen({ navigation }) {
       const ocrResponse = await ocrAPI.extractText(base64);
       const { newWords, knownWords: known } = ocrResponse.data;
 
-      const normalizedNewWords = sortByStrokeCount(normalizeWordList(newWords));
-      const normalizedKnownWords = sortByStrokeCount(normalizeWordList(known));
+      const normalizedOriginalNewWords = normalizeWordList(newWords).map(
+        (item, index) => ({
+          ...item,
+          originalIndex: index,
+          id: `${item.word || "word"}-${index}-${Date.now()}`,
+        })
+      );
+      const normalizedKnownWords = normalizeWordList(known).map(
+        (item, index) => ({
+          ...item,
+          id: `${item.word || "known"}-${index}-${Date.now()}`,
+        })
+      );
+
+      const sortedNewWords = sortByStrokeCount([
+        ...normalizedOriginalNewWords,
+      ]).map((item, index) => ({
+        ...item,
+        sortedIndex: index,
+      }));
+      const sortedKnownWords = sortByStrokeCount([...normalizedKnownWords]);
 
       if (__DEV__) {
         console.log(
           "New words:",
-          normalizedNewWords.map((w) => w.word)
+          sortedNewWords.map((w) => w.word)
         );
         console.log(
           "Known words:",
-          normalizedKnownWords.map((w) => w.word)
+          sortedKnownWords.map((w) => w.word)
         );
       }
 
-      if (
-        normalizedNewWords.length === 0 &&
-        normalizedKnownWords.length === 0
-      ) {
+      if (sortedNewWords.length === 0 && sortedKnownWords.length === 0) {
         Alert.alert(
           "No Words Found",
           "No Chinese characters detected in the image."
@@ -179,13 +250,12 @@ export default function HomeScreen({ navigation }) {
 
       // 显示确认界面
       setScannedImage(imageUri);
-      setExtractedWords(normalizedNewWords); // 按笔画排序
-      setKnownWords(normalizedKnownWords); // 已学单词也排序
+      setExtractedWords(sortedNewWords); // 按笔画排序
+      setKnownWords(sortedKnownWords);
       setSelectedWords([]); // 默认不选中，让用户自己选择
+      setProcessingImage(false);
       setShowWordsConfirm(false);
       setTimeout(() => {
-        const nextSession = confirmModalSession + 1;
-        setConfirmModalSession(nextSession);
         setShowWordsConfirm(true);
       }, 0);
     } catch (error) {
@@ -201,7 +271,7 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  function normalizeWordList(list) {
+  const normalizeWordList = function normalizeWordList(list) {
     if (!Array.isArray(list)) {
       return [];
     }
@@ -232,7 +302,43 @@ export default function HomeScreen({ navigation }) {
         return null;
       })
       .filter(Boolean);
-  }
+  };
+
+  const getGridColumns = useCallback(() => {
+    if (gridWidth <= 0) {
+      return 1;
+    }
+    const cellSpacing = WORD_CELL_SIZE + WORD_CELL_MARGIN;
+    return Math.max(
+      1,
+      Math.floor((gridWidth + WORD_CELL_MARGIN) / cellSpacing)
+    );
+  }, [gridWidth]);
+
+  const getGridPosition = useCallback(
+    (index, columns) => {
+      const cellSpacing = WORD_CELL_SIZE + WORD_CELL_MARGIN;
+      const totalWidth = columns * cellSpacing - WORD_CELL_MARGIN;
+      const offsetX = Math.max((gridWidth - totalWidth) / 2, 0);
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      return {
+        x: offsetX + col * cellSpacing,
+        y: row * cellSpacing,
+      };
+    },
+    [gridWidth]
+  );
+
+  const handleWordGridLayout = useCallback(
+    (event) => {
+      const { width } = event.nativeEvent.layout;
+      if (Math.abs(width - gridWidth) > 1) {
+        setGridWidth(width);
+      }
+    },
+    [gridWidth]
+  );
 
   // 获取汉字笔画数（使用 cnchar 库获取准确笔画数）
   const getStrokeCount = (char) => {
@@ -311,6 +417,7 @@ export default function HomeScreen({ navigation }) {
       setExtractedWords([]);
       setKnownWords([]);
       setSelectedWords([]);
+      setGridWidth(0);
 
       Alert.alert(
         "Success! ✨",
@@ -328,6 +435,7 @@ export default function HomeScreen({ navigation }) {
     setExtractedWords([]);
     setKnownWords([]);
     setSelectedWords([]);
+    setGridWidth(0);
   };
 
   const takePhoto = async () => {
@@ -363,6 +471,13 @@ export default function HomeScreen({ navigation }) {
       Alert.alert("Error", "Camera failed: " + error.message);
     }
   };
+
+  const columns = getGridColumns();
+  const gridHeight =
+    extractedWords.length > 0
+      ? Math.ceil(extractedWords.length / Math.max(columns, 1)) *
+        (WORD_CELL_SIZE + WORD_CELL_MARGIN)
+      : 0;
 
   const pickImage = async () => {
     console.log("🖼️ pickImage function called");
@@ -650,37 +765,60 @@ export default function HomeScreen({ navigation }) {
                   <Text style={styles.confirmHint}>
                     Tap to select words you want to add
                   </Text>
-                  <View style={styles.wordChipsContainer}>
-                    {extractedWords.map((item, index) => {
+                  <View
+                    style={[styles.wordGridContainer, { height: gridHeight }]}
+                    onLayout={handleWordGridLayout}
+                  >
+                    {extractedWords.map((item) => {
+                      if (!wordAnimationsRef.current[item.id]) {
+                        wordAnimationsRef.current[item.id] =
+                          new Animated.ValueXY(
+                            getGridPosition(
+                              item.originalIndex,
+                              Math.max(columns, 1)
+                            )
+                          );
+                      }
+                      const anim = wordAnimationsRef.current[item.id];
+                      const animatedStyle = {
+                        transform: [
+                          { translateX: anim.x },
+                          { translateY: anim.y },
+                        ],
+                      };
                       const isSelected = selectedWords.includes(item.word);
                       return (
-                        <TouchableOpacity
-                          key={`new-${index}`}
-                          style={[
-                            styles.wordChip,
-                            isSelected
-                              ? styles.wordChipSelected
-                              : styles.wordChipUnselected,
-                          ]}
-                          onPress={() => toggleWordSelection(item.word)}
+                        <Animated.View
+                          key={item.id}
+                          style={[styles.wordChipAnimated, animatedStyle]}
                         >
-                          <Text
+                          <TouchableOpacity
                             style={[
-                              styles.wordChipPinyin,
-                              !isSelected && styles.wordChipTextUnselected,
+                              styles.wordChip,
+                              isSelected
+                                ? styles.wordChipSelected
+                                : styles.wordChipUnselected,
                             ]}
+                            onPress={() => toggleWordSelection(item.word)}
                           >
-                            {item.pinyin}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.wordChipText,
-                              !isSelected && styles.wordChipTextUnselected,
-                            ]}
-                          >
-                            {item.word}
-                          </Text>
-                        </TouchableOpacity>
+                            <Text
+                              style={[
+                                styles.wordChipPinyin,
+                                !isSelected && styles.wordChipTextUnselected,
+                              ]}
+                            >
+                              {item.pinyin}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.wordChipText,
+                                !isSelected && styles.wordChipTextUnselected,
+                              ]}
+                            >
+                              {item.word}
+                            </Text>
+                          </TouchableOpacity>
+                        </Animated.View>
                       );
                     })}
                   </View>
@@ -1018,6 +1156,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     marginBottom: 20,
+  },
+  wordGridContainer: {
+    position: "relative",
+    width: "100%",
+    minHeight: WORD_CELL_SIZE + WORD_CELL_MARGIN,
+    marginBottom: 24,
+  },
+  wordChipAnimated: {
+    position: "absolute",
   },
   wordChip: {
     paddingHorizontal: 12,
