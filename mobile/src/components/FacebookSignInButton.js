@@ -10,12 +10,24 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Config from "../../config";
 import { authAPI } from "../services/api";
-import {
-  LoginManager,
-  AccessToken,
-  GraphRequest,
-  GraphRequestManager,
-} from "react-native-fbsdk-next";
+import { isExpoGo } from "../utils/runtime";
+
+let LoginManager = null;
+let AccessToken = null;
+let GraphRequest = null;
+let GraphRequestManager = null;
+
+if (!isExpoGo) {
+  try {
+    const facebookModule = require("react-native-fbsdk-next");
+    LoginManager = facebookModule.LoginManager;
+    AccessToken = facebookModule.AccessToken;
+    GraphRequest = facebookModule.GraphRequest;
+    GraphRequestManager = facebookModule.GraphRequestManager;
+  } catch (error) {
+    console.warn("⚠️ Failed to load Facebook SDK native module:", error?.message);
+  }
+}
 
 export default function FacebookSignInButton({
   onSignInSuccess,
@@ -25,6 +37,23 @@ export default function FacebookSignInButton({
   const [isConfigured, setIsConfigured] = useState(true);
 
   useEffect(() => {
+    if (isExpoGo) {
+      console.warn("⚠️ Facebook Sign-In disabled in Expo Go runtime");
+      setIsConfigured(false);
+      return;
+    }
+
+    if (
+      !LoginManager ||
+      !AccessToken ||
+      !GraphRequest ||
+      !GraphRequestManager
+    ) {
+      console.warn("⚠️ Facebook SDK native modules unavailable in this runtime");
+      setIsConfigured(false);
+      return;
+    }
+
     // 检查Facebook配置
     const checkFacebookConfig = () => {
       try {
@@ -220,6 +249,10 @@ export default function FacebookSignInButton({
   };
 
   const handleSignOut = async () => {
+    if (!LoginManager) {
+      return;
+    }
+
     try {
       await LoginManager.logOut();
       console.log("✅ Facebook Sign-Out successful");
@@ -248,7 +281,7 @@ export default function FacebookSignInButton({
           shadowRadius: 3.84,
           elevation: 5,
         },
-        loading && {
+        (loading || !isConfigured) && {
           backgroundColor: "#CCCCCC",
           opacity: 0.6,
         },
