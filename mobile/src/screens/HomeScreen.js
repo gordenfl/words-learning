@@ -27,6 +27,12 @@ cnchar.use(order);
 const WORD_CELL_SIZE = 64;
 const WORD_CELL_MARGIN = 12;
 const WORD_ANIMATION_DURATION = 1200;
+const WORD_ANIMATION_DELAY = 300;
+const WORD_ANIMATION_SCALE_VARIATION = {
+  min: 0.75,
+  mid: 1.25,
+  base: 1,
+};
 
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -70,12 +76,19 @@ export default function HomeScreen({ navigation }) {
     const safeColumns = Math.max(columns, 1);
 
     extractedWords.forEach((item) => {
-      const anim =
-        wordAnimationsRef.current[item.id] ??
-        new Animated.ValueXY(getGridPosition(item.originalIndex, safeColumns));
+      const startPosition = getGridPosition(item.originalIndex, safeColumns);
+      const existing = wordAnimationsRef.current[item.id];
 
-      anim.setValue(getGridPosition(item.originalIndex, safeColumns));
-      wordAnimationsRef.current[item.id] = anim;
+      if (existing) {
+        existing.position.setValue(startPosition);
+        existing.progress.setValue(0);
+        return;
+      }
+
+      wordAnimationsRef.current[item.id] = {
+        position: new Animated.ValueXY(startPosition),
+        progress: new Animated.Value(0),
+      };
     });
 
     const timeout = setTimeout(() => {
@@ -84,12 +97,23 @@ export default function HomeScreen({ navigation }) {
         if (!anim) {
           return;
         }
-        Animated.timing(anim, {
-          toValue: getGridPosition(index, safeColumns),
-          duration: WORD_ANIMATION_DURATION,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }).start();
+
+        Animated.parallel([
+          Animated.timing(anim.position, {
+            toValue: getGridPosition(index, safeColumns),
+            duration: WORD_ANIMATION_DURATION,
+            delay: WORD_ANIMATION_DELAY,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim.progress, {
+            toValue: 1,
+            duration: WORD_ANIMATION_DURATION,
+            delay: WORD_ANIMATION_DELAY,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start();
       });
     }, 200);
 
@@ -771,19 +795,33 @@ export default function HomeScreen({ navigation }) {
                   >
                     {extractedWords.map((item) => {
                       if (!wordAnimationsRef.current[item.id]) {
-                        wordAnimationsRef.current[item.id] =
-                          new Animated.ValueXY(
+                        wordAnimationsRef.current[item.id] = {
+                          position: new Animated.ValueXY(
                             getGridPosition(
                               item.originalIndex,
                               Math.max(columns, 1)
                             )
-                          );
+                          ),
+                          progress: new Animated.Value(0),
+                        };
                       }
-                      const anim = wordAnimationsRef.current[item.id];
+                      const animBundle = wordAnimationsRef.current[item.id];
                       const animatedStyle = {
                         transform: [
-                          { translateX: anim.x },
-                          { translateY: anim.y },
+                          { translateX: animBundle.position.x },
+                          { translateY: animBundle.position.y },
+                          {
+                            scale: animBundle.progress.interpolate({
+                              inputRange: [0, 0.35, 0.7, 1],
+                              outputRange: [
+                                WORD_ANIMATION_SCALE_VARIATION.base,
+                                WORD_ANIMATION_SCALE_VARIATION.mid,
+                                WORD_ANIMATION_SCALE_VARIATION.min,
+                                WORD_ANIMATION_SCALE_VARIATION.base,
+                              ],
+                              extrapolate: "clamp",
+                            }),
+                          },
                         ],
                       };
                       const isSelected = selectedWords.includes(item.word);
