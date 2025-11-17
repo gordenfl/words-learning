@@ -125,11 +125,12 @@ export default function ArticleScreen({ route, navigation }) {
   const markArticleAsRead = async () => {
     try {
       await articlesAPI.markAsRead(article._id);
-      navigation.navigate("Home");
+      // Navigate back to ArticleList to see updated list
+      navigation.navigate("ArticleList");
     } catch (error) {
       console.log("Failed to mark article as read:", error);
-      // 即使失败也返回首页
-      navigation.navigate("Home");
+      // Even if failed, navigate back to list
+      navigation.navigate("ArticleList");
     }
   };
 

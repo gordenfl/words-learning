@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, View } from "react-native";
 import { PaperProvider } from "react-native-paper";
 import paperTheme from "./src/theme/paperTheme";
 // 配置 Paper 使用 Expo 图标库
@@ -14,9 +13,11 @@ import RegisterScreen from "./src/screens/RegisterScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import WordsListScreen from "./src/screens/WordsListScreen";
 import ArticleScreen from "./src/screens/ArticleScreen";
+import ArticleListScreen from "./src/screens/ArticleListScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import LearningPlanScreen from "./src/screens/LearningPlanScreen";
 import WordDetailScreen from "./src/screens/WordDetailScreen";
+import LoadingScreen from "./src/screens/LoadingScreen";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 
 const Stack = createStackNavigator();
@@ -31,8 +32,12 @@ function AppContent() {
 
   const checkAuthStatus = async () => {
     try {
-      const token = await AsyncStorage.getItem("authToken");
-      setIsAuthenticated(!!token);
+      // Add minimum display time for loading screen (1 second)
+      const [tokenResult] = await Promise.all([
+        AsyncStorage.getItem("authToken"),
+        new Promise((resolve) => setTimeout(resolve, 1000)), // Minimum 1 second
+      ]);
+      setIsAuthenticated(!!tokenResult);
     } catch (error) {
       console.error("Error checking auth status:", error);
     } finally {
@@ -41,11 +46,7 @@ function AppContent() {
   };
 
   if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#4A90E2" />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -74,6 +75,11 @@ function AppContent() {
           component={RegisterScreen}
           options={{ title: "Create Account" }}
         />
+        <Stack.Screen
+          name="LoadingPreview"
+          component={LoadingScreen}
+          options={{ headerShown: false }}
+        />
 
         {/* Main App Screens */}
         <Stack.Screen
@@ -85,6 +91,11 @@ function AppContent() {
           name="WordsList"
           component={WordsListScreen}
           options={{ title: "My Words" }}
+        />
+        <Stack.Screen
+          name="ArticleList"
+          component={ArticleListScreen}
+          options={{ title: "Reading" }}
         />
         <Stack.Screen
           name="Article"

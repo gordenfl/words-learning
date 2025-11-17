@@ -216,6 +216,17 @@ export default function LoginScreen({ navigation }) {
           >
             Don't have an account? Sign up
           </Button>
+
+          {/* Temporary Preview Button */}
+          <Button
+            mode="outlined"
+            onPress={() => navigation.navigate("LoadingPreview")}
+            style={styles.previewButton}
+            labelStyle={styles.previewButtonLabel}
+            icon="eye"
+          >
+            👀 Preview Loading Screen (Temporary)
+          </Button>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -322,5 +333,13 @@ const styles = StyleSheet.create({
   registerButtonLabel: {
     fontSize: ChildrenTheme.typography.body.fontSize,
     color: ChildrenTheme.colors.primary,
+  },
+  previewButton: {
+    marginTop: ChildrenTheme.spacing.lg,
+    borderColor: ChildrenTheme.colors.accent,
+  },
+  previewButtonLabel: {
+    fontSize: ChildrenTheme.typography.body.fontSize,
+    color: ChildrenTheme.colors.accent,
   },
 });

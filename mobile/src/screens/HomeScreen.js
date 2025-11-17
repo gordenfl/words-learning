@@ -764,8 +764,8 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => {
-            // Navigate immediately to Article screen, it will handle generation
-            navigation.navigate("Article");
+            // Navigate to Article List screen
+            navigation.navigate("ArticleList");
           }}
           activeOpacity={0.7}
         >
