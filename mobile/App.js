@@ -3,6 +3,10 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityIndicator, View } from "react-native";
+import { PaperProvider } from "react-native-paper";
+import paperTheme from "./src/theme/paperTheme";
+// 配置 Paper 使用 Expo 图标库
+import "./src/config/paperIcons";
 
 // Import screens
 import LoginScreen from "./src/screens/LoginScreen";
@@ -50,11 +54,12 @@ function AppContent() {
         initialRouteName={isAuthenticated ? "Home" : "Login"}
         screenOptions={{
           headerStyle: {
-            backgroundColor: "#4A90E2",
+            backgroundColor: paperTheme.colors.primary,
           },
-          headerTintColor: "#fff",
+          headerTintColor: paperTheme.colors.onPrimary,
           headerTitleStyle: {
             fontWeight: "bold",
+            fontSize: 20,
           },
         }}
       >
@@ -109,7 +114,9 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AppContent />
+      <PaperProvider theme={paperTheme}>
+        <AppContent />
+      </PaperProvider>
     </ErrorBoundary>
   );
 }

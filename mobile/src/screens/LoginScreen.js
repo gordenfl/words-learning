@@ -1,28 +1,38 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  Image,
 } from "react-native";
+import {
+  Text,
+  TextInput,
+  Button,
+  Card,
+  Surface,
+  Divider,
+  useTheme,
+} from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authAPI } from "../services/api";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import FacebookSignInButton from "../components/FacebookSignInButton";
+import ChildrenTheme from "../theme/childrenTheme";
 
 export default function LoginScreen({ navigation }) {
+  const theme = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert("Notice", "Please fill in all fields");
       return;
     }
 
@@ -93,72 +103,121 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <View style={styles.content}>
-        <Text style={styles.title}>Words Learning</Text>
-        <Text style={styles.subtitle}>Learn vocabulary the smart way</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          {/* Welcome Header */}
+          <Surface style={styles.headerSurface} elevation={0}>
+            <Image
+              source={require("../../assets/icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text variant="displaySmall" style={styles.title}>
+              👋 Welcome Back!
+            </Text>
+            <Text variant="titleMedium" style={styles.subtitle}>
+              Let's learn Chinese characters together!
+            </Text>
+          </Surface>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+          {/* Login Card */}
+          <Card style={styles.card} mode="elevated" elevation={2}>
+            <Card.Content style={styles.cardContent}>
+              <TextInput
+                label="📧 Email"
+                value={email}
+                onChangeText={setEmail}
+                mode="outlined"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.input}
+                contentStyle={styles.inputContent}
+                outlineColor={theme.colors.outline}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="email" />}
+              />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+              <TextInput
+                label="🔒 Password"
+                value={password}
+                onChangeText={setPassword}
+                mode="outlined"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                style={styles.input}
+                contentStyle={styles.inputContent}
+                outlineColor={theme.colors.outline}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="lock" />}
+                right={
+                  <TextInput.Icon
+                    icon={showPassword ? "eye-off" : "eye"}
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+              />
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
+              <Button
+                mode="contained"
+                onPress={handleLogin}
+                loading={loading}
+                disabled={loading}
+                style={styles.loginButton}
+                contentStyle={styles.buttonContent}
+                labelStyle={styles.buttonLabel}
+                icon="login"
+              >
+                {loading ? "Logging in..." : "Login"}
+              </Button>
+            </Card.Content>
+          </Card>
 
-        {/* 分隔线 */}
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>或</Text>
-          <View style={styles.dividerLine} />
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <Divider style={styles.divider} />
+            <Text variant="bodyMedium" style={styles.dividerText}>
+              or
+            </Text>
+            <Divider style={styles.divider} />
+          </View>
+
+          {/* Social Login Card */}
+          <Card style={styles.socialCard} mode="outlined">
+            <Card.Content style={styles.socialCardContent}>
+              <Text variant="titleSmall" style={styles.socialTitle}>
+                Sign in with
+              </Text>
+              <View style={styles.socialButtonsContainer}>
+                <GoogleSignInButton
+                  onSignInSuccess={handleGoogleSignInSuccess}
+                  onSignInError={handleGoogleSignInError}
+                />
+                <FacebookSignInButton
+                  onSignInSuccess={handleFacebookSignInSuccess}
+                  onSignInError={handleFacebookSignInError}
+                />
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Register Link */}
+          <Button
+            mode="text"
+            onPress={() => navigation.navigate("Register")}
+            style={styles.registerButton}
+            labelStyle={styles.registerButtonLabel}
+            icon="account-plus"
+          >
+            Don't have an account? Sign up
+          </Button>
         </View>
-
-        {/* 第三方登录按钮容器 */}
-        <View style={styles.socialLoginContainer}>
-          {/* Google登录按钮 */}
-          <GoogleSignInButton
-            onSignInSuccess={handleGoogleSignInSuccess}
-            onSignInError={handleGoogleSignInError}
-          />
-
-          {/* Facebook登录按钮 */}
-          <FacebookSignInButton
-            onSignInSuccess={handleFacebookSignInSuccess}
-            onSignInError={handleFacebookSignInError}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.navigate("Register")}
-        >
-          <Text style={styles.linkText}>Don't have an account? Sign up</Text>
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -166,71 +225,102 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
   },
   content: {
     flex: 1,
     justifyContent: "center",
-    padding: 20,
+    padding: ChildrenTheme.spacing.lg,
+    paddingTop: ChildrenTheme.spacing.xl,
+  },
+  headerSurface: {
+    backgroundColor: "transparent",
+    padding: ChildrenTheme.spacing.lg,
+    marginBottom: ChildrenTheme.spacing.xl,
+    alignItems: "center",
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
+    overflow: "hidden",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#4A90E2",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: ChildrenTheme.spacing.sm,
+    color: ChildrenTheme.colors.primary,
+    fontWeight: "bold",
   },
   subtitle: {
-    fontSize: 16,
-    color: "#666",
     textAlign: "center",
-    marginBottom: 40,
+    color: ChildrenTheme.colors.textLight,
+    marginTop: ChildrenTheme.spacing.xs,
+  },
+  card: {
+    marginBottom: ChildrenTheme.spacing.lg,
+    borderRadius: ChildrenTheme.borderRadius.large,
+  },
+  cardContent: {
+    padding: ChildrenTheme.spacing.md,
   },
   input: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    marginBottom: ChildrenTheme.spacing.md,
+    fontSize: ChildrenTheme.typography.body.fontSize,
   },
-  button: {
-    backgroundColor: "#4A90E2",
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 10,
+  inputContent: {
+    fontSize: ChildrenTheme.typography.body.fontSize,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
+  loginButton: {
+    marginTop: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    ...ChildrenTheme.shadows.small,
+  },
+  buttonContent: {
+    paddingVertical: ChildrenTheme.spacing.sm,
+    minHeight: ChildrenTheme.button.large.height,
+  },
+  buttonLabel: {
+    fontSize: ChildrenTheme.typography.h4.fontSize,
     fontWeight: "bold",
   },
-  linkButton: {
-    marginTop: 20,
-    alignItems: "center",
-  },
-  linkText: {
-    color: "#4A90E2",
-    fontSize: 16,
-  },
-  divider: {
+  dividerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 20,
+    marginVertical: ChildrenTheme.spacing.lg,
+    paddingHorizontal: ChildrenTheme.spacing.md,
   },
-  dividerLine: {
+  divider: {
     flex: 1,
     height: 1,
-    backgroundColor: "#ddd",
   },
   dividerText: {
-    marginHorizontal: 15,
-    color: "#666",
-    fontSize: 14,
+    marginHorizontal: ChildrenTheme.spacing.md,
+    color: ChildrenTheme.colors.textLight,
   },
-  socialLoginContainer: {
-    marginTop: 10,
+  socialCard: {
+    marginBottom: ChildrenTheme.spacing.lg,
+    borderRadius: ChildrenTheme.borderRadius.large,
+  },
+  socialCardContent: {
+    padding: ChildrenTheme.spacing.md,
+  },
+  socialTitle: {
+    textAlign: "center",
+    marginBottom: ChildrenTheme.spacing.md,
+    color: ChildrenTheme.colors.text,
+  },
+  socialButtonsContainer: {
+    gap: ChildrenTheme.spacing.sm,
+  },
+  registerButton: {
+    marginTop: ChildrenTheme.spacing.sm,
+  },
+  registerButtonLabel: {
+    fontSize: ChildrenTheme.typography.body.fontSize,
+    color: ChildrenTheme.colors.primary,
   },
 });

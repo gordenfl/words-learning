@@ -1,28 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
   ActivityIndicator,
   Modal,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { usersAPI, authAPI } from '../services/api';
+  Image,
+  StatusBar,
+} from "react-native";
+import {
+  Text,
+  TextInput,
+  Button,
+  Card,
+  Surface,
+  useTheme,
+  IconButton,
+  Divider,
+} from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { usersAPI, authAPI } from "../services/api";
+import ChildrenTheme from "../theme/childrenTheme";
 
 export default function ProfileScreen({ navigation }) {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [user, setUser] = useState(null);
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
@@ -150,79 +163,177 @@ export default function ProfileScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text variant="bodyMedium" style={styles.loaderText}>
+          Loading profile...
+        </Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user?.username?.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <Text style={styles.username}>{user?.username}</Text>
-          <Text style={styles.email}>{user?.email}</Text>
-        </View>
-
-        <View style={styles.form}>
-          <Text style={styles.label}>Display Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter display name"
-            value={displayName}
-            onChangeText={setDisplayName}
-          />
-
-          <Text style={styles.label}>Bio</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Tell us about yourself"
-            value={bio}
-            onChangeText={setBio}
-            multiline
-            numberOfLines={4}
-          />
-
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleUpdateProfile}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Update Profile</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
-          
-          <TouchableOpacity
-            style={styles.settingButton}
-            onPress={handleChangePassword}
-          >
-            <Text style={styles.settingButtonText}>Change Password</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingButton, styles.lastButton]}
-            onPress={handleLogout}
-          >
-            <Text style={styles.settingButtonText}>Logout</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={[styles.container, { backgroundColor: ChildrenTheme.colors.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={ChildrenTheme.colors.primary} />
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: (insets.top + 10) / 2,
+            backgroundColor: ChildrenTheme.colors.primary,
+          },
+        ]}
+      >
       </View>
 
-      {/* 修改密码 Modal */}
+      <ScrollView style={styles.scrollContent}>
+        <View style={styles.content}>
+          {/* Profile Header Card */}
+          <Card style={styles.profileCard} mode="elevated" elevation={2}>
+            <Card.Content style={styles.profileCardContent}>
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {user?.username?.charAt(0).toUpperCase() || "👤"}
+                  </Text>
+                </View>
+                <View style={styles.userInfo}>
+                  <Text variant="headlineSmall" style={styles.username}>
+                    {user?.username || "User"}
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.email}>
+                    {user?.email || ""}
+                  </Text>
+                </View>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Profile Form Card */}
+          <Card style={styles.formCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Edit Profile
+              </Text>
+
+              <TextInput
+                label="Display Name"
+                value={displayName}
+                onChangeText={setDisplayName}
+                mode="outlined"
+                style={styles.input}
+                contentStyle={styles.inputContent}
+                outlineColor={theme.colors.outline}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="account" />}
+              />
+
+              <TextInput
+                label="Bio"
+                value={bio}
+                onChangeText={setBio}
+                mode="outlined"
+                multiline
+                numberOfLines={4}
+                style={styles.input}
+                contentStyle={styles.textAreaContent}
+                outlineColor={theme.colors.outline}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="text" />}
+              />
+
+              <Button
+                mode="contained"
+                onPress={handleUpdateProfile}
+                loading={saving}
+                disabled={saving}
+                style={styles.updateButton}
+                buttonColor={ChildrenTheme.colors.primary}
+                icon="content-save"
+              >
+                Update Profile
+              </Button>
+            </Card.Content>
+          </Card>
+
+          {/* Account Settings Card */}
+          <Card style={styles.settingsCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Account Settings
+              </Text>
+
+              <Surface
+                style={styles.settingItem}
+                elevation={0}
+                onTouchEnd={handleChangePassword}
+              >
+                <View style={styles.settingItemLeft}>
+                  <IconButton
+                    icon="lock-reset"
+                    size={24}
+                    iconColor={ChildrenTheme.colors.primary}
+                    style={styles.settingIcon}
+                  />
+                  <Text variant="bodyLarge" style={styles.settingText}>
+                    Change Password
+                  </Text>
+                </View>
+                <IconButton
+                  icon="chevron-right"
+                  size={24}
+                  iconColor={ChildrenTheme.colors.textLight}
+                  style={styles.chevronIcon}
+                />
+              </Surface>
+
+              <Divider style={styles.divider} />
+
+              <Surface
+                style={styles.settingItem}
+                elevation={0}
+                onTouchEnd={handleLogout}
+              >
+                <View style={styles.settingItemLeft}>
+                  <IconButton
+                    icon="logout"
+                    size={24}
+                    iconColor={ChildrenTheme.colors.warning}
+                    style={styles.settingIcon}
+                  />
+                  <Text variant="bodyLarge" style={styles.settingText}>
+                    Logout
+                  </Text>
+                </View>
+                <IconButton
+                  icon="chevron-right"
+                  size={24}
+                  iconColor={ChildrenTheme.colors.textLight}
+                  style={styles.chevronIcon}
+                />
+              </Surface>
+            </Card.Content>
+          </Card>
+
+          {/* Delete Account Button */}
+          <Button
+            mode="contained"
+            onPress={handleDeleteAccount}
+            style={styles.deleteButton}
+            buttonColor={ChildrenTheme.colors.error}
+            icon="delete"
+          >
+            Delete Account
+          </Button>
+        </View>
+      </ScrollView>
+
+      {/* Change Password Modal */}
       <Modal
         visible={showPasswordModal}
         transparent={true}
@@ -230,248 +341,288 @@ export default function ProfileScreen({ navigation }) {
         onRequestClose={handleCancelPasswordChange}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Change Password</Text>
+          <Card style={styles.modalCard} mode="elevated" elevation={8}>
+            <Card.Content style={styles.modalHeaderContent}>
+              <View style={styles.modalHeader}>
+                <Text variant="headlineSmall" style={styles.modalTitle}>
+                  Change Password
+                </Text>
+                <IconButton
+                  icon="close"
+                  size={24}
+                  iconColor={ChildrenTheme.colors.text}
+                  onPress={handleCancelPasswordChange}
+                  style={styles.modalCloseButton}
+                />
+              </View>
+            </Card.Content>
 
-            <Text style={styles.modalLabel}>Current Password</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Enter current password"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <Card.Content style={styles.modalContent}>
+              <TextInput
+                label="Current Password"
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                mode="outlined"
+                secureTextEntry
+                autoCapitalize="none"
+                style={styles.modalInput}
+                outlineColor={theme.colors.outline}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="lock" />}
+              />
 
-            <Text style={styles.modalLabel}>New Password</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Enter new password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+              <TextInput
+                label="New Password"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                mode="outlined"
+                secureTextEntry
+                autoCapitalize="none"
+                style={styles.modalInput}
+                outlineColor={theme.colors.outline}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="lock-outline" />}
+              />
 
-            <Text style={styles.modalLabel}>Confirm New Password</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+              <TextInput
+                label="Confirm New Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                mode="outlined"
+                secureTextEntry
+                autoCapitalize="none"
+                style={styles.modalInput}
+                outlineColor={theme.colors.outline}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="lock-check" />}
+              />
+            </Card.Content>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalCancelButton]}
+            <Card.Actions style={styles.modalActions}>
+              <Button
+                mode="outlined"
                 onPress={handleCancelPasswordChange}
                 disabled={changingPassword}
+                style={styles.modalCancelButton}
+                textColor={ChildrenTheme.colors.textLight}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalConfirmButton]}
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
                 onPress={handleConfirmPasswordChange}
+                loading={changingPassword}
                 disabled={changingPassword}
+                style={styles.modalConfirmButton}
+                buttonColor={ChildrenTheme.colors.primary}
+                icon="check"
               >
-                {changingPassword ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.modalConfirmText}>Change</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+                Change
+              </Button>
+            </Card.Actions>
+          </Card>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: ChildrenTheme.colors.background,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.xl,
   },
-  content: {
-    padding: 20,
+  loaderText: {
+    color: ChildrenTheme.colors.textLight,
+    marginTop: ChildrenTheme.spacing.md,
   },
   header: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: ChildrenTheme.spacing.sm,
+    backgroundColor: ChildrenTheme.colors.primary,
+    ...ChildrenTheme.shadows.medium,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerIcon: {
+    width: 60,
+    height: 60,
+    marginRight: ChildrenTheme.spacing.sm,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    overflow: "hidden",
+  },
+  headerTitle: {
+    ...ChildrenTheme.typography.h3,
+    color: ChildrenTheme.colors.textInverse,
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    ...ChildrenTheme.typography.body,
+    color: ChildrenTheme.colors.textInverse,
+    opacity: 0.9,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: ChildrenTheme.spacing.md,
+  },
+  profileCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
+  },
+  profileCardContent: {
+    padding: ChildrenTheme.spacing.lg,
+  },
+  avatarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#4A90E2',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
+    backgroundColor: ChildrenTheme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: ChildrenTheme.spacing.md,
+    ...ChildrenTheme.shadows.medium,
   },
   avatarText: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: ChildrenTheme.colors.textInverse,
+  },
+  userInfo: {
+    flex: 1,
   },
   username: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   email: {
-    fontSize: 16,
-    color: '#666',
+    color: ChildrenTheme.colors.textLight,
   },
-  form: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    marginTop: 10,
-  },
-  input: {
-    backgroundColor: '#f9f9f9',
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  button: {
-    backgroundColor: '#4A90E2',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginBottom: 20,
-    overflow: 'hidden',
+  formCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    padding: 15,
-    backgroundColor: '#f9f9f9',
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.md,
   },
-  settingButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+  input: {
+    marginBottom: ChildrenTheme.spacing.md,
   },
-  settingButtonText: {
-    fontSize: 16,
-    color: '#333',
+  inputContent: {
+    fontSize: ChildrenTheme.typography.body.fontSize,
   },
-  chevron: {
-    fontSize: 24,
-    color: '#999',
+  textAreaContent: {
+    fontSize: ChildrenTheme.typography.body.fontSize,
+    minHeight: 80,
   },
-  lastButton: {
-    borderBottomWidth: 0,
+  updateButton: {
+    marginTop: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+  },
+  settingsCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
+  },
+  settingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: ChildrenTheme.spacing.sm,
+    paddingHorizontal: ChildrenTheme.spacing.xs,
+    borderRadius: ChildrenTheme.borderRadius.small,
+    marginBottom: ChildrenTheme.spacing.xs,
+  },
+  settingItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  settingIcon: {
+    margin: 0,
+    padding: 0,
+  },
+  settingText: {
+    color: ChildrenTheme.colors.text,
+    marginLeft: ChildrenTheme.spacing.xs,
+  },
+  chevronIcon: {
+    margin: 0,
+    padding: 0,
+  },
+  divider: {
+    marginVertical: ChildrenTheme.spacing.xs,
+  },
+  deleteButton: {
+    marginTop: ChildrenTheme.spacing.sm,
+    marginBottom: ChildrenTheme.spacing.lg,
+    borderRadius: ChildrenTheme.borderRadius.medium,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.lg,
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 25,
-    width: '100%',
+  modalCard: {
+    width: "100%",
     maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: ChildrenTheme.colors.card,
+    borderRadius: ChildrenTheme.borderRadius.xlarge,
+    overflow: "hidden",
+  },
+  modalHeaderContent: {
+    padding: ChildrenTheme.spacing.md,
+    paddingBottom: ChildrenTheme.spacing.sm,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    flex: 1,
   },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-    marginTop: 12,
+  modalCloseButton: {
+    margin: 0,
+  },
+  modalContent: {
+    padding: ChildrenTheme.spacing.md,
   },
   modalInput: {
-    backgroundColor: '#f9f9f9',
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    marginBottom: ChildrenTheme.spacing.md,
   },
-  modalButtons: {
-    flexDirection: 'row',
-    marginTop: 25,
-    gap: 10,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  modalActions: {
+    flexDirection: "row",
+    padding: ChildrenTheme.spacing.md,
+    gap: ChildrenTheme.spacing.sm,
   },
   modalCancelButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  modalCancelText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
+    flex: 1,
   },
   modalConfirmButton: {
-    backgroundColor: '#4A90E2',
-  },
-  modalConfirmText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    flex: 1,
   },
 });
 

@@ -1,15 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
-  Animated,
-} from 'react-native';
-import { usersAPI } from '../services/api';
+  Image,
+  StatusBar,
+} from "react-native";
+import {
+  Text,
+  Card,
+  Button,
+  Chip,
+  useTheme,
+  Snackbar,
+  Surface,
+} from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usersAPI } from "../services/api";
+import ChildrenTheme from "../theme/childrenTheme";
 
 const DIFFICULTY_LEVELS = [
   { 
@@ -44,13 +53,15 @@ const STUDY_TIMES = [
 ];
 
 export default function LearningPlanScreen({ navigation }) {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [showSavedToast, setShowSavedToast] = useState(false);
-  
+
   const [dailyGoal, setDailyGoal] = useState(10);
   const [weeklyGoal, setWeeklyGoal] = useState(50);
   const [monthlyGoal, setMonthlyGoal] = useState(200);
-  const [difficulty, setDifficulty] = useState('intermediate');
+  const [difficulty, setDifficulty] = useState("intermediate");
   const [studyTimes, setStudyTimes] = useState([]);
 
   useEffect(() => {
@@ -117,322 +128,364 @@ export default function LearningPlanScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text variant="bodyMedium" style={styles.loaderText}>
+          Loading plan...
+        </Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.sectionTitle}>🎯 Learning Goals</Text>
-        <Text style={styles.sectionDesc}>
-          Set your Chinese learning goals to stay motivated
-        </Text>
-
-        {/* Daily Goal */}
-        <View style={styles.goalSection}>
-          <Text style={styles.goalLabel}>Daily Goal</Text>
-          <View style={styles.optionsRow}>
-            {DAILY_GOALS.map(goal => (
-              <TouchableOpacity
-                key={goal}
-                style={[
-                  styles.optionButton,
-                  dailyGoal === goal && styles.optionButtonActive
-                ]}
-                onPress={() => handleDailyGoalChange(goal)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  dailyGoal === goal && styles.optionTextActive
-                ]}>
-                  {goal}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.helperText}>{dailyGoal} words per day</Text>
-        </View>
-
-        {/* Weekly Goal */}
-        <View style={styles.goalSection}>
-          <Text style={styles.goalLabel}>Weekly Goal</Text>
-          <View style={styles.optionsRow}>
-            {WEEKLY_GOALS.map(goal => (
-              <TouchableOpacity
-                key={goal}
-                style={[
-                  styles.optionButton,
-                  weeklyGoal === goal && styles.optionButtonActive
-                ]}
-                onPress={() => handleWeeklyGoalChange(goal)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  weeklyGoal === goal && styles.optionTextActive
-                ]}>
-                  {goal}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.helperText}>{weeklyGoal} words per week</Text>
-        </View>
-
-        {/* Monthly Goal */}
-        <View style={styles.goalSection}>
-          <Text style={styles.goalLabel}>Monthly Goal</Text>
-          <View style={styles.optionsRow}>
-            {MONTHLY_GOALS.map(goal => (
-              <TouchableOpacity
-                key={goal}
-                style={[
-                  styles.optionButton,
-                  monthlyGoal === goal && styles.optionButtonActive
-                ]}
-                onPress={() => handleMonthlyGoalChange(goal)}
-              >
-                <Text style={[
-                  styles.optionText,
-                  monthlyGoal === goal && styles.optionTextActive
-                ]}>
-                  {goal}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.helperText}>{monthlyGoal} words per month</Text>
-        </View>
-
-        {/* Difficulty Level */}
-        <Text style={styles.sectionTitle}>📊 Difficulty Level</Text>
-        <Text style={styles.sectionDesc}>
-          Choose your Chinese proficiency level
-        </Text>
-
-        {DIFFICULTY_LEVELS.map(level => (
-          <TouchableOpacity
-            key={level.value}
-            style={[
-              styles.difficultyCard,
-              difficulty === level.value && styles.difficultyCardActive
-            ]}
-            onPress={() => handleDifficultyChange(level.value)}
-          >
-            <View style={styles.difficultyHeader}>
-              <Text style={styles.difficultyIcon}>{level.icon}</Text>
-              <Text style={[
-                styles.difficultyLabel,
-                difficulty === level.value && styles.difficultyLabelActive
-              ]}>
-                {level.label}
-              </Text>
-              {difficulty === level.value && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </View>
-            <Text style={styles.difficultyDesc}>{level.description}</Text>
-          </TouchableOpacity>
-        ))}
-
-        {/* Preferred Study Time */}
-        <Text style={styles.sectionTitle}>⏰ Preferred Study Time</Text>
-        <Text style={styles.sectionDesc}>
-          When do you prefer to study? (Select all that apply)
-        </Text>
-
-        <View style={styles.timeGrid}>
-          {STUDY_TIMES.map(time => (
-            <TouchableOpacity
-              key={time.value}
-              style={[
-                styles.timeCard,
-                studyTimes.includes(time.value) && styles.timeCardActive
-              ]}
-              onPress={() => toggleStudyTime(time.value)}
-            >
-              <Text style={styles.timeIcon}>{time.icon}</Text>
-              <Text style={[
-                styles.timeLabel,
-                studyTimes.includes(time.value) && styles.timeLabelActive
-              ]}>
-                {time.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+    <View style={[styles.container, { backgroundColor: ChildrenTheme.colors.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={ChildrenTheme.colors.primary} />
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: (insets.top + 10) / 2,
+            backgroundColor: ChildrenTheme.colors.primary,
+          },
+        ]}
+      >
       </View>
 
-      {/* 保存成功Toast提示 */}
-      {showSavedToast && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>✓ Saved</Text>
+      <ScrollView style={styles.scrollContent}>
+        <View style={styles.content}>
+          {/* Learning Goals Card */}
+          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleLarge" style={styles.sectionTitle}>
+                🎯 Learning Goals
+              </Text>
+              <Text variant="bodyMedium" style={styles.sectionDesc}>
+                Set your Chinese learning goals to stay motivated
+              </Text>
+
+              {/* Daily Goal */}
+              <View style={styles.goalSection}>
+                <Text variant="titleMedium" style={styles.goalLabel}>
+                  Daily Goal
+                </Text>
+                <View style={styles.optionsRow}>
+                  {DAILY_GOALS.map((goal) => (
+                    <Chip
+                      key={goal}
+                      selected={dailyGoal === goal}
+                      onPress={() => handleDailyGoalChange(goal)}
+                      style={styles.optionChip}
+                      selectedColor={ChildrenTheme.colors.textInverse}
+                      mode={dailyGoal === goal ? "flat" : "outlined"}
+                    >
+                      {goal}
+                    </Chip>
+                  ))}
+                </View>
+                <Text variant="bodySmall" style={styles.helperText}>
+                  {dailyGoal} words per day
+                </Text>
+              </View>
+
+              {/* Weekly Goal */}
+              <View style={styles.goalSection}>
+                <Text variant="titleMedium" style={styles.goalLabel}>
+                  Weekly Goal
+                </Text>
+                <View style={styles.optionsRow}>
+                  {WEEKLY_GOALS.map((goal) => (
+                    <Chip
+                      key={goal}
+                      selected={weeklyGoal === goal}
+                      onPress={() => handleWeeklyGoalChange(goal)}
+                      style={styles.optionChip}
+                      selectedColor={ChildrenTheme.colors.textInverse}
+                      mode={weeklyGoal === goal ? "flat" : "outlined"}
+                    >
+                      {goal}
+                    </Chip>
+                  ))}
+                </View>
+                <Text variant="bodySmall" style={styles.helperText}>
+                  {weeklyGoal} words per week
+                </Text>
+              </View>
+
+              {/* Monthly Goal */}
+              <View style={styles.goalSection}>
+                <Text variant="titleMedium" style={styles.goalLabel}>
+                  Monthly Goal
+                </Text>
+                <View style={styles.optionsRow}>
+                  {MONTHLY_GOALS.map((goal) => (
+                    <Chip
+                      key={goal}
+                      selected={monthlyGoal === goal}
+                      onPress={() => handleMonthlyGoalChange(goal)}
+                      style={styles.optionChip}
+                      selectedColor={ChildrenTheme.colors.textInverse}
+                      mode={monthlyGoal === goal ? "flat" : "outlined"}
+                    >
+                      {goal}
+                    </Chip>
+                  ))}
+                </View>
+                <Text variant="bodySmall" style={styles.helperText}>
+                  {monthlyGoal} words per month
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          {/* Difficulty Level Card */}
+          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleLarge" style={styles.sectionTitle}>
+                📊 Difficulty Level
+              </Text>
+              <Text variant="bodyMedium" style={styles.sectionDesc}>
+                Choose your Chinese proficiency level
+              </Text>
+
+              {DIFFICULTY_LEVELS.map((level) => (
+                <Surface
+                  key={level.value}
+                  style={[
+                    styles.difficultyCard,
+                    difficulty === level.value && styles.difficultyCardActive,
+                  ]}
+                  elevation={difficulty === level.value ? 2 : 0}
+                  onTouchEnd={() => handleDifficultyChange(level.value)}
+                >
+                  <View style={styles.difficultyHeader}>
+                    <Text style={styles.difficultyIcon}>{level.icon}</Text>
+                    <Text
+                      variant="titleMedium"
+                      style={[
+                        styles.difficultyLabel,
+                        difficulty === level.value &&
+                          styles.difficultyLabelActive,
+                      ]}
+                    >
+                      {level.label}
+                    </Text>
+                    {difficulty === level.value && (
+                      <Chip
+                        icon="check-circle"
+                        style={styles.checkmarkChip}
+                        textStyle={styles.checkmarkText}
+                      >
+                        Selected
+                      </Chip>
+                    )}
+                  </View>
+                  <Text variant="bodyMedium" style={styles.difficultyDesc}>
+                    {level.description}
+                  </Text>
+                </Surface>
+              ))}
+            </Card.Content>
+          </Card>
+
+          {/* Preferred Study Time Card */}
+          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleLarge" style={styles.sectionTitle}>
+                ⏰ Preferred Study Time
+              </Text>
+              <Text variant="bodyMedium" style={styles.sectionDesc}>
+                When do you prefer to study? (Select all that apply)
+              </Text>
+
+              <View style={styles.timeGrid}>
+                {STUDY_TIMES.map((time) => (
+                  <Surface
+                    key={time.value}
+                    style={[
+                      styles.timeCard,
+                      studyTimes.includes(time.value) &&
+                        styles.timeCardActive,
+                    ]}
+                    elevation={studyTimes.includes(time.value) ? 2 : 0}
+                    onTouchEnd={() => toggleStudyTime(time.value)}
+                  >
+                    <Text style={styles.timeIcon}>{time.icon}</Text>
+                    <Text
+                      variant="bodyMedium"
+                      style={[
+                        styles.timeLabel,
+                        studyTimes.includes(time.value) &&
+                          styles.timeLabelActive,
+                      ]}
+                    >
+                      {time.label}
+                    </Text>
+                  </Surface>
+                ))}
+              </View>
+            </Card.Content>
+          </Card>
         </View>
-      )}
-    </ScrollView>
+      </ScrollView>
+
+      {/* Save Success Snackbar */}
+      <Snackbar
+        visible={showSavedToast}
+        onDismiss={() => setShowSavedToast(false)}
+        duration={1500}
+        style={styles.snackbar}
+      >
+        ✓ Saved
+      </Snackbar>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: ChildrenTheme.colors.background,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.xl,
+  },
+  loaderText: {
+    color: ChildrenTheme.colors.textLight,
+    marginTop: ChildrenTheme.spacing.md,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: ChildrenTheme.spacing.sm,
+    backgroundColor: ChildrenTheme.colors.primary,
+    ...ChildrenTheme.shadows.medium,
+  },
+  scrollContent: {
+    flex: 1,
   },
   content: {
-    padding: 20,
+    padding: ChildrenTheme.spacing.md,
+  },
+  sectionCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 20,
-    marginBottom: 8,
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   sectionDesc: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 15,
+    color: ChildrenTheme.colors.textLight,
+    marginBottom: ChildrenTheme.spacing.md,
   },
   goalSection: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    marginBottom: ChildrenTheme.spacing.lg,
   },
   goalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.sm,
   },
   optionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: ChildrenTheme.spacing.xs,
+    gap: ChildrenTheme.spacing.xs,
   },
-  optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  optionButtonActive: {
-    backgroundColor: '#4A90E2',
-  },
-  optionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
-  optionTextActive: {
-    color: '#fff',
+  optionChip: {
+    marginRight: ChildrenTheme.spacing.xs,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   helperText: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
+    color: ChildrenTheme.colors.textLight,
+    fontStyle: "italic",
+    marginTop: ChildrenTheme.spacing.xs,
   },
   difficultyCard: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    padding: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    marginBottom: ChildrenTheme.spacing.sm,
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: ChildrenTheme.colors.border,
+    backgroundColor: ChildrenTheme.colors.card,
   },
   difficultyCardActive: {
-    borderColor: '#4A90E2',
-    backgroundColor: '#E3F2FD',
+    borderColor: ChildrenTheme.colors.primary,
+    backgroundColor: ChildrenTheme.colors.primary + "20",
   },
   difficultyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   difficultyIcon: {
     fontSize: 24,
-    marginRight: 10,
+    marginRight: ChildrenTheme.spacing.sm,
   },
   difficultyLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
     flex: 1,
   },
   difficultyLabelActive: {
-    color: '#4A90E2',
+    color: ChildrenTheme.colors.primary,
   },
-  checkmark: {
-    fontSize: 20,
-    color: '#4A90E2',
-    fontWeight: 'bold',
+  checkmarkChip: {
+    backgroundColor: ChildrenTheme.colors.primary,
+    height: 28,
+  },
+  checkmarkText: {
+    color: ChildrenTheme.colors.textInverse,
+    fontSize: 12,
   },
   difficultyDesc: {
-    fontSize: 14,
-    color: '#666',
+    color: ChildrenTheme.colors.textLight,
     marginLeft: 34,
+    marginTop: ChildrenTheme.spacing.xs,
   },
   timeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: ChildrenTheme.spacing.sm,
+    gap: ChildrenTheme.spacing.sm,
   },
   timeCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginRight: '2%',
-    marginBottom: 10,
-    alignItems: 'center',
+    width: "48%",
+    padding: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: ChildrenTheme.colors.border,
+    backgroundColor: ChildrenTheme.colors.card,
   },
   timeCardActive: {
-    borderColor: '#4A90E2',
-    backgroundColor: '#E3F2FD',
+    borderColor: ChildrenTheme.colors.primary,
+    backgroundColor: ChildrenTheme.colors.primary + "20",
   },
   timeIcon: {
     fontSize: 32,
-    marginBottom: 8,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   timeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
+    color: ChildrenTheme.colors.text,
+    fontWeight: "600",
+    textAlign: "center",
   },
   timeLabelActive: {
-    color: '#4A90E2',
+    color: ChildrenTheme.colors.primary,
   },
-  toast: {
-    position: 'absolute',
-    bottom: 30,
-    left: '50%',
-    marginLeft: -40,
-    backgroundColor: '#50C878',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  toastText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+  snackbar: {
+    marginBottom: ChildrenTheme.spacing.xl,
   },
 });
 

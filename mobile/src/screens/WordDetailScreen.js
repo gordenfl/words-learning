@@ -1,24 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
-  Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
   ActivityIndicator,
   Modal,
-} from 'react-native';
-import { WebView } from 'react-native-webview';
-import * as Speech from 'expo-speech';
-import { wordsAPI } from '../services/api';
+  TouchableOpacity,
+} from "react-native";
+import {
+  Text,
+  Card,
+  Button,
+  Chip,
+  IconButton,
+  useTheme,
+  Surface,
+  Snackbar,
+} from "react-native-paper";
+import { WebView } from "react-native-webview";
+import * as Speech from "expo-speech";
+import { wordsAPI } from "../services/api";
+import ChildrenTheme from "../theme/childrenTheme";
 
 export default function WordDetailScreen({ route, navigation }) {
+  const theme = useTheme();
   const { wordId } = route.params;
   const [word, setWord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [toastMessage, setToastMessage] = useState("");
   const [generatingDetails, setGeneratingDetails] = useState(false);
   const [generatingCompounds, setGeneratingCompounds] = useState(false);
   const [generatingExamples, setGeneratingExamples] = useState(false);
@@ -32,13 +43,14 @@ export default function WordDetailScreen({ route, navigation }) {
     try {
       // 获取单词列表，找到对应的单词
       const response = await wordsAPI.getAll();
-      const foundWord = response.data.words.find(w => w._id === wordId);
+      const foundWord = response.data.words.find((w) => w._id === wordId);
       setWord(foundWord);
-      
+
       // 检查是否需要自动生成组词和例句（只在完全没有数据时才生成）
-      const hasCompounds = foundWord.compounds && foundWord.compounds.length > 0;
+      const hasCompounds =
+        foundWord.compounds && foundWord.compounds.length > 0;
       const hasExamples = foundWord.examples && foundWord.examples.length > 0;
-      
+
       if (!hasCompounds || !hasExamples) {
         // 自动生成（只在缺失数据时）
         setTimeout(() => {
@@ -46,8 +58,8 @@ export default function WordDetailScreen({ route, navigation }) {
         }, 500); // 延迟500ms开始生成，让界面先显示出来
       }
     } catch (error) {
-      console.log('Error loading word:', error);
-      Alert.alert('Error', 'Could not load word details');
+      console.log("Error loading word:", error);
+      Alert.alert("Error", "Could not load word details");
     } finally {
       setLoading(false);
     }
@@ -55,7 +67,7 @@ export default function WordDetailScreen({ route, navigation }) {
 
   const speakWord = (text) => {
     Speech.speak(text, {
-      language: 'zh-CN', // 中文（普通话）
+      language: "zh-CN", // 中文（普通话）
       pitch: 1.0,
       rate: 0.1, // 极慢速播放，便于初学者
     });
@@ -72,54 +84,64 @@ export default function WordDetailScreen({ route, navigation }) {
       await wordsAPI.updateStatus(wordId, status);
       const updatedWord = { ...word, status };
       setWord(updatedWord);
-      
+
       // 通知列表页面更新（不刷新整个列表，只更新这个单词）
       const routes = navigation.getState().routes;
-      const wordsListRoute = routes.find(r => r.name === 'WordsList');
+      const wordsListRoute = routes.find((r) => r.name === "WordsList");
       if (wordsListRoute) {
-        navigation.navigate('WordsList', {
+        navigation.navigate("WordsList", {
           ...wordsListRoute.params,
-          wordUpdated: { wordId, newStatus: status }
+          wordUpdated: { wordId, newStatus: status },
         });
       }
-      
-      const statusLabel = status === 'known' ? '✓ Marked as Known' : '📖 Marked as Learning';
+
+      const statusLabel =
+        status === "known" ? "✓ Marked as Known" : "📖 Marked as Learning";
       showToastMessage(statusLabel);
     } catch (error) {
-      showToastMessage('❌ Update failed');
+      showToastMessage("❌ Update failed");
     }
   };
 
-  const generateDetails = async (force = false, updateType = 'both') => {
+  const generateDetails = async (force = false, updateType = "both") => {
     // 设置对应的加载状态
-    if (updateType === 'compounds') {
+    if (updateType === "compounds") {
       setGeneratingCompounds(true);
-    } else if (updateType === 'examples') {
+    } else if (updateType === "examples") {
       setGeneratingExamples(true);
     } else {
       setGeneratingDetails(true);
     }
 
     try {
-      const response = await wordsAPI.generateDetails(wordId, force, updateType);
+      const response = await wordsAPI.generateDetails(
+        wordId,
+        force,
+        updateType
+      );
       setWord(response.data.word);
       // 成功后显示提示
       if (force) {
-        const message = updateType === 'compounds' ? '✅ Compounds updated' :
-                        updateType === 'examples' ? '✅ Examples updated' :
-                        '✅ Updated successfully';
+        const message =
+          updateType === "compounds"
+            ? "✅ Compounds updated"
+            : updateType === "examples"
+            ? "✅ Examples updated"
+            : "✅ Updated successfully";
         showToastMessage(message);
       } else {
         // 自动生成时不显示提示，直接更新界面
       }
     } catch (error) {
-      console.log('Error generating details:', error);
-      const errorMessage = force ? '❌ Failed to update' : '❌ Failed to generate';
+      console.log("Error generating details:", error);
+      const errorMessage = force
+        ? "❌ Failed to update"
+        : "❌ Failed to generate";
       showToastMessage(errorMessage);
     } finally {
-      if (updateType === 'compounds') {
+      if (updateType === "compounds") {
         setGeneratingCompounds(false);
-      } else if (updateType === 'examples') {
+      } else if (updateType === "examples") {
         setGeneratingExamples(false);
       } else {
         setGeneratingDetails(false);
@@ -128,246 +150,355 @@ export default function WordDetailScreen({ route, navigation }) {
   };
 
   const deleteWord = async () => {
-    Alert.alert(
-      'Delete Word',
-      'Are you sure you want to delete this word?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await wordsAPI.delete(wordId);
-              
-              // 通知列表页面删除这个单词
-              const routes = navigation.getState().routes;
-              const wordsListRoute = routes.find(r => r.name === 'WordsList');
-              if (wordsListRoute) {
-                navigation.navigate('WordsList', {
-                  ...wordsListRoute.params,
-                  wordUpdated: { wordId, deleted: true }
-                });
-              } else {
-                navigation.goBack();
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Could not delete word');
+    Alert.alert("Delete Word", "Are you sure you want to delete this word?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await wordsAPI.delete(wordId);
+
+            // 通知列表页面删除这个单词
+            const routes = navigation.getState().routes;
+            const wordsListRoute = routes.find((r) => r.name === "WordsList");
+            if (wordsListRoute) {
+              navigation.navigate("WordsList", {
+                ...wordsListRoute.params,
+                wordUpdated: { wordId, deleted: true },
+              });
+            } else {
+              navigation.goBack();
             }
-          },
+          } catch (error) {
+            Alert.alert("Error", "Could not delete word");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text variant="bodyMedium" style={styles.loaderText}>
+          Loading word...
+        </Text>
       </View>
     );
   }
 
   if (!word) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.errorText}>Word not found</Text>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <Text variant="titleLarge" style={styles.errorText}>
+          Word not found
+        </Text>
       </View>
     );
   }
 
+  const statusColor =
+    word.status === "known"
+      ? ChildrenTheme.colors.success
+      : word.status === "learning"
+      ? ChildrenTheme.colors.warning
+      : ChildrenTheme.colors.error;
+
   return (
-    <ScrollView style={styles.container}>
-      {/* Toast 提示 */}
-      {showToast && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toastMessage}</Text>
-        </View>
-      )}
-      
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <Snackbar
+        visible={showToast}
+        onDismiss={() => setShowToast(false)}
+        duration={2000}
+        style={styles.snackbar}
+      >
+        {toastMessage}
+      </Snackbar>
+
       <View style={styles.content}>
         {/* 状态标签 */}
         <View style={styles.statusContainer}>
-          <View style={[styles.statusBadge, styles[`status_${word.status}`]]}>
-            <Text style={styles.statusText}>{word.status}</Text>
-          </View>
-        </View>
-
-        {/* 主要内容 - 只显示大字 */}
-        <View style={styles.mainContent}>
-          {word.pinyin && (
-            <View style={styles.pinyinWithSpeaker}>
-              <Text style={styles.pinyin}>{word.pinyin}</Text>
-              <TouchableOpacity 
-                onPress={() => speakWord(word.word)}
-                activeOpacity={0.6}
-                style={styles.speakerButton}
-              >
-                <Text style={styles.speakerIcon}>🔊</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          <TouchableOpacity 
-            onPress={() => setShowStrokeOrder(true)}
-            activeOpacity={0.7}
+          <Chip
+            icon={
+              word.status === "known" ? "check-circle" : "book-open-variant"
+            }
+            style={[
+              styles.statusChip,
+              {
+                backgroundColor:
+                  word.status === "known"
+                    ? ChildrenTheme.colors.success + "20"
+                    : word.status === "learning"
+                    ? ChildrenTheme.colors.warning + "20"
+                    : ChildrenTheme.colors.error + "20",
+              },
+            ]}
+            textStyle={[styles.statusChipText, { color: statusColor }]}
           >
-            <Text style={styles.wordText}>{word.word}</Text>
-          </TouchableOpacity>
-          {word.translation && (
-            <Text style={styles.translation}>{word.translation}</Text>
-          )}
-          <Text style={styles.tapHint}>Tap 🔊 to hear • Tap 字 to see strokes</Text>
+            {word.status === "known"
+              ? "Mastered"
+              : word.status === "learning"
+              ? "Learning"
+              : "To Learn"}
+          </Chip>
         </View>
 
-        {/* 组词模块 - 独立卡片 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📚 Word Compounds</Text>
-            {(word.compounds && word.compounds.length > 0) && (
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={() => generateDetails(true, 'compounds')}
-                disabled={generatingCompounds}
-              >
-                <Text style={styles.updateButtonText}>
-                  {generatingCompounds ? '⏳' : 'Update'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {(generatingDetails || generatingCompounds) && (!word.compounds || word.compounds.length === 0) ? (
-            <View style={styles.generatingContainer}>
-              <ActivityIndicator color="#4A90E2" size="small" />
-              <Text style={styles.generatingText}>Generating compounds...</Text>
-            </View>
-          ) : word.compounds && word.compounds.length > 0 ? (
-            <>
-              {word.compounds.map((compound, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.compoundItemInline}
-                  onPress={() => speakWord(compound.word)}
-                  activeOpacity={0.6}
+        {/* 主要内容 */}
+        <Card style={styles.mainCard} mode="elevated" elevation={2}>
+          <Card.Content style={styles.mainContent}>
+            {word.pinyin && (
+              <View style={styles.pinyinWithSpeaker}>
+                <Text
+                  variant="titleLarge"
+                  style={[styles.pinyin, { color: theme.colors.primary }]}
                 >
-                  <View style={styles.compoundLeftInline}>
-                    <Text style={styles.compoundWordInline}>{compound.word}</Text>
-                    {compound.pinyin && (
-                      <Text style={styles.compoundPinyinInline}>{compound.pinyin}</Text>
-                    )}
-                  </View>
-                  {compound.meaning && (
-                    <Text style={styles.compoundMeaningInline}>{compound.meaning}</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </>
-          ) : (
-            <Text style={styles.emptyText}>No compounds yet</Text>
-          )}
-        </View>
-
-        {/* 例句模块 - 独立卡片 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💬 Example Sentences</Text>
-            {(word.examples && word.examples.length > 0) && (
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={() => generateDetails(true, 'examples')}
-                disabled={generatingExamples}
-              >
-                <Text style={styles.updateButtonText}>
-                  {generatingExamples ? '⏳' : 'Update'}
+                  {word.pinyin}
                 </Text>
-              </TouchableOpacity>
+                <IconButton
+                  icon="volume-high"
+                  size={24}
+                  iconColor={theme.colors.primary}
+                  onPress={() => speakWord(word.word)}
+                  style={styles.speakerButton}
+                />
+              </View>
             )}
-          </View>
-          {(generatingDetails || generatingExamples) && (!word.examples || word.examples.length === 0) ? (
-            <View style={styles.generatingContainer}>
-              <ActivityIndicator color="#4A90E2" size="small" />
-              <Text style={styles.generatingText}>Generating examples...</Text>
+            <IconButton
+              icon="gesture-tap"
+              size={20}
+              iconColor={ChildrenTheme.colors.textLight}
+              onPress={() => setShowStrokeOrder(true)}
+              style={styles.strokeHintButton}
+            />
+            <Text style={styles.wordText}>{word.word}</Text>
+            {word.translation && (
+              <Text variant="titleMedium" style={styles.translation}>
+                {word.translation}
+              </Text>
+            )}
+            <Text variant="bodySmall" style={styles.tapHint}>
+              Tap 🔊 to hear • Tap 字 to see strokes
+            </Text>
+          </Card.Content>
+        </Card>
+
+        {/* 组词模块 */}
+        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+          <Card.Content>
+            <View style={styles.sectionHeader}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                📚 Word Compounds
+              </Text>
+              {word.compounds && word.compounds.length > 0 && (
+                <IconButton
+                  icon="refresh"
+                  size={20}
+                  iconColor={theme.colors.primary}
+                  onPress={() => generateDetails(true, "compounds")}
+                  disabled={generatingCompounds}
+                />
+              )}
             </View>
-          ) : word.examples && word.examples.length > 0 ? (
-            <>
-              {word.examples.map((example, index) => {
-                // 兼容旧格式（字符串）和新格式（对象）
-                const sentenceText = typeof example === 'string' ? example : example.chinese;
-                
-                return (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.exampleItemInline}
-                    onPress={() => speakWord(sentenceText)}
-                    activeOpacity={0.6}
+            {(generatingDetails || generatingCompounds) &&
+            (!word.compounds || word.compounds.length === 0) ? (
+              <View style={styles.generatingContainer}>
+                <ActivityIndicator color={theme.colors.primary} size="small" />
+                <Text variant="bodySmall" style={styles.generatingText}>
+                  Generating compounds...
+                </Text>
+              </View>
+            ) : word.compounds && word.compounds.length > 0 ? (
+              <>
+                {word.compounds.map((compound, index) => (
+                  <Surface
+                    key={index}
+                    style={styles.compoundItem}
+                    elevation={0}
+                    onTouchEnd={() => speakWord(compound.word)}
                   >
-                    {typeof example === 'string' ? (
-                      <Text style={styles.exampleText}>{example}</Text>
-                    ) : (
-                      <>
-                        <Text style={styles.exampleChineseInline}>{example.chinese}</Text>
-                        {example.pinyin && (
-                          <Text style={styles.examplePinyinInline}>{example.pinyin}</Text>
-                        )}
-                        {example.english && (
-                          <Text style={styles.exampleEnglishInline}>{example.english}</Text>
-                        )}
-                      </>
+                    <View style={styles.compoundLeft}>
+                      <Text variant="titleMedium" style={styles.compoundWord}>
+                        {compound.word}
+                      </Text>
+                      {compound.pinyin && (
+                        <Text variant="bodySmall" style={styles.compoundPinyin}>
+                          {compound.pinyin}
+                        </Text>
+                      )}
+                    </View>
+                    {compound.meaning && (
+                      <Text variant="bodyMedium" style={styles.compoundMeaning}>
+                        {compound.meaning}
+                      </Text>
                     )}
-                  </TouchableOpacity>
-                );
-              })}
-            </>
-          ) : (
-            <Text style={styles.emptyText}>No examples yet</Text>
-          )}
-        </View>
+                  </Surface>
+                ))}
+              </>
+            ) : (
+              <Text variant="bodyMedium" style={styles.emptyText}>
+                No compounds yet
+              </Text>
+            )}
+          </Card.Content>
+        </Card>
+
+        {/* 例句模块 */}
+        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+          <Card.Content>
+            <View style={styles.sectionHeader}>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                💬 Example Sentences
+              </Text>
+              {word.examples && word.examples.length > 0 && (
+                <IconButton
+                  icon="refresh"
+                  size={20}
+                  iconColor={theme.colors.primary}
+                  onPress={() => generateDetails(true, "examples")}
+                  disabled={generatingExamples}
+                />
+              )}
+            </View>
+            {(generatingDetails || generatingExamples) &&
+            (!word.examples || word.examples.length === 0) ? (
+              <View style={styles.generatingContainer}>
+                <ActivityIndicator color={theme.colors.primary} size="small" />
+                <Text variant="bodySmall" style={styles.generatingText}>
+                  Generating examples...
+                </Text>
+              </View>
+            ) : word.examples && word.examples.length > 0 ? (
+              <>
+                {word.examples.map((example, index) => {
+                  const sentenceText =
+                    typeof example === "string" ? example : example.chinese;
+
+                  return (
+                    <Surface
+                      key={index}
+                      style={styles.exampleItem}
+                      elevation={0}
+                      onTouchEnd={() => speakWord(sentenceText)}
+                    >
+                      {typeof example === "string" ? (
+                        <Text variant="bodyLarge" style={styles.exampleText}>
+                          {example}
+                        </Text>
+                      ) : (
+                        <>
+                          <Text
+                            variant="bodyLarge"
+                            style={styles.exampleChinese}
+                          >
+                            {example.chinese}
+                          </Text>
+                          {example.pinyin && (
+                            <Text
+                              variant="bodySmall"
+                              style={styles.examplePinyin}
+                            >
+                              {example.pinyin}
+                            </Text>
+                          )}
+                          {example.english && (
+                            <Text
+                              variant="bodyMedium"
+                              style={styles.exampleEnglish}
+                            >
+                              {example.english}
+                            </Text>
+                          )}
+                        </>
+                      )}
+                    </Surface>
+                  );
+                })}
+              </>
+            ) : (
+              <Text variant="bodyMedium" style={styles.emptyText}>
+                No examples yet
+              </Text>
+            )}
+          </Card.Content>
+        </Card>
 
         {/* 定义 */}
         {word.definition && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Definition</Text>
-            <Text style={styles.definition}>{word.definition}</Text>
-          </View>
+          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Definition
+              </Text>
+              <Text variant="bodyLarge" style={styles.definition}>
+                {word.definition}
+              </Text>
+            </Card.Content>
+          </Card>
         )}
 
         {/* 状态更新按钮 */}
-        <View style={styles.statusActions}>
-          <Text style={styles.statusActionsTitle}>Update Status</Text>
-          <View style={styles.statusButtons}>
-            <TouchableOpacity
-              style={[
-                styles.statusBtn,
-                word.status === 'unknown' && styles.statusBtnActive,
-              ]}
-              onPress={() => updateWordStatus('unknown')}
-            >
-              <Text style={[
-                styles.statusBtnText,
-                word.status === 'unknown' && styles.statusBtnTextActive,
-              ]}>📖 Learning</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.statusBtn,
-                word.status === 'known' && styles.statusBtnActive,
-              ]}
-              onPress={() => updateWordStatus('known')}
-            >
-              <Text style={[
-                styles.statusBtnText,
-                word.status === 'known' && styles.statusBtnTextActive,
-              ]}>✓ Known</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+          <Card.Content>
+            <Text variant="titleMedium" style={styles.statusActionsTitle}>
+              Update Status
+            </Text>
+            <View style={styles.statusButtons}>
+              <Button
+                mode={word.status === "unknown" ? "contained" : "outlined"}
+                onPress={() => updateWordStatus("unknown")}
+                style={styles.statusBtn}
+                buttonColor={ChildrenTheme.colors.warning}
+                textColor={
+                  word.status === "unknown"
+                    ? "#fff"
+                    : ChildrenTheme.colors.warning
+                }
+                icon="book-open-variant"
+              >
+                Learning
+              </Button>
+              <Button
+                mode={word.status === "known" ? "contained" : "outlined"}
+                onPress={() => updateWordStatus("known")}
+                style={styles.statusBtn}
+                buttonColor={ChildrenTheme.colors.success}
+                textColor={
+                  word.status === "known"
+                    ? "#fff"
+                    : ChildrenTheme.colors.success
+                }
+                icon="check-circle"
+              >
+                Known
+              </Button>
+            </View>
+          </Card.Content>
+        </Card>
 
         {/* 删除按钮 */}
-        <TouchableOpacity
-          style={styles.deleteButton}
+        <Button
+          mode="contained"
           onPress={deleteWord}
+          style={styles.deleteButton}
+          buttonColor={ChildrenTheme.colors.error}
+          icon="delete"
         >
-          <Text style={styles.deleteButtonText}>🗑️ Delete Word</Text>
-        </TouchableOpacity>
+          Delete Word
+        </Button>
       </View>
 
       {/* 笔顺动画 Modal */}
@@ -378,21 +509,27 @@ export default function WordDetailScreen({ route, navigation }) {
         onRequestClose={() => setShowStrokeOrder(false)}
       >
         <View style={styles.strokeModalOverlay}>
-          <View style={styles.strokeModalContent}>
-            <View style={styles.strokeModalHeader}>
-              <Text style={styles.strokeModalTitle}>Stroke Order • 笔顺</Text>
-              <TouchableOpacity 
-                onPress={() => setShowStrokeOrder(false)}
-                style={styles.strokeModalClose}
-              >
-                <Text style={styles.strokeModalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.strokeWebViewContainer}>
-              <WebView
-                source={{
-                  html: `
+          <Card style={styles.strokeModalContent} mode="elevated" elevation={8}>
+            <Card.Content style={styles.strokeModalHeaderContent}>
+              <View style={styles.strokeModalHeader}>
+                <Text variant="headlineSmall" style={styles.strokeModalTitle}>
+                  Stroke Order • 笔顺
+                </Text>
+                <IconButton
+                  icon="close"
+                  size={24}
+                  iconColor={ChildrenTheme.colors.text}
+                  onPress={() => setShowStrokeOrder(false)}
+                  style={styles.strokeModalClose}
+                />
+              </View>
+            </Card.Content>
+
+            <Card.Content style={styles.strokeWebViewContent}>
+              <View style={styles.strokeWebViewContainer}>
+                <WebView
+                  source={{
+                    html: `
                     <!DOCTYPE html>
                     <html>
                     <head>
@@ -413,7 +550,7 @@ export default function WordDetailScreen({ route, navigation }) {
                           align-items: center;
                           justify-content: center;
                           min-height: 100vh;
-                          background: #fff;
+                          background: #F5F5F5;
                           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                           overflow-x: hidden;
                         }
@@ -435,12 +572,12 @@ export default function WordDetailScreen({ route, navigation }) {
                           padding: 14px 28px;
                           font-size: 17px;
                           border: none;
-                          border-radius: 10px;
-                          background: #4A90E2;
+                          border-radius: 20px;
+                          background: #FF6B9D;
                           color: white;
                           font-weight: 600;
                           cursor: pointer;
-                          box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+                          box-shadow: 0 4px 8px rgba(255, 107, 157, 0.3);
                           transition: all 0.2s;
                           flex: 1;
                           min-width: 140px;
@@ -448,23 +585,24 @@ export default function WordDetailScreen({ route, navigation }) {
                         }
                         button:active {
                           transform: scale(0.96);
-                          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                          box-shadow: 0 2px 4px rgba(255, 107, 157, 0.2);
                         }
                         button:hover {
-                          background: #3A7BC8;
+                          background: #FF5A8A;
                         }
                         .info {
                           text-align: center;
-                          color: #666;
+                          color: #999;
                           margin-top: 18px;
                           font-size: 15px;
                           padding: 0 20px;
                         }
                         #status {
-                          color: #4A90E2;
+                          color: #FF6B9D;
                           font-size: 14px;
                           margin-top: 10px;
                           min-height: 20px;
+                          font-weight: 500;
                         }
                       </style>
                     </head>
@@ -753,32 +891,41 @@ export default function WordDetailScreen({ route, navigation }) {
                       </script>
                     </body>
                     </html>
-                  `
-                }}
-                style={styles.strokeWebView}
-                originWhitelist={['*']}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                startInLoadingState={true}
-                scalesPageToFit={false}
-                scrollEnabled={false}
-                bounces={false}
-                allowsInlineMediaPlayback={true}
-                mediaPlaybackRequiresUserAction={false}
-                mixedContentMode="always"
-                renderLoading={() => (
-                  <View style={styles.strokeLoadingContainer}>
-                    <ActivityIndicator size="large" color="#4A90E2" />
-                    <Text style={styles.strokeLoadingText}>Loading stroke order...</Text>
-                  </View>
-                )}
-                onError={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                  console.warn('WebView error: ', nativeEvent);
-                }}
-              />
-            </View>
-          </View>
+                  `,
+                  }}
+                  style={styles.strokeWebView}
+                  originWhitelist={["*"]}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  startInLoadingState={true}
+                  scalesPageToFit={false}
+                  scrollEnabled={false}
+                  bounces={false}
+                  allowsInlineMediaPlayback={true}
+                  mediaPlaybackRequiresUserAction={false}
+                  mixedContentMode="always"
+                  renderLoading={() => (
+                    <View style={styles.strokeLoadingContainer}>
+                      <ActivityIndicator
+                        size="large"
+                        color={theme.colors.primary}
+                      />
+                      <Text
+                        variant="bodyMedium"
+                        style={styles.strokeLoadingText}
+                      >
+                        Loading stroke order...
+                      </Text>
+                    </View>
+                  )}
+                  onError={(syntheticEvent) => {
+                    const { nativeEvent } = syntheticEvent;
+                    console.warn("WebView error: ", nativeEvent);
+                  }}
+                />
+              </View>
+            </Card.Content>
+          </Card>
         </View>
       </Modal>
     </ScrollView>
@@ -788,438 +935,245 @@ export default function WordDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: ChildrenTheme.colors.background,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.xl,
+  },
+  loaderText: {
+    color: ChildrenTheme.colors.textLight,
+    marginTop: ChildrenTheme.spacing.md,
   },
   errorText: {
-    fontSize: 16,
-    color: '#999',
+    color: ChildrenTheme.colors.textLight,
   },
   content: {
-    padding: 15,
+    padding: ChildrenTheme.spacing.md,
   },
   statusContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 20,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: ChildrenTheme.spacing.md,
   },
-  statusBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 16,
+  statusChip: {
+    alignSelf: "flex-end",
   },
-  status_unknown: {
-    backgroundColor: '#FFE4E1',
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
-  status_known: {
-    backgroundColor: '#E0F8E0',
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
+  mainCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
   },
   mainContent: {
-    backgroundColor: '#fff',
-    padding: 25,
-    borderRadius: 15,
-    marginBottom: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    padding: ChildrenTheme.spacing.lg,
+    alignItems: "center",
   },
   pinyinWithSpeaker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    alignSelf: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: ChildrenTheme.spacing.sm,
   },
   pinyin: {
-    fontSize: 32,
-    color: '#4A90E2',
-    fontStyle: 'italic',
-    fontWeight: '500',
+    fontStyle: "italic",
+    marginRight: ChildrenTheme.spacing.xs,
   },
   speakerButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginLeft: 10,
+    margin: 0,
+    padding: 0,
   },
-  speakerIcon: {
-    fontSize: 28,
+  strokeHintButton: {
+    margin: 0,
+    padding: 0,
+    position: "absolute",
+    top: ChildrenTheme.spacing.sm,
+    right: ChildrenTheme.spacing.sm,
   },
   wordText: {
-    fontSize: 96,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 12,
-    alignSelf: 'center',
+    fontSize: 80,
+    fontWeight: "bold",
+    color: ChildrenTheme.colors.text,
+    textAlign: "center",
+    marginBottom: ChildrenTheme.spacing.sm,
+    lineHeight: 88,
   },
   translation: {
-    fontSize: 24,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 8,
-    alignSelf: 'center',
+    color: ChildrenTheme.colors.text,
+    textAlign: "center",
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   tapHint: {
-    fontSize: 13,
-    color: '#999',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    alignSelf: 'center',
+    color: ChildrenTheme.colors.textLight,
+    textAlign: "center",
+    marginTop: ChildrenTheme.spacing.xs,
   },
   generatingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-    gap: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: ChildrenTheme.spacing.md,
+    gap: ChildrenTheme.spacing.sm,
   },
   generatingText: {
-    fontSize: 14,
-    color: '#4A90E2',
-    fontStyle: 'italic',
+    color: ChildrenTheme.colors.textLight,
+    fontStyle: "italic",
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-    textAlign: 'center',
+    color: ChildrenTheme.colors.textLight,
+    fontStyle: "italic",
+    textAlign: "center",
   },
-  compoundItemInline: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
-  compoundLeftInline: {
-    flex: 1,
-    marginRight: 10,
-  },
-  compoundWordInline: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 3,
-  },
-  compoundPinyinInline: {
-    fontSize: 13,
-    color: '#4A90E2',
-    fontStyle: 'italic',
-  },
-  compoundMeaningInline: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'right',
-    maxWidth: '40%',
-  },
-  exampleItemInline: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
-  exampleChineseInline: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    lineHeight: 24,
-    marginBottom: 4,
-  },
-  examplePinyinInline: {
-    fontSize: 13,
-    color: '#4A90E2',
-    fontStyle: 'italic',
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  exampleEnglishInline: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  section: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  sectionCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: ChildrenTheme.spacing.sm,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
     flex: 1,
   },
-  updateButton: {
-    backgroundColor: '#4A90E2',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  updateButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  definition: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 24,
-  },
   compoundItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: ChildrenTheme.spacing.sm,
+    paddingHorizontal: ChildrenTheme.spacing.sm,
+    marginBottom: ChildrenTheme.spacing.xs,
+    borderRadius: ChildrenTheme.borderRadius.small,
+    backgroundColor: ChildrenTheme.colors.background,
   },
   compoundLeft: {
     flex: 1,
+    marginRight: ChildrenTheme.spacing.sm,
   },
   compoundWord: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    marginBottom: 2,
   },
   compoundPinyin: {
-    fontSize: 14,
-    color: '#4A90E2',
-    fontStyle: 'italic',
+    color: ChildrenTheme.colors.primary,
+    fontStyle: "italic",
   },
   compoundMeaning: {
-    fontSize: 15,
-    color: '#666',
-    marginLeft: 12,
-    flex: 1,
-    textAlign: 'right',
+    color: ChildrenTheme.colors.textLight,
+    textAlign: "right",
+    maxWidth: "40%",
   },
   exampleItem: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  exampleContent: {
-    flex: 1,
+    paddingVertical: ChildrenTheme.spacing.sm,
+    paddingHorizontal: ChildrenTheme.spacing.sm,
+    marginBottom: ChildrenTheme.spacing.xs,
+    borderRadius: ChildrenTheme.borderRadius.small,
+    backgroundColor: ChildrenTheme.colors.background,
   },
   exampleChinese: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    lineHeight: 26,
-    marginBottom: 6,
+    color: ChildrenTheme.colors.text,
+    fontWeight: "500",
+    marginBottom: 4,
   },
   examplePinyin: {
-    fontSize: 14,
-    color: '#4A90E2',
-    fontStyle: 'italic',
-    lineHeight: 20,
-    marginBottom: 6,
+    color: ChildrenTheme.colors.primary,
+    fontStyle: "italic",
+    marginBottom: 4,
   },
   exampleEnglish: {
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 22,
-  },
-  exampleBullet: {
-    fontSize: 16,
-    color: '#4A90E2',
-    marginRight: 8,
+    color: ChildrenTheme.colors.textLight,
   },
   exampleText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 22,
+    color: ChildrenTheme.colors.text,
   },
-  generateButton: {
-    backgroundColor: '#50C878',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  generateButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  statusActions: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  definition: {
+    color: ChildrenTheme.colors.text,
+    lineHeight: 24,
+    marginTop: ChildrenTheme.spacing.xs,
   },
   statusActionsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.md,
   },
   statusButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: ChildrenTheme.spacing.sm,
   },
   statusBtn: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-  },
-  statusBtnActive: {
-    backgroundColor: '#4A90E2',
-    borderColor: '#4A90E2',
-  },
-  statusBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-  },
-  statusBtnTextActive: {
-    color: '#fff',
   },
   deleteButton: {
-    backgroundColor: '#FF6347',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: ChildrenTheme.spacing.lg,
   },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  toast: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: '#50C878',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  toastText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  snackbar: {
+    marginBottom: ChildrenTheme.spacing.xl,
   },
   strokeModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.lg,
   },
   strokeModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    width: '100%',
+    backgroundColor: ChildrenTheme.colors.card,
+    borderRadius: ChildrenTheme.borderRadius.xlarge,
+    width: "100%",
     maxWidth: 500,
-    maxHeight: '85%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
+    maxHeight: "85%",
+    overflow: "hidden",
+  },
+  strokeModalHeaderContent: {
+    padding: ChildrenTheme.spacing.md,
+    paddingBottom: ChildrenTheme.spacing.sm,
   },
   strokeModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   strokeModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    flex: 1,
   },
   strokeModalClose: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    margin: 0,
   },
-  strokeModalCloseText: {
-    fontSize: 20,
-    color: '#666',
-    fontWeight: 'bold',
+  strokeWebViewContent: {
+    padding: 0,
   },
   strokeWebViewContainer: {
     height: 550,
-    width: '100%',
+    width: "100%",
+    backgroundColor: ChildrenTheme.colors.card,
   },
   strokeWebView: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: ChildrenTheme.colors.card,
   },
   strokeLoadingContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: ChildrenTheme.colors.card,
   },
   strokeLoadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#4A90E2',
+    marginTop: ChildrenTheme.spacing.md,
+    color: ChildrenTheme.colors.textLight,
   },
 });
-

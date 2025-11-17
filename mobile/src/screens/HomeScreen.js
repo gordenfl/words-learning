@@ -14,12 +14,24 @@ import {
   Easing,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  IconButton,
+  useTheme,
+  Card,
+  Button,
+  Chip,
+  Text as PaperText,
+  Surface,
+} from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { wordsAPI, articlesAPI, usersAPI, ocrAPI } from "../services/api";
 import cnchar from "cnchar";
 import order from "cnchar-order";
+// 引入儿童友好主题和组件
+import ChildrenTheme from "../theme/childrenTheme";
+import ProgressCard from "../components/children/ProgressCard";
 
 // 初始化 cnchar 笔画插件
 cnchar.use(order);
@@ -35,6 +47,7 @@ const WORD_ANIMATION_SCALE_VARIATION = {
 };
 
 export default function HomeScreen({ navigation }) {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -598,129 +611,119 @@ export default function HomeScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4A90E2" />
+      <View style={[styles.loadingContainer, { backgroundColor: ChildrenTheme.colors.background }]}>
+        <ActivityIndicator size="large" color={ChildrenTheme.colors.primary} />
+        <Text style={[styles.loadingText, ChildrenTheme.typography.body]}>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#4A90E2" />
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={styles.welcomeText}>Welcome back, {user?.username}!</Text>
+    <View style={[styles.container, { backgroundColor: ChildrenTheme.colors.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={ChildrenTheme.colors.primary} />
+      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: ChildrenTheme.colors.primary }]}>
+        <View style={styles.headerLeft}>
+          <Image
+            source={require("../../assets/icon.png")}
+            style={styles.welcomeIcon}
+            resizeMode="contain"
+          />
+          <View>
+            <Text style={styles.welcomeText}>Hello, {user?.username || "friend"}!</Text>
+            <Text style={styles.welcomeSubtext}>Let's learn Chinese today!</Text>
+          </View>
+        </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity
+          <IconButton
+            icon="camera"
+            size={32}
+            iconColor={ChildrenTheme.colors.textInverse}
             onPress={handleScanBook}
             style={styles.cameraButton}
-          >
-            <Text style={styles.cameraIcon}>📸</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Profile")}
-            style={styles.avatarButton}
-          >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user?.username?.charAt(0).toUpperCase() || "U"}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          />
         </View>
       </View>
 
-      <ScrollView style={styles.scrollContent}>
-        {/* Learning Plan Info */}
+      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer}>
+        {/* Learning Plan Info - 儿童友好版本 */}
         {learningPlan && (
           <View style={styles.planInfo}>
-            <Text style={styles.planTitle}>📚 Chinese Learning Plan</Text>
-            <View style={styles.planRow}>
-              <Text style={styles.planLabel}>Level:</Text>
-              <Text style={styles.planValue}>
-                {learningPlan.difficulty === "beginner" && "初级 Beginner"}
-                {learningPlan.difficulty === "intermediate" &&
-                  "中级 Intermediate"}
-                {learningPlan.difficulty === "advanced" && "高级 Advanced"}
-              </Text>
+            <View style={styles.planHeader}>
+              <Text style={styles.planEmoji}>📚</Text>
+              <Text style={styles.planTitle}>My Learning Plan</Text>
             </View>
-            <View style={styles.planRow}>
-              <Text style={styles.planLabel}>Daily Goal:</Text>
-              <Text style={styles.planValue}>
-                {learningPlan.dailyWordGoal} words/day
-              </Text>
+            <View style={styles.planContent}>
+              <View style={styles.planRow}>
+                <Text style={styles.planLabel}>📖 Level:</Text>
+                <Text style={styles.planValue}>
+                  {learningPlan.difficulty === "beginner" && "🌟 Beginner"}
+                  {learningPlan.difficulty === "intermediate" && "⭐ Intermediate"}
+                  {learningPlan.difficulty === "advanced" && "✨ Advanced"}
+                </Text>
+              </View>
+              <View style={styles.planRow}>
+                <Text style={styles.planLabel}>🎯 Daily Goal:</Text>
+                <Text style={styles.planValue}>
+                  {learningPlan.dailyWordGoal} characters
+                </Text>
+              </View>
             </View>
           </View>
         )}
 
+        {/* 使用 ProgressCard 组件替换统计卡片 */}
         <View style={styles.statsContainer}>
           <TouchableOpacity
-            style={styles.statCard}
             onPress={() => navigation.navigate("WordsList", { filter: "all" })}
             activeOpacity={0.7}
           >
-            <Text style={styles.statNumber}>{stats?.total || 0}</Text>
-            <Text style={styles.statLabel}>Total Words</Text>
-            {learningPlan && (
-              <Text style={styles.statGoal}>
-                Goal: {learningPlan.monthlyWordGoal}/month
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() =>
-              navigation.navigate("WordsList", { filter: "known" })
-            }
-            activeOpacity={0.7}
-          >
-            <Text style={styles.statNumber}>{stats?.known || 0}</Text>
-            <Text style={styles.statLabel}>Known</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() =>
-              navigation.navigate("WordsList", { filter: "unknown" })
-            }
-            activeOpacity={0.7}
-          >
-            <Text style={styles.statNumber}>{stats?.unknown || 0}</Text>
-            <Text style={styles.statLabel}>To Learn</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() =>
-              navigation.navigate("WordsList", { filter: "unknown" })
-            }
-            activeOpacity={0.7}
-          >
-            <Text style={styles.statNumber}>{stats?.todayLearned || 0}</Text>
-            <Text style={styles.statLabel}>Today</Text>
-            {learningPlan && (
-              <Text style={styles.statGoal}>
-                Goal: {learningPlan.dailyWordGoal}/day
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              styles.primaryButton,
-              generatingArticle && styles.disabledButton,
-            ]}
-            onPress={handleGenerateArticle}
-            disabled={generatingArticle}
-          >
-            <Text style={styles.actionButtonText}>📝 Generate Article</Text>
+            <ProgressCard
+              emoji="📝"
+              label="Total Words"
+              current={stats?.total || 0}
+              total={learningPlan?.monthlyWordGoal || 200}
+              color={ChildrenTheme.colors.primary}
+              showPercentage={false}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, styles.secondaryButton]}
-            onPress={() => navigation.navigate("LearningPlan")}
+            onPress={() => navigation.navigate("WordsList", { filter: "known" })}
+            activeOpacity={0.7}
           >
-            <Text style={styles.actionButtonText}>🎯 Learning Plan</Text>
+            <ProgressCard
+              emoji="✅"
+              label="Mastered"
+              current={stats?.known || 0}
+              total={stats?.total || 1}
+              color={ChildrenTheme.colors.success}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("WordsList", { filter: "unknown" })}
+            activeOpacity={0.7}
+          >
+            <ProgressCard
+              emoji="📖"
+              label="To Learn"
+              current={stats?.unknown || 0}
+              total={stats?.total || 1}
+              color={ChildrenTheme.colors.warning}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate("WordsList", { filter: "unknown" })}
+            activeOpacity={0.7}
+          >
+            <ProgressCard
+              emoji="⭐"
+              label="Today"
+              current={stats?.todayLearned || 0}
+              total={learningPlan?.dailyWordGoal || 10}
+              color={ChildrenTheme.colors.accent}
+            />
           </TouchableOpacity>
         </View>
 
@@ -732,63 +735,138 @@ export default function HomeScreen({ navigation }) {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <ActivityIndicator size="large" color="#50C878" />
-              <Text style={styles.modalTitle}>Extracting Text...</Text>
+              <Text style={styles.modalEmoji}>🔍</Text>
+              <ActivityIndicator size="large" color={ChildrenTheme.colors.primary} style={styles.modalLoader} />
+              <Text style={styles.modalTitle}>Extracting Characters...</Text>
               <Text style={styles.modalSubtitle}>
-                Recognizing Chinese characters from image
+                Please wait while we extract Chinese characters from the image
               </Text>
             </View>
           </View>
         </Modal>
       </ScrollView>
 
-      {showWordsConfirm && (
-        <View style={[styles.confirmOverlay, { paddingTop: insets.top + 20 }]}>
-          <TouchableOpacity
-            style={styles.confirmOverlayBackdrop}
-            activeOpacity={1}
-            onPress={handleCancelAddWords}
+      {/* Bottom Navigation Bar */}
+      <View style={[styles.bottomNav, { paddingBottom: insets.bottom }]}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate("WordsList", { filter: "all" })}
+          activeOpacity={0.7}
+        >
+          <IconButton
+            icon="book-open-variant"
+            size={28}
+            iconColor={ChildrenTheme.colors.primary}
           />
-          <View style={styles.confirmContainer}>
-            <View style={styles.confirmHeader}>
-              <Text style={styles.confirmTitle}>Confirm Words to Add</Text>
-              <TouchableOpacity onPress={handleCancelAddWords}>
-                <Text style={styles.closeButton}>✕</Text>
-              </TouchableOpacity>
-            </View>
+          <Text style={styles.navLabel}>Words</Text>
+        </TouchableOpacity>
 
-            <ScrollView
-              style={styles.confirmContent}
-              contentContainerStyle={{ paddingBottom: 24 }}
-            >
-              {extractedWords.length === 0 && knownWords.length > 0 && (
-                <View style={styles.infoBanner}>
-                  <Text style={styles.infoBannerTitle}>All Words Known 🎉</Text>
-                  <Text style={styles.infoBannerText}>
-                    Every character we found in this photo is already in your
-                    vocabulary list.
-                  </Text>
-                </View>
-              )}
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => {
+            // Navigate immediately to Article screen, it will handle generation
+            navigation.navigate("Article");
+          }}
+          activeOpacity={0.7}
+        >
+          <IconButton
+            icon="book-open-page-variant"
+            size={28}
+            iconColor={ChildrenTheme.colors.secondary}
+          />
+          <Text style={styles.navLabel}>Reading</Text>
+        </TouchableOpacity>
 
-              {scannedImage && (
-                <View style={styles.imagePreview}>
-                  <Image
-                    source={{ uri: scannedImage }}
-                    style={styles.previewImage}
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate("LearningPlan")}
+          activeOpacity={0.7}
+        >
+          <IconButton
+            icon="calendar-check"
+            size={28}
+            iconColor={ChildrenTheme.colors.accent}
+          />
+          <Text style={styles.navLabel}>Plan</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => navigation.navigate("Profile")}
+          activeOpacity={0.7}
+        >
+          <IconButton
+            icon="account"
+            size={28}
+            iconColor={ChildrenTheme.colors.tertiary}
+          />
+          <Text style={styles.navLabel}>Profile</Text>
+        </TouchableOpacity>
+      </View>
+
+      {showWordsConfirm && (
+        <Modal
+          visible={showWordsConfirm}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={handleCancelAddWords}
+        >
+          <View style={[styles.confirmOverlay, { paddingTop: insets.top + 20 }]}>
+            <TouchableOpacity
+              style={styles.confirmOverlayBackdrop}
+              activeOpacity={1}
+              onPress={handleCancelAddWords}
+            />
+            <Card style={styles.confirmContainer} mode="elevated" elevation={8}>
+              <Card.Content style={styles.confirmHeaderContent}>
+                <View style={styles.confirmHeader}>
+                  <PaperText variant="headlineSmall" style={styles.confirmTitle}>
+                    Confirm Words to Add
+                  </PaperText>
+                  <IconButton
+                    icon="close"
+                    size={24}
+                    iconColor={ChildrenTheme.colors.text}
+                    onPress={handleCancelAddWords}
+                    style={styles.closeButton}
                   />
                 </View>
-              )}
+              </Card.Content>
 
-              {extractedWords.length > 0 && (
-                <>
-                  <Text style={styles.sectionTitle}>
-                    🆕 New Words ({selectedWords.length}/{extractedWords.length}{" "}
-                    selected)
-                  </Text>
-                  <Text style={styles.confirmHint}>
-                    Tap to select words you want to add
-                  </Text>
+              <ScrollView
+                style={styles.confirmContent}
+                contentContainerStyle={{ paddingBottom: 24 }}
+              >
+                {extractedWords.length === 0 && knownWords.length > 0 && (
+                  <Surface style={styles.infoBanner} elevation={0}>
+                    <PaperText variant="titleMedium" style={styles.infoBannerTitle}>
+                      All Words Known 🎉
+                    </PaperText>
+                    <PaperText variant="bodyMedium" style={styles.infoBannerText}>
+                      Every character we found in this photo is already in your
+                      vocabulary list.
+                    </PaperText>
+                  </Surface>
+                )}
+
+                {scannedImage && (
+                  <Surface style={styles.imagePreview} elevation={1}>
+                    <Image
+                      source={{ uri: scannedImage }}
+                      style={styles.previewImage}
+                    />
+                  </Surface>
+                )}
+
+                {extractedWords.length > 0 && (
+                  <>
+                    <PaperText variant="titleMedium" style={styles.sectionTitle}>
+                      🆕 New Words ({selectedWords.length}/{extractedWords.length}{" "}
+                      selected)
+                    </PaperText>
+                    <PaperText variant="bodySmall" style={styles.confirmHint}>
+                      Tap to select words you want to add
+                    </PaperText>
                   <View
                     style={[styles.wordGridContainer, { height: gridHeight }]}
                     onLayout={handleWordGridLayout}
@@ -863,14 +941,14 @@ export default function HomeScreen({ navigation }) {
                 </>
               )}
 
-              {knownWords.length > 0 && (
-                <>
-                  <Text style={styles.sectionTitleKnown}>
-                    ✓ Already Learned ({knownWords.length})
-                  </Text>
-                  <Text style={styles.confirmHint}>
-                    These words are already in your vocabulary
-                  </Text>
+                {knownWords.length > 0 && (
+                  <>
+                    <PaperText variant="titleMedium" style={styles.sectionTitleKnown}>
+                      ✓ Already Learned ({knownWords.length})
+                    </PaperText>
+                    <PaperText variant="bodySmall" style={styles.confirmHint}>
+                      These words are already in your vocabulary
+                    </PaperText>
                   <View style={styles.wordChipsContainer}>
                     {knownWords.map((item, index) => (
                       <View key={`known-${index}`} style={styles.wordChipKnown}>
@@ -885,27 +963,31 @@ export default function HomeScreen({ navigation }) {
                   </View>
                 </>
               )}
-            </ScrollView>
+              </ScrollView>
 
-            <View style={styles.confirmActions}>
-              <TouchableOpacity
-                style={[styles.confirmButton, styles.cancelButton]}
-                onPress={handleCancelAddWords}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmButton, styles.addButton]}
-                onPress={handleConfirmAddWords}
-                disabled={selectedWords.length === 0}
-              >
-                <Text style={styles.addButtonText}>
+              <Card.Actions style={styles.confirmActions}>
+                <Button
+                  mode="outlined"
+                  onPress={handleCancelAddWords}
+                  style={styles.cancelButton}
+                  textColor={ChildrenTheme.colors.textLight}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleConfirmAddWords}
+                  disabled={selectedWords.length === 0}
+                  style={styles.addButton}
+                  buttonColor={ChildrenTheme.colors.success}
+                  icon="plus"
+                >
                   Add {selectedWords.length} Words
-                </Text>
-              </TouchableOpacity>
-            </View>
+                </Button>
+              </Card.Actions>
+            </Card>
           </View>
-        </View>
+        </Modal>
       )}
     </View>
   );
@@ -914,206 +996,170 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: ChildrenTheme.colors.background,
   },
   scrollContent: {
     flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: ChildrenTheme.colors.background,
+  },
+  loadingText: {
+    marginTop: ChildrenTheme.spacing.md,
+    color: ChildrenTheme.colors.textLight,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    backgroundColor: "#fff",
+    padding: ChildrenTheme.spacing.lg,
+    backgroundColor: ChildrenTheme.colors.primary,
+    ...ChildrenTheme.shadows.medium,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  welcomeIcon: {
+    width: 60,
+    height: 60,
+    marginRight: ChildrenTheme.spacing.sm,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    overflow: "hidden",
   },
   welcomeText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    flex: 1,
+    ...ChildrenTheme.typography.h3,
+    color: ChildrenTheme.colors.textInverse,
+    marginBottom: 4,
+  },
+  welcomeSubtext: {
+    ...ChildrenTheme.typography.bodySmall,
+    color: ChildrenTheme.colors.textInverse,
+    opacity: 0.9,
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
   },
   cameraButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#50C878",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  cameraIcon: {
-    fontSize: 24,
-  },
-  avatarButton: {
-    padding: 0,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#4A90E2",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  avatarText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
+    margin: 0,
+    backgroundColor: ChildrenTheme.colors.accent,
+    borderRadius: 28,
+    width: 56,
+    height: 56,
   },
   planInfo: {
-    backgroundColor: "#fff",
-    margin: 10,
-    padding: 15,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: ChildrenTheme.colors.card,
+    margin: ChildrenTheme.spacing.md,
+    padding: ChildrenTheme.spacing.lg,
+    borderRadius: ChildrenTheme.borderRadius.large,
+    ...ChildrenTheme.shadows.medium,
+  },
+  planHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  planEmoji: {
+    fontSize: 28,
+    marginRight: ChildrenTheme.spacing.sm,
   },
   planTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
+    ...ChildrenTheme.typography.h3,
+    color: ChildrenTheme.colors.text,
+  },
+  planContent: {
+    marginTop: ChildrenTheme.spacing.sm,
   },
   planRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
+    marginBottom: ChildrenTheme.spacing.sm,
+    paddingVertical: ChildrenTheme.spacing.xs,
   },
   planLabel: {
-    fontSize: 14,
-    color: "#666",
+    ...ChildrenTheme.typography.body,
+    color: ChildrenTheme.colors.textLight,
   },
   planValue: {
-    fontSize: 14,
+    ...ChildrenTheme.typography.body,
     fontWeight: "600",
-    color: "#4A90E2",
+    color: ChildrenTheme.colors.primary,
   },
   statsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 10,
-  },
-  statCard: {
-    width: "48%",
-    backgroundColor: "#fff",
-    padding: 20,
-    margin: "1%",
-    borderRadius: 10,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#4A90E2",
-  },
-  statLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 5,
-  },
-  statGoal: {
-    fontSize: 11,
-    color: "#4A90E2",
-    marginTop: 5,
-    fontStyle: "italic",
-  },
-  actionsContainer: {
-    padding: 20,
-  },
-  actionButton: {
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    alignItems: "center",
-  },
-  primaryButton: {
-    backgroundColor: "#4A90E2",
-  },
-  secondaryButton: {
-    backgroundColor: "#50C878",
-  },
-  highlightButton: {
-    backgroundColor: "#FF6B6B",
-  },
-  disabledButton: {
-    backgroundColor: "#ccc",
-    opacity: 0.6,
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    padding: ChildrenTheme.spacing.md,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: ChildrenTheme.colors.overlay,
     justifyContent: "center",
     alignItems: "center",
   },
   modalContent: {
-    backgroundColor: "#fff",
-    padding: 40,
-    borderRadius: 20,
+    backgroundColor: ChildrenTheme.colors.card,
+    padding: ChildrenTheme.spacing.xl,
+    borderRadius: ChildrenTheme.borderRadius.xlarge,
     alignItems: "center",
     width: "80%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    ...ChildrenTheme.shadows.large,
+  },
+  modalEmoji: {
+    fontSize: 48,
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  modalLoader: {
+    marginVertical: ChildrenTheme.spacing.md,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 20,
-    marginBottom: 10,
+    ...ChildrenTheme.typography.h3,
+    color: ChildrenTheme.colors.text,
+    marginTop: ChildrenTheme.spacing.sm,
+    marginBottom: ChildrenTheme.spacing.sm,
   },
   modalSubtitle: {
-    fontSize: 14,
-    color: "#666",
+    ...ChildrenTheme.typography.bodySmall,
+    color: ChildrenTheme.colors.textLight,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 22,
+  },
+  bottomNav: {
+    flexDirection: "row",
+    backgroundColor: ChildrenTheme.colors.card,
+    borderTopWidth: 1,
+    borderTopColor: ChildrenTheme.colors.border,
+    paddingTop: ChildrenTheme.spacing.xs,
+    paddingHorizontal: ChildrenTheme.spacing.xs,
+    ...ChildrenTheme.shadows.medium,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: ChildrenTheme.spacing.xs,
+    minHeight: 64,
+  },
+  navLabel: {
+    ...ChildrenTheme.typography.caption,
+    color: ChildrenTheme.colors.textLight,
+    marginTop: -4,
+    fontSize: 11,
+    fontWeight: "500",
   },
   confirmOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    zIndex: 1000,
+    paddingHorizontal: ChildrenTheme.spacing.lg,
+    paddingBottom: ChildrenTheme.spacing.xl,
   },
   confirmOverlayBackdrop: {
     position: "absolute",
@@ -1126,69 +1172,59 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     maxHeight: "80%",
-    backgroundColor: "#f5f5f5",
-    borderRadius: 18,
+    backgroundColor: ChildrenTheme.colors.card,
+    borderRadius: ChildrenTheme.borderRadius.xlarge,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 10,
+  },
+  confirmHeaderContent: {
+    padding: ChildrenTheme.spacing.md,
+    paddingBottom: ChildrenTheme.spacing.sm,
   },
   confirmHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
   },
   confirmTitle: {
-    fontSize: 20,
+    color: ChildrenTheme.colors.text,
     fontWeight: "bold",
-    color: "#333",
+    flex: 1,
   },
   closeButton: {
-    fontSize: 28,
-    color: "#999",
-    fontWeight: "300",
+    margin: 0,
   },
   confirmContent: {
-    paddingHorizontal: 18,
-    paddingVertical: 20,
+    paddingHorizontal: ChildrenTheme.spacing.md,
+    paddingVertical: ChildrenTheme.spacing.md,
   },
   imagePreview: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 15,
+    backgroundColor: ChildrenTheme.colors.background,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    padding: ChildrenTheme.spacing.sm,
+    marginBottom: ChildrenTheme.spacing.md,
     alignItems: "center",
   },
   previewImage: {
     width: "100%",
     height: 200,
-    borderRadius: 8,
+    borderRadius: ChildrenTheme.borderRadius.small,
     resizeMode: "contain",
   },
   sectionTitle: {
-    fontSize: 16,
+    color: ChildrenTheme.colors.text,
     fontWeight: "bold",
-    color: "#333",
-    marginTop: 10,
-    marginBottom: 8,
+    marginTop: ChildrenTheme.spacing.sm,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   sectionTitleKnown: {
-    fontSize: 16,
+    color: ChildrenTheme.colors.success,
     fontWeight: "bold",
-    color: "#50C878",
-    marginTop: 20,
-    marginBottom: 8,
+    marginTop: ChildrenTheme.spacing.md,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   confirmHint: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 15,
+    color: ChildrenTheme.colors.textLight,
+    marginBottom: ChildrenTheme.spacing.md,
   },
   wordChipsContainer: {
     flexDirection: "row",
@@ -1215,98 +1251,76 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   wordChipSelected: {
-    backgroundColor: "#E3F2FD",
+    backgroundColor: ChildrenTheme.colors.primary + "20",
     borderWidth: 2,
-    borderColor: "#4A90E2",
+    borderColor: ChildrenTheme.colors.primary,
   },
   wordChipUnselected: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: ChildrenTheme.colors.background,
     borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderColor: ChildrenTheme.colors.border,
     opacity: 0.6,
   },
   wordChipPinyin: {
     fontSize: 11,
-    color: "#4A90E2",
+    color: ChildrenTheme.colors.primary,
     marginBottom: 2,
   },
   wordChipText: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#333",
+    color: ChildrenTheme.colors.text,
   },
   wordChipTextUnselected: {
-    color: "#999",
+    color: ChildrenTheme.colors.textLight,
   },
   wordChipKnown: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: ChildrenTheme.borderRadius.medium,
     margin: 4,
     alignItems: "center",
     justifyContent: "center",
     minWidth: 60,
-    backgroundColor: "#E0F8E0",
+    backgroundColor: ChildrenTheme.colors.success + "20",
     borderWidth: 2,
-    borderColor: "#50C878",
+    borderColor: ChildrenTheme.colors.success,
   },
   wordChipPinyinKnown: {
     fontSize: 11,
-    color: "#50C878",
+    color: ChildrenTheme.colors.success,
     marginBottom: 2,
   },
   wordChipTextKnown: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#50C878",
+    color: ChildrenTheme.colors.success,
   },
   confirmActions: {
     flexDirection: "row",
-    padding: 15,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-  },
-  confirmButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
-    marginHorizontal: 5,
+    padding: ChildrenTheme.spacing.md,
+    gap: ChildrenTheme.spacing.sm,
   },
   cancelButton: {
-    backgroundColor: "#f0f0f0",
-  },
-  cancelButtonText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "600",
+    flex: 1,
   },
   addButton: {
-    backgroundColor: "#50C878",
-  },
-  addButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    flex: 1,
   },
   infoBanner: {
-    backgroundColor: "#E0F8E0",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    backgroundColor: ChildrenTheme.colors.success + "20",
+    padding: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    marginBottom: ChildrenTheme.spacing.md,
     alignItems: "center",
   },
   infoBannerTitle: {
-    fontSize: 16,
+    color: ChildrenTheme.colors.success,
     fontWeight: "bold",
-    color: "#50C878",
-    marginBottom: 5,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   infoBannerText: {
-    fontSize: 13,
-    color: "#50C878",
+    color: ChildrenTheme.colors.success,
     textAlign: "center",
-    lineHeight: 18,
   },
 });

@@ -1,18 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
-  Text,
   FlatList,
-  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Animated,
 } from "react-native";
+import {
+  Text,
+  Card,
+  Button,
+  Chip,
+  IconButton,
+  useTheme,
+  Surface,
+} from "react-native-paper";
 import * as Speech from "expo-speech";
 import { wordsAPI } from "../services/api";
+import ChildrenTheme from "../theme/childrenTheme";
 
 export default function WordsListScreen({ navigation, route }) {
+  const theme = useTheme();
   const initialFilter = route.params?.filter || "all";
   const [words, setWords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -283,140 +292,176 @@ export default function WordsListScreen({ navigation, route }) {
     }
 
     const isRemoving = removingWordIds.has(item._id);
+    const statusColor =
+      item.status === "known"
+        ? ChildrenTheme.colors.success
+        : item.status === "learning"
+        ? ChildrenTheme.colors.warning
+        : ChildrenTheme.colors.error;
 
     return (
       <Animated.View style={{ opacity: fadeAnims.current[item._id] }}>
-        <TouchableOpacity
+        <Card
           style={styles.wordCard}
+          mode="elevated"
+          elevation={2}
           onPress={() =>
+            !isRemoving &&
             navigation.navigate("WordDetail", { wordId: item._id })
           }
-          activeOpacity={0.9}
           disabled={isRemoving}
         >
-          <View style={styles.cardHeader}>
-            <View style={[styles.statusBadge, styles[`status_${item.status}`]]}>
-              <Text style={styles.statusText}>{item.status}</Text>
+          <Card.Content style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <Chip
+                icon={
+                  item.status === "known" ? "check-circle" : "book-open-variant"
+                }
+                style={[
+                  styles.statusChip,
+                  {
+                    backgroundColor:
+                      item.status === "known"
+                        ? ChildrenTheme.colors.success + "20"
+                        : item.status === "learning"
+                        ? ChildrenTheme.colors.warning + "20"
+                        : ChildrenTheme.colors.error + "20",
+                  },
+                ]}
+                textStyle={[styles.statusChipText, { color: statusColor }]}
+              >
+                {item.status === "known"
+                  ? "Mastered"
+                  : item.status === "learning"
+                  ? "Learning"
+                  : "To Learn"}
+              </Chip>
             </View>
-          </View>
 
-          <View style={styles.cardContent}>
             <View style={styles.wordInfo}>
               {item.pinyin && (
                 <View style={styles.pinyinWithSpeaker}>
-                  <Text style={styles.pinyin}>{item.pinyin}</Text>
-                  <TouchableOpacity
-                    onPress={() => speakWord(item.word)}
-                    activeOpacity={0.6}
-                    style={styles.speakerButton}
+                  <Text
+                    variant="titleMedium"
+                    style={[styles.pinyin, { color: theme.colors.primary }]}
                   >
-                    <Text style={styles.speakerIcon}>🔊</Text>
-                  </TouchableOpacity>
+                    {item.pinyin}
+                  </Text>
+                  <IconButton
+                    icon="volume-high"
+                    size={20}
+                    iconColor={theme.colors.primary}
+                    onPress={() => speakWord(item.word)}
+                    style={styles.speakerButton}
+                  />
                 </View>
               )}
 
-              <Text style={styles.wordText}>{item.word}</Text>
+              <View style={styles.wordRow}>
+                <Text style={styles.wordText}>{item.word}</Text>
+                <View style={styles.actions}>
+                  {item.status === "unknown" && (
+                    <IconButton
+                      icon="check-circle"
+                      size={28}
+                      iconColor={ChildrenTheme.colors.success}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        updateWordStatus(item._id, "known");
+                      }}
+                      style={styles.actionIconButton}
+                    />
+                  )}
+                  {item.status === "known" && (
+                    <IconButton
+                      icon="refresh"
+                      size={28}
+                      iconColor={ChildrenTheme.colors.warning}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        updateWordStatus(item._id, "unknown");
+                      }}
+                      style={styles.actionIconButton}
+                    />
+                  )}
+                  <IconButton
+                    icon="delete"
+                    size={28}
+                    iconColor={ChildrenTheme.colors.error}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      deleteWord(item._id);
+                    }}
+                    style={styles.actionIconButton}
+                  />
+                </View>
+              </View>
 
               {item.translation && (
-                <Text style={styles.translation}>{item.translation}</Text>
+                <Text variant="bodyLarge" style={styles.translation}>
+                  {item.translation}
+                </Text>
               )}
               {item.definition && (
-                <Text style={styles.definition}>{item.definition}</Text>
+                <Text variant="bodyMedium" style={styles.definition}>
+                  {item.definition}
+                </Text>
               )}
             </View>
-
-            <View style={styles.actions}>
-              {item.status === "unknown" && (
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.knownBtn]}
-                  onPress={(e) => {
-                    updateWordStatus(item._id, "known");
-                  }}
-                >
-                  <Text style={styles.actionBtnText}>✓</Text>
-                </TouchableOpacity>
-              )}
-              {item.status === "known" && (
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    styles.unknownBtn,
-                    styles.learnAgainBtn,
-                  ]}
-                  onPress={(e) => {
-                    updateWordStatus(item._id, "unknown");
-                  }}
-                >
-                  <Text style={styles.learnAgainBtnText}>Learn Again</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.deleteBtn]}
-                onPress={(e) => {
-                  deleteWord(item._id);
-                }}
-              >
-                <Text style={styles.actionBtnText}>🗑️</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
+          </Card.Content>
+        </Card>
       </Animated.View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterBtn, filter === "all" && styles.filterBtnActive]}
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <Surface style={styles.filterContainer} elevation={1}>
+        <Chip
+          selected={filter === "all"}
           onPress={() => setFilter("all")}
+          style={styles.filterChip}
+          selectedColor={theme.colors.primary}
+          mode={filter === "all" ? "flat" : "outlined"}
+          icon="format-list-bulleted"
         >
-          <Text
-            style={[
-              styles.filterText,
-              filter === "all" && styles.filterTextActive,
-            ]}
-          >
-            All
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterBtn,
-            filter === "unknown" && styles.filterBtnActive,
-          ]}
+          All
+        </Chip>
+        <Chip
+          selected={filter === "unknown"}
           onPress={() => setFilter("unknown")}
+          style={styles.filterChip}
+          selectedColor={ChildrenTheme.colors.warning}
+          mode={filter === "unknown" ? "flat" : "outlined"}
+          icon="book-open-variant"
         >
-          <Text
-            style={[
-              styles.filterText,
-              filter === "unknown" && styles.filterTextActive,
-            ]}
-          >
-            Learning
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterBtn,
-            filter === "known" && styles.filterBtnActive,
-          ]}
+          Learning
+        </Chip>
+        <Chip
+          selected={filter === "known"}
           onPress={() => setFilter("known")}
+          style={styles.filterChip}
+          selectedColor={ChildrenTheme.colors.success}
+          mode={filter === "known" ? "flat" : "outlined"}
+          icon="check-circle"
         >
-          <Text
-            style={[
-              styles.filterText,
-              filter === "known" && styles.filterTextActive,
-            ]}
-          >
-            Known
-          </Text>
-        </TouchableOpacity>
-      </View>
+          Known
+        </Chip>
+      </Surface>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#4A90E2" style={styles.loader} />
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator
+            size="large"
+            color={theme.colors.primary}
+            style={styles.loader}
+          />
+          <Text variant="bodyMedium" style={styles.loaderText}>
+            Loading words...
+          </Text>
+        </View>
       ) : (
         <FlatList
           data={words}
@@ -424,19 +469,33 @@ export default function WordsListScreen({ navigation, route }) {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No words found</Text>
+            <View style={styles.emptyContainer}>
+              <Text variant="headlineSmall" style={styles.emptyText}>
+                📚
+              </Text>
+              <Text variant="titleLarge" style={styles.emptyTitle}>
+                No words found
+              </Text>
+              <Text variant="bodyMedium" style={styles.emptySubtext}>
+                Start by scanning books or adding words manually
+              </Text>
+            </View>
           }
           onEndReached={loadMoreWords}
           onEndReachedThreshold={0.5}
           ListFooterComponent={() =>
             loadingMore ? (
               <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color="#4A90E2" />
-                <Text style={styles.footerText}>Loading more...</Text>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text variant="bodySmall" style={styles.footerText}>
+                  Loading more...
+                </Text>
               </View>
             ) : hasMore ? null : (
               words.length > 0 && (
-                <Text style={styles.footerText}>All words loaded</Text>
+                <Text variant="bodySmall" style={styles.footerText}>
+                  All words loaded
+                </Text>
               )
             )
           }
@@ -453,166 +512,131 @@ export default function WordsListScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: ChildrenTheme.colors.background,
   },
   filterContainer: {
     flexDirection: "row",
-    padding: 10,
-    backgroundColor: "#fff",
+    padding: ChildrenTheme.spacing.md,
+    backgroundColor: ChildrenTheme.colors.card,
+    gap: ChildrenTheme.spacing.sm,
   },
-  filterBtn: {
+  filterChip: {
     flex: 1,
-    padding: 10,
-    marginHorizontal: 5,
-    borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    marginHorizontal: ChildrenTheme.spacing.xs,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-  },
-  filterBtnActive: {
-    backgroundColor: "#4A90E2",
-  },
-  filterText: {
-    color: "#666",
-    fontWeight: "600",
-  },
-  filterTextActive: {
-    color: "#fff",
+    padding: ChildrenTheme.spacing.xl,
   },
   loader: {
-    marginTop: 50,
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  loaderText: {
+    color: ChildrenTheme.colors.textLight,
+    marginTop: ChildrenTheme.spacing.sm,
   },
   list: {
-    padding: 15,
+    padding: ChildrenTheme.spacing.md,
   },
   wordCard: {
-    backgroundColor: "#fff",
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: ChildrenTheme.spacing.sm,
+    borderRadius: ChildrenTheme.borderRadius.large,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginBottom: 10,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   cardContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    padding: ChildrenTheme.spacing.sm,
+    paddingVertical: ChildrenTheme.spacing.sm,
+  },
+  statusChip: {
+    alignSelf: "flex-end",
+  },
+  statusChipText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   wordInfo: {
-    flex: 1,
-    marginRight: 15,
+    marginBottom: 0,
   },
   pinyinWithSpeaker: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 2,
   },
   pinyin: {
-    fontSize: 20,
-    color: "#4A90E2",
     fontStyle: "italic",
+    marginRight: ChildrenTheme.spacing.xs,
+    fontSize: 20,
   },
   speakerButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
+    margin: 0,
+    padding: 0,
   },
-  speakerIcon: {
-    fontSize: 20,
+  wordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 0,
   },
   wordText: {
-    fontSize: 48,
+    color: ChildrenTheme.colors.text,
+    marginBottom: 0,
+    fontSize: 64,
     fontWeight: "bold",
-    color: "#333",
-    marginBottom: 6,
+    lineHeight: 68,
+    flex: 1,
   },
   translation: {
+    color: ChildrenTheme.colors.text,
+    marginTop: 2,
     fontSize: 18,
-    color: "#666",
-    marginTop: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 16,
-    alignSelf: "flex-start",
-  },
-  status_unknown: {
-    backgroundColor: "#FFE4E1",
-  },
-  status_known: {
-    backgroundColor: "#E0F8E0",
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#333",
   },
   definition: {
-    fontSize: 15,
-    color: "#666",
-    marginTop: 8,
+    color: ChildrenTheme.colors.textLight,
+    marginTop: 2,
+    fontSize: 14,
   },
   actions: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
+    marginLeft: ChildrenTheme.spacing.sm,
   },
-  actionBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginLeft: 6,
-    width: 44,
-    height: 44,
+  actionIconButton: {
+    margin: 0,
+    padding: 0,
+  },
+  emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  knownBtn: {
-    backgroundColor: "#50C878",
-  },
-  unknownBtn: {
-    backgroundColor: "#FFA500",
-  },
-  learnAgainBtn: {
-    width: undefined,
-    minWidth: 100,
-    paddingHorizontal: 12,
-  },
-  deleteBtn: {
-    backgroundColor: "#FF6347",
-  },
-  actionBtnText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  learnAgainBtnText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 12,
+    padding: ChildrenTheme.spacing.xl,
+    marginTop: ChildrenTheme.spacing.xxl,
   },
   emptyText: {
+    fontSize: 64,
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  emptyTitle: {
+    color: ChildrenTheme.colors.text,
+    marginBottom: ChildrenTheme.spacing.sm,
+    fontWeight: "bold",
+  },
+  emptySubtext: {
+    color: ChildrenTheme.colors.textLight,
     textAlign: "center",
-    marginTop: 50,
-    fontSize: 16,
-    color: "#666",
   },
   footerLoader: {
-    padding: 20,
+    padding: ChildrenTheme.spacing.lg,
     alignItems: "center",
   },
   footerText: {
     textAlign: "center",
-    padding: 20,
-    fontSize: 14,
-    color: "#999",
+    padding: ChildrenTheme.spacing.md,
+    color: ChildrenTheme.colors.textLight,
   },
 });

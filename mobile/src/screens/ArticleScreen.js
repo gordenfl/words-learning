@@ -1,21 +1,74 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
+  StatusBar,
 } from "react-native";
+import {
+  Text,
+  Card,
+  Surface,
+  useTheme,
+  Snackbar,
+} from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Speech from "expo-speech";
 import { articlesAPI, wordsAPI } from "../services/api";
+import ChildrenTheme from "../theme/childrenTheme";
 
 export default function ArticleScreen({ route, navigation }) {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [article, setArticle] = useState(route.params?.article);
+  const [loading, setLoading] = useState(!route.params?.article);
+  const [error, setError] = useState(null);
   const [completedWords, setCompletedWords] = useState(new Set());
   const [isReading, setIsReading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
+  // Auto-generate article if not provided
+  useEffect(() => {
+    if (!route.params?.article) {
+      generateArticle();
+    }
+  }, []);
+
+  const generateArticle = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await articlesAPI.generateArticle(10);
+
+      // Check if more words are needed
+      if (response.data.needMoreWords) {
+        setLoading(false);
+        setError({
+          type: "needMoreWords",
+          message: response.data.message || "Great job! 🎉",
+          suggestion: response.data.suggestion || "Scan books or photos to add more Chinese words.",
+        });
+      } else {
+        setArticle(response.data.article);
+        setLoading(false);
+      }
+    } catch (err) {
+      setLoading(false);
+      const errorMsg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Failed to generate article";
+      setError({
+        type: "error",
+        message: "Oops!",
+        suggestion: errorMsg,
+      });
+    }
+  };
 
   const speakWord = (word) => {
     Speech.speak(word, {
@@ -490,22 +543,166 @@ export default function ArticleScreen({ route, navigation }) {
     );
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: ChildrenTheme.colors.background },
+        ]}
+      >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={ChildrenTheme.colors.primary}
+        />
+        <View
+          style={[
+            styles.header,
+            {
+              paddingTop: (insets.top + 10) / 2,
+              backgroundColor: ChildrenTheme.colors.primary,
+            },
+          ]}
+        ></View>
+        <View style={styles.loadingContainer}>
+          <Card style={styles.loadingCard} mode="elevated" elevation={2}>
+            <Card.Content style={styles.loadingContent}>
+              <Text style={styles.loadingEmoji}>📚</Text>
+              <ActivityIndicator
+                size="large"
+                color={ChildrenTheme.colors.primary}
+                style={styles.loader}
+              />
+              <Text variant="titleLarge" style={styles.loadingTitle}>
+                Generating Article...
+              </Text>
+              <Text variant="bodyMedium" style={styles.loadingSubtitle}>
+                AI is creating a personalized Chinese reading article for you
+              </Text>
+            </Card.Content>
+          </Card>
+        </View>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: ChildrenTheme.colors.background },
+        ]}
+      >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={ChildrenTheme.colors.primary}
+        />
+        <View
+          style={[
+            styles.header,
+            {
+              paddingTop: (insets.top + 10) / 2,
+              backgroundColor: ChildrenTheme.colors.primary,
+            },
+          ]}
+        ></View>
+        <View style={styles.loadingContainer}>
+          <Card style={styles.loadingCard} mode="elevated" elevation={2}>
+            <Card.Content style={styles.loadingContent}>
+              <Text style={styles.loadingEmoji}>
+                {error.type === "needMoreWords" ? "🎉" : "😔"}
+              </Text>
+              <Text variant="titleLarge" style={styles.loadingTitle}>
+                {error.message}
+              </Text>
+              <Text variant="bodyMedium" style={styles.loadingSubtitle}>
+                {error.suggestion}
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => {
+                  if (error.type === "needMoreWords") {
+                    navigation.navigate("Home");
+                  } else {
+                    generateArticle();
+                  }
+                }}
+              >
+                <Text style={styles.retryButtonText}>
+                  {error.type === "needMoreWords" ? "Go Home" : "Try Again"}
+                </Text>
+              </TouchableOpacity>
+            </Card.Content>
+          </Card>
+        </View>
+      </View>
+    );
+  }
+
+  // No article state
   if (!article) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>No article available</Text>
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: ChildrenTheme.colors.background },
+        ]}
+      >
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={ChildrenTheme.colors.primary}
+        />
+        <View
+          style={[
+            styles.header,
+            {
+              paddingTop: (insets.top + 10) / 2,
+              backgroundColor: ChildrenTheme.colors.primary,
+            },
+          ]}
+        ></View>
+        <View style={styles.loadingContainer}>
+          <Text variant="bodyLarge" style={styles.errorText}>
+            No article available
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Toast 提示 */}
-      {showToast && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toastMessage}</Text>
-        </View>
-      )}
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: ChildrenTheme.colors.background },
+      ]}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={ChildrenTheme.colors.primary}
+      />
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: (insets.top + 10) / 2,
+            backgroundColor: ChildrenTheme.colors.primary,
+          },
+        ]}
+      ></View>
+      <ScrollView style={styles.scrollContent}>
+        {/* Toast 提示 */}
+        <Snackbar
+          visible={showToast}
+          onDismiss={() => setShowToast(false)}
+          duration={2000}
+          style={styles.snackbar}
+        >
+          {toastMessage}
+        </Snackbar>
 
       <View style={styles.content}>
         {/* 标题和朗读按钮 */}
@@ -536,17 +733,74 @@ export default function ArticleScreen({ route, navigation }) {
           <Text style={styles.completeButtonText}>Complete Article</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: ChildrenTheme.colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: ChildrenTheme.spacing.sm,
+    backgroundColor: ChildrenTheme.colors.primary,
+    ...ChildrenTheme.shadows.medium,
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.xl,
+  },
+  loadingCard: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: ChildrenTheme.borderRadius.large,
+  },
+  loadingContent: {
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.xl,
+  },
+  loadingEmoji: {
+    fontSize: 64,
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  loader: {
+    marginVertical: ChildrenTheme.spacing.md,
+  },
+  loadingTitle: {
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.sm,
+    textAlign: "center",
+  },
+  loadingSubtitle: {
+    color: ChildrenTheme.colors.textLight,
+    textAlign: "center",
+    marginBottom: ChildrenTheme.spacing.lg,
+  },
+  retryButton: {
+    backgroundColor: ChildrenTheme.colors.primary,
+    paddingVertical: ChildrenTheme.spacing.md,
+    paddingHorizontal: ChildrenTheme.spacing.xl,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    marginTop: ChildrenTheme.spacing.md,
+  },
+  retryButtonText: {
+    color: ChildrenTheme.colors.textInverse,
+    fontSize: 16,
+    fontWeight: "bold",
   },
   content: {
-    padding: 20,
+    padding: ChildrenTheme.spacing.md,
   },
   titleRow: {
     flexDirection: "row",
@@ -726,26 +980,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
-  toast: {
-    position: "absolute",
-    top: 20,
-    left: 20,
-    right: 20,
-    backgroundColor: "#50C878",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    zIndex: 1000,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+  snackbar: {
+    marginBottom: ChildrenTheme.spacing.xl,
   },
-  toastText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+  errorText: {
+    textAlign: "center",
+    color: ChildrenTheme.colors.textLight,
   },
 });
