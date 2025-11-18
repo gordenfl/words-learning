@@ -59,8 +59,14 @@ export const authAPI = {
 
   getProfile: () => api.get("/auth/me"),
 
-  changePassword: (oldPassword, newPassword) =>
-    api.post("/auth/change-password", { oldPassword, newPassword }),
+  changePassword: (oldPassword, newPassword) => {
+    // 如果 oldPassword 为 null 或 undefined，不发送该字段
+    const payload = { newPassword };
+    if (oldPassword !== null && oldPassword !== undefined) {
+      payload.oldPassword = oldPassword;
+    }
+    return api.post("/auth/change-password", payload);
+  },
 
   googleSignIn: (userInfo) => api.post("/auth/google", { userInfo }),
 

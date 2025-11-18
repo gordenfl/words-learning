@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Speech from "expo-speech";
 import { articlesAPI, wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useScrollDragHandler } from "../utils/touchHandler";
 
 export default function ArticleScreen({ route, navigation }) {
   const theme = useTheme();
@@ -29,6 +30,7 @@ export default function ArticleScreen({ route, navigation }) {
   const [completedWords, setCompletedWords] = useState(new Set());
   const [isReading, setIsReading] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const { scrollHandlers, createPressHandler } = useScrollDragHandler();
   const [toastMessage, setToastMessage] = useState("");
 
   // Auto-generate article if not provided
@@ -510,7 +512,7 @@ export default function ArticleScreen({ route, navigation }) {
                       <View style={styles.pinyinWithSpeaker}>
                         <Text style={styles.pinyin}>{wordPinyin}</Text>
                         <TouchableOpacity
-                          onPress={() => speakWord(wordText)}
+                          onPress={createPressHandler(() => speakWord(wordText))}
                           activeOpacity={0.6}
                           style={styles.speakerButton}
                         >
@@ -525,7 +527,7 @@ export default function ArticleScreen({ route, navigation }) {
                     {!isCompleted ? (
                       <TouchableOpacity
                         style={styles.markKnownBtn}
-                        onPress={() => markWordAsKnown(wordId, wordText)}
+                        onPress={createPressHandler(() => markWordAsKnown(wordId, wordText))}
                       >
                         <Text style={styles.markKnownText}>✓</Text>
                       </TouchableOpacity>
@@ -694,7 +696,10 @@ export default function ArticleScreen({ route, navigation }) {
           },
         ]}
       ></View>
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollContent}
+        {...scrollHandlers}
+      >
         {/* Toast 提示 */}
         <Snackbar
           visible={showToast}

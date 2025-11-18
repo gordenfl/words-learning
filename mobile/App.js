@@ -17,6 +17,7 @@ import ArticleListScreen from "./src/screens/ArticleListScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import LearningPlanScreen from "./src/screens/LearningPlanScreen";
 import WordDetailScreen from "./src/screens/WordDetailScreen";
+import ImageViewScreen from "./src/screens/ImageViewScreen";
 import LoadingScreen from "./src/screens/LoadingScreen";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 
@@ -116,6 +117,11 @@ function AppContent() {
           name="WordDetail"
           component={WordDetailScreen}
           options={{ title: "Word Details" }}
+        />
+        <Stack.Screen
+          name="ImageView"
+          component={ImageViewScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

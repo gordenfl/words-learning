@@ -19,6 +19,7 @@ import {
 import * as Speech from "expo-speech";
 import { wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useScrollDragHandler } from "../utils/touchHandler";
 
 export default function WordsListScreen({ navigation, route }) {
   const theme = useTheme();
@@ -34,6 +35,7 @@ export default function WordsListScreen({ navigation, route }) {
 
   // 为每个单词存储动画值
   const fadeAnims = useRef({});
+  const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
     // 监听路由参数变化
@@ -305,10 +307,11 @@ export default function WordsListScreen({ navigation, route }) {
           style={styles.wordCard}
           mode="elevated"
           elevation={2}
-          onPress={() =>
-            !isRemoving &&
-            navigation.navigate("WordDetail", { wordId: item._id })
-          }
+          onPress={createPressHandler(() => {
+            if (!isRemoving) {
+              navigation.navigate("WordDetail", { wordId: item._id });
+            }
+          })}
           disabled={isRemoving}
         >
           <Card.Content style={styles.cardContent}>
@@ -468,6 +471,7 @@ export default function WordsListScreen({ navigation, route }) {
           renderItem={renderWord}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
+          {...scrollHandlers}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text variant="headlineSmall" style={styles.emptyText}>

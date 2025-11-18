@@ -21,7 +21,7 @@ const baseConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.gordenfl.wordslearning",
-    buildNumber: "4",
+    buildNumber: "6",
     infoPlist: {
       NSCameraUsageDescription:
         "We need camera access to scan and recognize Chinese characters from books and images.",
@@ -161,4 +161,3 @@ export default ({ config }) => {
 
   return mergedConfig;
 };
-

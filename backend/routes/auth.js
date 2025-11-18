@@ -266,6 +266,39 @@ router.post("/change-password", authMiddleware, async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     const user = await User.findById(req.userId);
 
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // 检查用户是否通过 OAuth 登录（Google/Facebook）
+    const isOAuthUser = user.authProvider === "google" || user.authProvider === "facebook";
+    
+    // 检查用户是否已经设置过密码
+    const hasExistingPassword = user.password && user.password.trim().length > 0;
+
+    // 如果是 OAuth 用户且没有设置过密码，允许跳过旧密码验证
+    if (isOAuthUser && !hasExistingPassword) {
+      // OAuth 用户首次设置密码，不需要验证旧密码
+      if (!oldPassword) {
+        // 直接设置新密码
+        user.password = newPassword;
+        await user.save();
+        return res.json({ 
+          message: "Password set successfully",
+          isFirstTime: true 
+        });
+      }
+      // 如果提供了 oldPassword，但用户没有密码，返回错误
+      return res.status(400).json({ 
+        error: "No existing password found. You can set a password without providing the old password." 
+      });
+    }
+
+    // 对于邮箱登录用户或已有密码的 OAuth 用户，必须验证旧密码
+    if (!oldPassword) {
+      return res.status(400).json({ error: "Current password is required" });
+    }
+
     // Verify old password
     const isMatch = await user.comparePassword(oldPassword);
     if (!isMatch) {
@@ -276,7 +309,10 @@ router.post("/change-password", authMiddleware, async (req, res) => {
     user.password = newPassword;
     await user.save();
 
-    res.json({ message: "Password changed successfully" });
+    res.json({ 
+      message: "Password changed successfully",
+      isFirstTime: false 
+    });
   } catch (error) {
     res
       .status(500)

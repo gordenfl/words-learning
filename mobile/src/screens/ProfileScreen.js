@@ -91,9 +91,21 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleConfirmPasswordChange = async () => {
+    // 检查用户是否通过 OAuth 登录（Google/Facebook）
+    const isOAuthUser = user?.authProvider === 'google' || user?.authProvider === 'facebook';
+    
+    // 对于 OAuth 用户首次设置密码，不需要当前密码
+    // 对于邮箱登录用户或已有密码的用户，需要当前密码
+    const requiresCurrentPassword = !isOAuthUser;
+
     // 验证输入
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (requiresCurrentPassword && !currentPassword) {
+      Alert.alert('Error', 'Please enter your current password');
+      return;
+    }
+
+    if (!newPassword || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in new password fields');
       return;
     }
 
@@ -109,8 +121,10 @@ export default function ProfileScreen({ navigation }) {
 
     setChangingPassword(true);
     try {
-      await authAPI.changePassword(currentPassword, newPassword);
-      Alert.alert('Success', 'Password changed successfully');
+      // 如果是 OAuth 用户首次设置密码，不发送 oldPassword（或发送 null）
+      const oldPasswordToSend = requiresCurrentPassword ? currentPassword : null;
+      await authAPI.changePassword(oldPasswordToSend, newPassword);
+      Alert.alert('Success', isOAuthUser ? 'Password set successfully' : 'Password changed successfully');
       handleCancelPasswordChange();
     } catch (error) {
       Alert.alert('Error', error.response?.data?.error || 'Failed to change password');
@@ -358,8 +372,17 @@ export default function ProfileScreen({ navigation }) {
             </Card.Content>
 
             <Card.Content style={styles.modalContent}>
+              {/* 对于 OAuth 用户首次设置密码，当前密码字段可选 */}
+              {(user?.authProvider === 'google' || user?.authProvider === 'facebook') ? (
+                <Text style={styles.helperText}>
+                  You're using {user.authProvider === 'google' ? 'Google' : 'Facebook'} login. 
+                  You can set a password without entering your current password.
+                </Text>
+              ) : null}
               <TextInput
-                label="Current Password"
+                label={user?.authProvider === 'google' || user?.authProvider === 'facebook' 
+                  ? "Current Password (Optional)" 
+                  : "Current Password"}
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 mode="outlined"
@@ -369,6 +392,9 @@ export default function ProfileScreen({ navigation }) {
                 outlineColor={theme.colors.outline}
                 activeOutlineColor={theme.colors.primary}
                 left={<TextInput.Icon icon="lock" />}
+                placeholder={user?.authProvider === 'google' || user?.authProvider === 'facebook' 
+                  ? "Leave empty if setting password for the first time" 
+                  : ""}
               />
 
               <TextInput
@@ -612,6 +638,13 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     marginBottom: ChildrenTheme.spacing.md,
+  },
+  helperText: {
+    fontSize: 12,
+    color: ChildrenTheme.colors.textLight,
+    marginBottom: ChildrenTheme.spacing.sm,
+    paddingHorizontal: ChildrenTheme.spacing.xs,
+    fontStyle: 'italic',
   },
   modalActions: {
     flexDirection: "row",

@@ -5,7 +5,11 @@
 
 // 环境控制变量
 // 设置为 true 使用生产环境，false 使用开发环境
-const IS_PRODUCTION = false; // 开发时设为 false，生产时设为 true
+// 可以通过环境变量 EXPO_PUBLIC_IS_PRODUCTION 覆盖
+// 在生产构建时，构建脚本会自动设置此环境变量
+const IS_PRODUCTION = process.env.EXPO_PUBLIC_IS_PRODUCTION === 'true' || 
+                      process.env.NODE_ENV === 'production' ||
+                      !__DEV__; // 在 Release 构建中 __DEV__ 为 false
 
 // 环境配置
 const ENV_CONFIG = {

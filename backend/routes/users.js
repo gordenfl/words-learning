@@ -108,6 +108,49 @@ router.patch('/learning-plan', async (req, res) => {
   }
 });
 
+// Update user profile (must be before /:userId)
+router.patch('/profile', async (req, res) => {
+  try {
+    const { displayName, bio, avatar } = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // 确保 profile 对象存在
+    if (!user.profile) {
+      user.profile = {};
+    }
+
+    // 更新允许的字段
+    if (displayName !== undefined) {
+      user.profile.displayName = displayName;
+    }
+    if (bio !== undefined) {
+      user.profile.bio = bio;
+    }
+    if (avatar !== undefined) {
+      user.profile.avatar = avatar;
+    }
+
+    await user.save();
+
+    res.json({ 
+      message: 'Profile updated successfully',
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        profile: user.profile
+      }
+    });
+  } catch (error) {
+    console.error('Error in PATCH /profile:', error);
+    res.status(500).json({ error: 'Failed to update profile', message: error.message });
+  }
+});
+
 // Delete account (must be before /:userId)
 router.delete('/account', async (req, res) => {
   try {
