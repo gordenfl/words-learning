@@ -22,6 +22,7 @@ import { WebView } from "react-native-webview";
 import * as Speech from "expo-speech";
 import { wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useScrollDragHandler } from "../utils/touchHandler";
 
 export default function WordDetailScreen({ route, navigation }) {
   const theme = useTheme();
@@ -34,6 +35,7 @@ export default function WordDetailScreen({ route, navigation }) {
   const [generatingCompounds, setGeneratingCompounds] = useState(false);
   const [generatingExamples, setGeneratingExamples] = useState(false);
   const [showStrokeOrder, setShowStrokeOrder] = useState(false);
+  const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
     loadWordDetail();
@@ -218,6 +220,7 @@ export default function WordDetailScreen({ route, navigation }) {
 
   return (
     <ScrollView
+      {...scrollHandlers}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <Snackbar
@@ -261,30 +264,30 @@ export default function WordDetailScreen({ route, navigation }) {
         <Card style={styles.mainCard} mode="elevated" elevation={2}>
           <Card.Content style={styles.mainContent}>
             {word.pinyin && (
-              <View style={styles.pinyinWithSpeaker}>
-                <Text
-                  variant="titleLarge"
-                  style={[styles.pinyin, { color: theme.colors.primary }]}
-                >
-                  {word.pinyin}
-                </Text>
-                <IconButton
-                  icon="volume-high"
-                  size={24}
-                  iconColor={theme.colors.primary}
-                  onPress={() => speakWord(word.word)}
-                  style={styles.speakerButton}
-                />
-              </View>
+              <Text
+                variant="titleLarge"
+                style={[styles.pinyin, { color: theme.colors.primary }]}
+              >
+                {word.pinyin}
+              </Text>
             )}
+            <View style={styles.wordWithSpeaker}>
+              <Text style={styles.wordText}>{word.word}</Text>
+              <IconButton
+                icon="volume-high"
+                size={28}
+                iconColor={theme.colors.primary}
+                onPress={createPressHandler(() => speakWord(word.word))}
+                style={styles.speakerButton}
+              />
+            </View>
             <IconButton
               icon="gesture-tap"
               size={20}
               iconColor={ChildrenTheme.colors.textLight}
-              onPress={() => setShowStrokeOrder(true)}
+              onPress={createPressHandler(() => setShowStrokeOrder(true))}
               style={styles.strokeHintButton}
             />
-            <Text style={styles.wordText}>{word.word}</Text>
             {word.translation && (
               <Text variant="titleMedium" style={styles.translation}>
                 {word.translation}
@@ -308,7 +311,7 @@ export default function WordDetailScreen({ route, navigation }) {
                   icon="refresh"
                   size={20}
                   iconColor={theme.colors.primary}
-                  onPress={() => generateDetails(true, "compounds")}
+                  onPress={createPressHandler(() => generateDetails(true, "compounds"))}
                   disabled={generatingCompounds}
                 />
               )}
@@ -328,7 +331,7 @@ export default function WordDetailScreen({ route, navigation }) {
                     key={index}
                     style={styles.compoundItem}
                     elevation={0}
-                    onTouchEnd={() => speakWord(compound.word)}
+                    onTouchEnd={createPressHandler(() => speakWord(compound.word))}
                   >
                     <View style={styles.compoundLeft}>
                       <Text variant="titleMedium" style={styles.compoundWord}>
@@ -368,7 +371,7 @@ export default function WordDetailScreen({ route, navigation }) {
                   icon="refresh"
                   size={20}
                   iconColor={theme.colors.primary}
-                  onPress={() => generateDetails(true, "examples")}
+                  onPress={createPressHandler(() => generateDetails(true, "examples"))}
                   disabled={generatingExamples}
                 />
               )}
@@ -392,7 +395,7 @@ export default function WordDetailScreen({ route, navigation }) {
                       key={index}
                       style={styles.exampleItem}
                       elevation={0}
-                      onTouchEnd={() => speakWord(sentenceText)}
+                      onTouchEnd={createPressHandler(() => speakWord(sentenceText))}
                     >
                       {typeof example === "string" ? (
                         <Text variant="bodyLarge" style={styles.exampleText}>
@@ -459,7 +462,7 @@ export default function WordDetailScreen({ route, navigation }) {
             <View style={styles.statusButtons}>
               <Button
                 mode={word.status === "unknown" ? "contained" : "outlined"}
-                onPress={() => updateWordStatus("unknown")}
+                onPress={createPressHandler(() => updateWordStatus("unknown"))}
                 style={styles.statusBtn}
                 buttonColor={ChildrenTheme.colors.warning}
                 textColor={
@@ -473,7 +476,7 @@ export default function WordDetailScreen({ route, navigation }) {
               </Button>
               <Button
                 mode={word.status === "known" ? "contained" : "outlined"}
-                onPress={() => updateWordStatus("known")}
+                onPress={createPressHandler(() => updateWordStatus("known"))}
                 style={styles.statusBtn}
                 buttonColor={ChildrenTheme.colors.success}
                 textColor={
@@ -492,7 +495,7 @@ export default function WordDetailScreen({ route, navigation }) {
         {/* 删除按钮 */}
         <Button
           mode="contained"
-          onPress={deleteWord}
+          onPress={createPressHandler(deleteWord)}
           style={styles.deleteButton}
           buttonColor={ChildrenTheme.colors.error}
           icon="delete"
@@ -519,7 +522,7 @@ export default function WordDetailScreen({ route, navigation }) {
                   icon="close"
                   size={24}
                   iconColor={ChildrenTheme.colors.text}
-                  onPress={() => setShowStrokeOrder(false)}
+                  onPress={createPressHandler(() => setShowStrokeOrder(false))}
                   style={styles.strokeModalClose}
                 />
               </View>
@@ -973,18 +976,20 @@ const styles = StyleSheet.create({
     padding: ChildrenTheme.spacing.lg,
     alignItems: "center",
   },
-  pinyinWithSpeaker: {
+  pinyin: {
+    fontStyle: "italic",
+    marginBottom: ChildrenTheme.spacing.sm,
+    textAlign: "center",
+  },
+  wordWithSpeaker: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: ChildrenTheme.spacing.sm,
-  },
-  pinyin: {
-    fontStyle: "italic",
-    marginRight: ChildrenTheme.spacing.xs,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
   speakerButton: {
     margin: 0,
+    marginLeft: ChildrenTheme.spacing.sm,
     padding: 0,
   },
   strokeHintButton: {

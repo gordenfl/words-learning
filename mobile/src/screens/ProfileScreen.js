@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usersAPI, authAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useScrollDragHandler } from "../utils/touchHandler";
 
 export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
@@ -37,6 +38,7 @@ export default function ProfileScreen({ navigation }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
     loadProfile();
@@ -205,7 +207,10 @@ export default function ProfileScreen({ navigation }) {
       >
       </View>
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollContent}
+        {...scrollHandlers}
+      >
         <View style={styles.content}>
           {/* Profile Header Card */}
           <Card style={styles.profileCard} mode="elevated" elevation={2}>
@@ -263,7 +268,7 @@ export default function ProfileScreen({ navigation }) {
 
               <Button
                 mode="contained"
-                onPress={handleUpdateProfile}
+                onPress={createPressHandler(handleUpdateProfile)}
                 loading={saving}
                 disabled={saving}
                 style={styles.updateButton}
@@ -285,7 +290,7 @@ export default function ProfileScreen({ navigation }) {
               <Surface
                 style={styles.settingItem}
                 elevation={0}
-                onTouchEnd={handleChangePassword}
+                onTouchEnd={createPressHandler(handleChangePassword)}
               >
                 <View style={styles.settingItemLeft}>
                   <IconButton
@@ -311,7 +316,7 @@ export default function ProfileScreen({ navigation }) {
               <Surface
                 style={styles.settingItem}
                 elevation={0}
-                onTouchEnd={handleLogout}
+                onTouchEnd={createPressHandler(handleLogout)}
               >
                 <View style={styles.settingItemLeft}>
                   <IconButton
@@ -337,7 +342,7 @@ export default function ProfileScreen({ navigation }) {
           {/* Delete Account Button */}
           <Button
             mode="contained"
-            onPress={handleDeleteAccount}
+            onPress={createPressHandler(handleDeleteAccount)}
             style={styles.deleteButton}
             buttonColor={ChildrenTheme.colors.error}
             icon="delete"

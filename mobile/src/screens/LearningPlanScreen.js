@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usersAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useScrollDragHandler } from "../utils/touchHandler";
 
 const DIFFICULTY_LEVELS = [
   { 
@@ -57,6 +58,7 @@ export default function LearningPlanScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [showSavedToast, setShowSavedToast] = useState(false);
+  const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   const [dailyGoal, setDailyGoal] = useState(10);
   const [weeklyGoal, setWeeklyGoal] = useState(50);
@@ -156,7 +158,10 @@ export default function LearningPlanScreen({ navigation }) {
       >
       </View>
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollContent}
+        {...scrollHandlers}
+      >
         <View style={styles.content}>
           {/* Learning Goals Card */}
           <Card style={styles.sectionCard} mode="elevated" elevation={1}>
@@ -178,7 +183,7 @@ export default function LearningPlanScreen({ navigation }) {
                     <Chip
                       key={goal}
                       selected={dailyGoal === goal}
-                      onPress={() => handleDailyGoalChange(goal)}
+                      onPress={createPressHandler(() => handleDailyGoalChange(goal))}
                       style={styles.optionChip}
                       selectedColor={ChildrenTheme.colors.textInverse}
                       mode={dailyGoal === goal ? "flat" : "outlined"}
@@ -202,7 +207,7 @@ export default function LearningPlanScreen({ navigation }) {
                     <Chip
                       key={goal}
                       selected={weeklyGoal === goal}
-                      onPress={() => handleWeeklyGoalChange(goal)}
+                      onPress={createPressHandler(() => handleWeeklyGoalChange(goal))}
                       style={styles.optionChip}
                       selectedColor={ChildrenTheme.colors.textInverse}
                       mode={weeklyGoal === goal ? "flat" : "outlined"}
@@ -226,7 +231,7 @@ export default function LearningPlanScreen({ navigation }) {
                     <Chip
                       key={goal}
                       selected={monthlyGoal === goal}
-                      onPress={() => handleMonthlyGoalChange(goal)}
+                      onPress={createPressHandler(() => handleMonthlyGoalChange(goal))}
                       style={styles.optionChip}
                       selectedColor={ChildrenTheme.colors.textInverse}
                       mode={monthlyGoal === goal ? "flat" : "outlined"}
@@ -260,7 +265,7 @@ export default function LearningPlanScreen({ navigation }) {
                     difficulty === level.value && styles.difficultyCardActive,
                   ]}
                   elevation={difficulty === level.value ? 2 : 0}
-                  onTouchEnd={() => handleDifficultyChange(level.value)}
+                  onTouchEnd={createPressHandler(() => handleDifficultyChange(level.value))}
                 >
                   <View style={styles.difficultyHeader}>
                     <Text style={styles.difficultyIcon}>{level.icon}</Text>
@@ -312,7 +317,7 @@ export default function LearningPlanScreen({ navigation }) {
                         styles.timeCardActive,
                     ]}
                     elevation={studyTimes.includes(time.value) ? 2 : 0}
-                    onTouchEnd={() => toggleStudyTime(time.value)}
+                    onTouchEnd={createPressHandler(() => toggleStudyTime(time.value))}
                   >
                     <Text style={styles.timeIcon}>{time.icon}</Text>
                     <Text

@@ -429,11 +429,10 @@ export default function ArticleScreen({ route, navigation }) {
       .map((tw) => tw.word?.word || tw.wordText)
       .filter(Boolean);
 
-    // 只显示在文章内容中实际出现的单词
+    // 显示所有目标单词（不再过滤，因为文章生成时已经包含了这些单词）
     const wordsInContent = targetWords.filter((tw) => {
       const wordText = tw.word?.word || tw.wordText;
-      const allChinese = paragraphs.map((p) => p.chinese).join("\n");
-      return wordText && allChinese.includes(wordText);
+      return wordText; // 只要有单词文本就显示
     });
 
     return (
@@ -496,9 +495,10 @@ export default function ArticleScreen({ route, navigation }) {
           );
         })}
 
-        <View style={styles.wordsSection}>
-          <Text style={styles.sectionTitle}>Target Words:</Text>
-          {wordsInContent.map((tw, index) => {
+        {wordsInContent.length > 0 && (
+          <View style={styles.wordsSection}>
+            <Text style={styles.sectionTitle}>Target Words:</Text>
+            {wordsInContent.map((tw, index) => {
             const wordId = tw.word?._id || tw.word;
             const wordText = tw.word?.word || tw.wordText;
             const wordPinyin = tw.word?.pinyin || "";
@@ -540,8 +540,9 @@ export default function ArticleScreen({ route, navigation }) {
                 </View>
               </View>
             );
-          })}
-        </View>
+            })}
+          </View>
+        )}
       </View>
     );
   };
