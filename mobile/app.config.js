@@ -5,7 +5,7 @@ const PROJECT_ID = "43b56fd3-62b6-4de8-8872-0e7cca605ed3";
 const baseConfig = {
   name: "Chinese Words Learning",
   slug: "words-learning",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   userInterfaceStyle: "light",
   icon: "./assets/icon.png",
@@ -21,7 +21,7 @@ const baseConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.gordenfl.wordslearning",
-    buildNumber: "6",
+    buildNumber: "8",
     infoPlist: {
       NSCameraUsageDescription:
         "We need camera access to scan and recognize Chinese characters from books and images.",
