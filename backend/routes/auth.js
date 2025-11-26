@@ -260,6 +260,93 @@ router.post("/facebook", async (req, res) => {
   }
 });
 
+// Apple Sign-In
+router.post("/apple", async (req, res) => {
+  const { userInfo } = req.body; // Apple Sign-In 提供用户信息
+
+  if (!userInfo || !userInfo.userId) {
+    return res.status(400).json({ message: "User information not provided" });
+  }
+
+  try {
+    console.log("🔍 UserInfo from Apple Sign-In:", userInfo);
+
+    const { userId: appleId, email, fullName, identityToken } = userInfo;
+
+    // 在数据库中查找或创建用户
+    let user = await User.findOne({ appleId: appleId });
+
+    if (!user) {
+      // 如果找不到，尝试用邮箱链接已有账户
+      if (email) {
+        user = await User.findOne({ email: email });
+        if (user) {
+          // 找到了邮箱匹配的用户，但没有 appleId，说明是老用户
+          // 更新他的 appleId 以便下次直接登录
+          user.appleId = appleId;
+          user.authProvider = "apple";
+          if (fullName) {
+            const displayName = fullName.givenName && fullName.familyName
+              ? `${fullName.givenName} ${fullName.familyName}`
+              : fullName.givenName || fullName.familyName || email.split("@")[0];
+            if (!user.profile.displayName) {
+              user.profile.displayName = displayName;
+            }
+          }
+          await user.save();
+        }
+      }
+
+      if (!user) {
+        // 完全新的用户，创建新账户
+        // 生成一个临时的、唯一的 username
+        const displayName = fullName && fullName.givenName && fullName.familyName
+          ? `${fullName.givenName} ${fullName.familyName}`
+          : fullName?.givenName || fullName?.familyName || "Apple User";
+        const tempUsername = (email || appleId).split("@")[0] + Math.floor(100 + Math.random() * 900);
+
+        user = new User({
+          appleId,
+          email: email || `${appleId}@privaterelay.appleid.com`, // Apple 可能使用私有中继邮箱
+          username: tempUsername,
+          authProvider: "apple",
+          profile: {
+            displayName: displayName,
+          },
+        });
+        await user.save();
+      }
+    }
+
+    // 为该用户生成 JWT
+    const appToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET || "default_secret_key",
+      { expiresIn: "7d" }
+    );
+
+    // 返回 JWT 和用户信息
+    res.status(200).json({
+      message: "Apple Sign-In successful",
+      token: appToken,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        name: user.profile.displayName,
+        avatar: user.profile.avatar,
+        authProvider: "apple",
+      },
+    });
+  } catch (error) {
+    console.error("Apple auth error:", error);
+    res.status(500).json({
+      error: "Apple authentication failed",
+      message: error.message,
+    });
+  }
+});
+
 // Change password
 router.post("/change-password", authMiddleware, async (req, res) => {
   try {
@@ -270,8 +357,8 @@ router.post("/change-password", authMiddleware, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // 检查用户是否通过 OAuth 登录（Google/Facebook）
-    const isOAuthUser = user.authProvider === "google" || user.authProvider === "facebook";
+    // 检查用户是否通过 OAuth 登录（Google/Facebook/Apple）
+    const isOAuthUser = user.authProvider === "google" || user.authProvider === "facebook" || user.authProvider === "apple";
     
     // 检查用户是否已经设置过密码
     const hasExistingPassword = user.password && user.password.trim().length > 0;

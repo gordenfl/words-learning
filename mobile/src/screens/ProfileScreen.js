@@ -93,8 +93,8 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleConfirmPasswordChange = async () => {
-    // 检查用户是否通过 OAuth 登录（Google/Facebook）
-    const isOAuthUser = user?.authProvider === 'google' || user?.authProvider === 'facebook';
+    // 检查用户是否通过 OAuth 登录（Google/Facebook/Apple）
+    const isOAuthUser = user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple';
     
     // 对于 OAuth 用户首次设置密码，不需要当前密码
     // 对于邮箱登录用户或已有密码的用户，需要当前密码
@@ -378,14 +378,14 @@ export default function ProfileScreen({ navigation }) {
 
             <Card.Content style={styles.modalContent}>
               {/* 对于 OAuth 用户首次设置密码，当前密码字段可选 */}
-              {(user?.authProvider === 'google' || user?.authProvider === 'facebook') ? (
+              {(user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple') ? (
                 <Text style={styles.helperText}>
-                  You're using {user.authProvider === 'google' ? 'Google' : 'Facebook'} login. 
+                  You're using {user.authProvider === 'google' ? 'Google' : user.authProvider === 'facebook' ? 'Facebook' : 'Apple'} login. 
                   You can set a password without entering your current password.
                 </Text>
               ) : null}
               <TextInput
-                label={user?.authProvider === 'google' || user?.authProvider === 'facebook' 
+                label={user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple'
                   ? "Current Password (Optional)" 
                   : "Current Password"}
                 value={currentPassword}
@@ -397,7 +397,7 @@ export default function ProfileScreen({ navigation }) {
                 outlineColor={theme.colors.outline}
                 activeOutlineColor={theme.colors.primary}
                 left={<TextInput.Icon icon="lock" />}
-                placeholder={user?.authProvider === 'google' || user?.authProvider === 'facebook' 
+                placeholder={user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple'
                   ? "Leave empty if setting password for the first time" 
                   : ""}
               />

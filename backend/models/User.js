@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
     },
     authProvider: {
       type: String,
-      enum: ["email", "google", "facebook"],
+      enum: ["email", "google", "facebook", "apple"],
       default: "email",
     },
     googleId: {
@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     facebookId: {
+      type: String,
+      sparse: true,
+      unique: true,
+    },
+    appleId: {
       type: String,
       sparse: true,
       unique: true,

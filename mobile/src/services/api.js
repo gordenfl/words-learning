@@ -71,6 +71,8 @@ export const authAPI = {
   googleSignIn: (userInfo) => api.post("/auth/google", { userInfo }),
 
   facebookSignIn: (userInfo) => api.post("/auth/facebook", { userInfo }),
+
+  appleSignIn: (userInfo) => api.post("/auth/apple", { userInfo }),
 };
 
 // Words API

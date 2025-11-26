@@ -21,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authAPI } from "../services/api";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import FacebookSignInButton from "../components/FacebookSignInButton";
+import AppleSignInButton from "../components/AppleSignInButton";
 import ChildrenTheme from "../theme/childrenTheme";
 
 export default function LoginScreen({ navigation }) {
@@ -98,6 +99,17 @@ export default function LoginScreen({ navigation }) {
   const handleFacebookSignInError = (error) => {
     console.log("❌ Facebook Sign-In error:", error);
     // Error handling is already done in FacebookSignInButton component
+  };
+
+  const handleAppleSignInSuccess = (data) => {
+    console.log("✅ Apple Sign-In successful:", data);
+    // Navigate to Home
+    navigation.navigate("Home");
+  };
+
+  const handleAppleSignInError = (error) => {
+    console.log("❌ Apple Sign-In error:", error);
+    // Error handling is already done in AppleSignInButton component
   };
 
   return (
@@ -194,6 +206,10 @@ export default function LoginScreen({ navigation }) {
                 Sign in with
               </Text>
               <View style={styles.socialButtonsContainer}>
+                <AppleSignInButton
+                  onSignInSuccess={handleAppleSignInSuccess}
+                  onSignInError={handleAppleSignInError}
+                />
                 <GoogleSignInButton
                   onSignInSuccess={handleGoogleSignInSuccess}
                   onSignInError={handleGoogleSignInError}

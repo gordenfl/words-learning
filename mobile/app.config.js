@@ -107,6 +107,7 @@ const baseConfig = {
           "This identifier will be used to deliver personalized ads to you.",
       },
     ],
+    "expo-apple-authentication",
   ],
   extra: {
     eas: {
