@@ -286,9 +286,12 @@ router.post("/apple", async (req, res) => {
           user.appleId = appleId;
           user.authProvider = "apple";
           if (fullName) {
-            const displayName = fullName.givenName && fullName.familyName
-              ? `${fullName.givenName} ${fullName.familyName}`
-              : fullName.givenName || fullName.familyName || email.split("@")[0];
+            const displayName =
+              fullName.givenName && fullName.familyName
+                ? `${fullName.givenName} ${fullName.familyName}`
+                : fullName.givenName ||
+                  fullName.familyName ||
+                  email.split("@")[0];
             if (!user.profile.displayName) {
               user.profile.displayName = displayName;
             }
@@ -300,10 +303,13 @@ router.post("/apple", async (req, res) => {
       if (!user) {
         // 完全新的用户，创建新账户
         // 生成一个临时的、唯一的 username
-        const displayName = fullName && fullName.givenName && fullName.familyName
-          ? `${fullName.givenName} ${fullName.familyName}`
-          : fullName?.givenName || fullName?.familyName || "Apple User";
-        const tempUsername = (email || appleId).split("@")[0] + Math.floor(100 + Math.random() * 900);
+        const displayName =
+          fullName && fullName.givenName && fullName.familyName
+            ? `${fullName.givenName} ${fullName.familyName}`
+            : fullName?.givenName || fullName?.familyName || "Apple User";
+        const tempUsername =
+          (email || appleId).split("@")[0] +
+          Math.floor(100 + Math.random() * 900);
 
         user = new User({
           appleId,
@@ -358,10 +364,14 @@ router.post("/change-password", authMiddleware, async (req, res) => {
     }
 
     // 检查用户是否通过 OAuth 登录（Google/Facebook/Apple）
-    const isOAuthUser = user.authProvider === "google" || user.authProvider === "facebook" || user.authProvider === "apple";
-    
+    const isOAuthUser =
+      user.authProvider === "google" ||
+      user.authProvider === "facebook" ||
+      user.authProvider === "apple";
+
     // 检查用户是否已经设置过密码
-    const hasExistingPassword = user.password && user.password.trim().length > 0;
+    const hasExistingPassword =
+      user.password && user.password.trim().length > 0;
 
     // 如果是 OAuth 用户且没有设置过密码，允许跳过旧密码验证
     if (isOAuthUser && !hasExistingPassword) {
@@ -370,14 +380,15 @@ router.post("/change-password", authMiddleware, async (req, res) => {
         // 直接设置新密码
         user.password = newPassword;
         await user.save();
-        return res.json({ 
+        return res.json({
           message: "Password set successfully",
-          isFirstTime: true 
+          isFirstTime: true,
         });
       }
       // 如果提供了 oldPassword，但用户没有密码，返回错误
-      return res.status(400).json({ 
-        error: "No existing password found. You can set a password without providing the old password." 
+      return res.status(400).json({
+        error:
+          "No existing password found. You can set a password without providing the old password.",
       });
     }
 
@@ -396,9 +407,9 @@ router.post("/change-password", authMiddleware, async (req, res) => {
     user.password = newPassword;
     await user.save();
 
-    res.json({ 
+    res.json({
       message: "Password changed successfully",
-      isFirstTime: false 
+      isFirstTime: false,
     });
   } catch (error) {
     res
