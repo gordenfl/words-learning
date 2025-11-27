@@ -20,6 +20,7 @@ import {
 } from "react-native-paper";
 import { WebView } from "react-native-webview";
 import * as Speech from "expo-speech";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useScrollDragHandler } from "../utils/touchHandler";
@@ -35,6 +36,9 @@ export default function WordDetailScreen({ route, navigation }) {
   const [generatingCompounds, setGeneratingCompounds] = useState(false);
   const [generatingExamples, setGeneratingExamples] = useState(false);
   const [showStrokeOrder, setShowStrokeOrder] = useState(false);
+  const [showCompoundPractice, setShowCompoundPractice] = useState(false);
+  const [currentPracticeCompound, setCurrentPracticeCompound] = useState(null);
+  const [userInput, setUserInput] = useState([]);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
@@ -85,35 +89,127 @@ export default function WordDetailScreen({ route, navigation }) {
     });
   };
 
+  // 组词练习相关函数
+  const handlePlayCompound = () => {
+    if (currentPracticeCompound) {
+      // 播放组词
+      Speech.speak(currentPracticeCompound.word, {
+        language: "zh-CN",
+        pitch: 1.0,
+        rate: 0.3,
+      });
+    }
+  };
+
+  const handleAddCharacter = (char) => {
+    if (
+      currentPracticeCompound &&
+      userInput.length < currentPracticeCompound.word.length
+    ) {
+      const newInput = [...userInput, char];
+      setUserInput(newInput);
+
+      // 如果输入长度达到目标组词长度，自动验证
+      if (newInput.length === currentPracticeCompound.word.length) {
+        const userWord = newInput.join("");
+        if (userWord === currentPracticeCompound.word) {
+          // 正确
+          setUserInput([]);
+          setShowCompoundPractice(false);
+          Alert.alert("🎉 正确！Correct!", `你组词正确！\nYou got it right!`, [
+            { text: "确认 / OK" },
+          ]);
+        } else {
+          // 错误
+          Speech.speak("The word you formed is incorrect. Please try again.", {
+            language: "en-US",
+            pitch: 1.0,
+            rate: 0.5,
+          });
+          setUserInput([]);
+        }
+      }
+    }
+  };
+
+  const handleRemoveCharacter = () => {
+    if (userInput.length > 0) {
+      setUserInput(userInput.slice(0, -1));
+    }
+  };
+
+  // 检查 Writing 练习是否完成
+  const checkWritingCompleted = async () => {
+    // 如果单词状态已经是 "known"，说明已完成 Writing 训练
+    if (word.status === "known") {
+      return true;
+    }
+
+    // 检查是否有保存的 Writing 进度
+    const progressStorageKey = `writingProgress_${word._id}`;
+    try {
+      const savedProgress = await AsyncStorage.getItem(progressStorageKey);
+      if (savedProgress) {
+        const indices = JSON.parse(savedProgress);
+        // 如果完成了所有10个练习，进度会被清除
+        // 如果还有进度，检查是否完成了10个
+        if (indices.length >= 10) {
+          // 已完成10个，但状态可能还没更新，返回 true
+          return true;
+        } else {
+          // 还有进度但未完成10个，返回 false
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking writing progress:", error);
+    }
+
+    // 如果没有进度且状态不是 "known"，说明未完成
+    return false;
+  };
+
+  // 处理 Compound Practice 按钮点击
+  const handleCompoundPracticeClick = async () => {
+    // 检查 Writing 练习是否完成
+    const isWritingCompleted = await checkWritingCompleted();
+
+    if (!isWritingCompleted) {
+      // 显示提示信息
+      Alert.alert(
+        "需要先完成 Writing 训练",
+        "You need to complete Writing practice first",
+        [
+          {
+            text: "去练习 / Go Practice",
+            onPress: () => {
+              navigation.navigate("WordWriting", { word });
+            },
+          },
+          {
+            text: "取消 / Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+      return;
+    }
+
+    // Writing 练习已完成，可以进入组词练习
+    const randomIndex = Math.floor(Math.random() * word.compounds.length);
+    const selectedCompound = word.compounds[randomIndex];
+    setCurrentPracticeCompound(selectedCompound);
+    setUserInput([]);
+    setShowCompoundPractice(true);
+  };
+
   const showToastMessage = (message) => {
     setToastMessage(message);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
   };
 
-  const updateWordStatus = async (status) => {
-    try {
-      await wordsAPI.updateStatus(wordId, status);
-      const updatedWord = { ...word, status };
-      setWord(updatedWord);
-
-      // 通知列表页面更新（不刷新整个列表，只更新这个单词）
-      const routes = navigation.getState().routes;
-      const wordsListRoute = routes.find((r) => r.name === "WordsList");
-      if (wordsListRoute) {
-        navigation.navigate("WordsList", {
-          ...wordsListRoute.params,
-          wordUpdated: { wordId, newStatus: status },
-        });
-      }
-
-      const statusLabel =
-        status === "known" ? "✓ Marked as Known" : "📖 Marked as Learning";
-      showToastMessage(statusLabel);
-    } catch (error) {
-      showToastMessage("❌ Update failed");
-    }
-  };
+  // updateWordStatus 函数已移除 - 状态只能通过用户行为（如书写练习）自动更新
 
   const generateDetails = async (force = false, updateType = "both") => {
     // 设置对应的加载状态
@@ -314,7 +410,7 @@ export default function WordDetailScreen({ route, navigation }) {
           <Card.Content>
             <Button
               mode="contained"
-              onPress={createPressHandler(() => 
+              onPress={createPressHandler(() =>
                 navigation.navigate("WordWriting", { word })
               )}
               style={styles.writingButton}
@@ -338,7 +434,9 @@ export default function WordDetailScreen({ route, navigation }) {
                   icon="refresh"
                   size={20}
                   iconColor={theme.colors.primary}
-                  onPress={createPressHandler(() => generateDetails(true, "compounds"))}
+                  onPress={createPressHandler(() =>
+                    generateDetails(true, "compounds")
+                  )}
                   disabled={generatingCompounds}
                 />
               )}
@@ -358,7 +456,9 @@ export default function WordDetailScreen({ route, navigation }) {
                     key={index}
                     style={styles.compoundItem}
                     elevation={0}
-                    onTouchEnd={createPressHandler(() => speakWord(compound.word))}
+                    onTouchEnd={createPressHandler(() =>
+                      speakWord(compound.word)
+                    )}
                   >
                     <View style={styles.compoundLeft}>
                       <Text variant="titleMedium" style={styles.compoundWord}>
@@ -386,6 +486,23 @@ export default function WordDetailScreen({ route, navigation }) {
           </Card.Content>
         </Card>
 
+        {/* 组词练习按钮 */}
+        {word.compounds && word.compounds.length > 0 && (
+          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Button
+                mode="contained"
+                onPress={createPressHandler(handleCompoundPracticeClick)}
+                style={styles.compoundPracticeButton}
+                buttonColor={ChildrenTheme.colors.secondary}
+                icon="puzzle"
+              >
+                Compound Practice • 组词练习
+              </Button>
+            </Card.Content>
+          </Card>
+        )}
+
         {/* 例句模块 */}
         <Card style={styles.sectionCard} mode="elevated" elevation={1}>
           <Card.Content>
@@ -398,7 +515,9 @@ export default function WordDetailScreen({ route, navigation }) {
                   icon="refresh"
                   size={20}
                   iconColor={theme.colors.primary}
-                  onPress={createPressHandler(() => generateDetails(true, "examples"))}
+                  onPress={createPressHandler(() =>
+                    generateDetails(true, "examples")
+                  )}
                   disabled={generatingExamples}
                 />
               )}
@@ -422,7 +541,9 @@ export default function WordDetailScreen({ route, navigation }) {
                       key={index}
                       style={styles.exampleItem}
                       elevation={0}
-                      onTouchEnd={createPressHandler(() => speakWord(sentenceText))}
+                      onTouchEnd={createPressHandler(() =>
+                        speakWord(sentenceText)
+                      )}
                     >
                       {typeof example === "string" ? (
                         <Text variant="bodyLarge" style={styles.exampleText}>
@@ -479,45 +600,6 @@ export default function WordDetailScreen({ route, navigation }) {
             </Card.Content>
           </Card>
         )}
-
-        {/* 状态更新按钮 */}
-        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
-          <Card.Content>
-            <Text variant="titleMedium" style={styles.statusActionsTitle}>
-              Update Status
-            </Text>
-            <View style={styles.statusButtons}>
-              <Button
-                mode={word.status === "unknown" ? "contained" : "outlined"}
-                onPress={createPressHandler(() => updateWordStatus("unknown"))}
-                style={styles.statusBtn}
-                buttonColor={ChildrenTheme.colors.warning}
-                textColor={
-                  word.status === "unknown"
-                    ? "#fff"
-                    : ChildrenTheme.colors.warning
-                }
-                icon="book-open-variant"
-              >
-                Learning
-              </Button>
-              <Button
-                mode={word.status === "known" ? "contained" : "outlined"}
-                onPress={createPressHandler(() => updateWordStatus("known"))}
-                style={styles.statusBtn}
-                buttonColor={ChildrenTheme.colors.success}
-                textColor={
-                  word.status === "known"
-                    ? "#fff"
-                    : ChildrenTheme.colors.success
-                }
-                icon="check-circle"
-              >
-                Known
-              </Button>
-            </View>
-          </Card.Content>
-        </Card>
 
         {/* 删除按钮 */}
         <Button
@@ -958,6 +1040,115 @@ export default function WordDetailScreen({ route, navigation }) {
           </Card>
         </View>
       </Modal>
+
+      {/* 组词练习 Modal */}
+      <Modal
+        visible={showCompoundPractice}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowCompoundPractice(false);
+          setUserInput([]);
+          setCurrentPracticeCompound(null);
+        }}
+      >
+        <View style={styles.compoundModalOverlay}>
+          <Card
+            style={styles.compoundModalContent}
+            mode="elevated"
+            elevation={8}
+          >
+            <Card.Content style={styles.compoundModalHeaderContent}>
+              <View style={styles.compoundModalHeader}>
+                <Text variant="headlineSmall" style={styles.compoundModalTitle}>
+                  Compound Practice • 组词练习
+                </Text>
+                <IconButton
+                  icon="close"
+                  size={24}
+                  iconColor={ChildrenTheme.colors.text}
+                  onPress={createPressHandler(() => {
+                    setShowCompoundPractice(false);
+                    setUserInput([]);
+                    setCurrentPracticeCompound(null);
+                  })}
+                  style={styles.compoundModalClose}
+                />
+              </View>
+            </Card.Content>
+
+            <Card.Content style={styles.compoundPracticeContent}>
+              {/* 主字符 */}
+              <View style={styles.mainCharContainer}>
+                <Text style={styles.mainCharText}>{word.word}</Text>
+              </View>
+
+              {/* 下划线位置 */}
+              {currentPracticeCompound && (
+                <View style={styles.underlineContainer}>
+                  {currentPracticeCompound.word.split("").map((_, index) => (
+                    <View key={index} style={styles.underlineBox}>
+                      <Text style={styles.underlineChar}>
+                        {userInput[index] || ""}
+                      </Text>
+                      <View style={styles.underline} />
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* 播放按钮 */}
+              <Button
+                mode="contained"
+                onPress={createPressHandler(handlePlayCompound)}
+                style={styles.playButton}
+                buttonColor={ChildrenTheme.colors.primary}
+                icon="volume-high"
+              >
+                Play Compound • 播放组词
+              </Button>
+
+              {/* 字符选择按钮 */}
+              {currentPracticeCompound && (
+                <View style={styles.charButtonsContainer}>
+                  <Text variant="bodyMedium" style={styles.charButtonsTitle}>
+                    Select Characters • 选择字符
+                  </Text>
+                  <View style={styles.charButtonsGrid}>
+                    {currentPracticeCompound.word
+                      .split("")
+                      .map((char, index) => (
+                        <Button
+                          key={index}
+                          mode="outlined"
+                          onPress={createPressHandler(() =>
+                            handleAddCharacter(char)
+                          )}
+                          style={styles.charButton}
+                          disabled={userInput.length >= 4}
+                        >
+                          {char}
+                        </Button>
+                      ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 删除按钮 */}
+              {userInput.length > 0 && (
+                <Button
+                  mode="outlined"
+                  onPress={createPressHandler(handleRemoveCharacter)}
+                  style={styles.removeButton}
+                  icon="backspace"
+                >
+                  Remove • 删除
+                </Button>
+              )}
+            </Card.Content>
+          </Card>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1131,19 +1322,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginTop: ChildrenTheme.spacing.xs,
   },
-  statusActionsTitle: {
-    color: ChildrenTheme.colors.text,
-    fontWeight: "bold",
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  statusButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: ChildrenTheme.spacing.sm,
-  },
-  statusBtn: {
-    flex: 1,
-  },
   deleteButton: {
     marginBottom: ChildrenTheme.spacing.lg,
   },
@@ -1210,5 +1388,95 @@ const styles = StyleSheet.create({
   },
   writingButton: {
     marginVertical: ChildrenTheme.spacing.xs,
+  },
+  compoundPracticeButton: {
+    marginVertical: ChildrenTheme.spacing.xs,
+  },
+  compoundModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: ChildrenTheme.spacing.lg,
+  },
+  compoundModalContent: {
+    width: "100%",
+    maxWidth: 500,
+    backgroundColor: ChildrenTheme.colors.card,
+    borderRadius: 16,
+  },
+  compoundModalHeaderContent: {
+    paddingBottom: ChildrenTheme.spacing.sm,
+  },
+  compoundModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  compoundModalTitle: {
+    color: ChildrenTheme.colors.text,
+    fontWeight: "bold",
+    flex: 1,
+  },
+  compoundModalClose: {
+    margin: 0,
+  },
+  compoundPracticeContent: {
+    paddingTop: ChildrenTheme.spacing.md,
+  },
+  mainCharContainer: {
+    alignItems: "center",
+    marginBottom: ChildrenTheme.spacing.xl,
+  },
+  mainCharText: {
+    fontSize: 64,
+    fontWeight: "bold",
+    color: ChildrenTheme.colors.text,
+  },
+  underlineContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: ChildrenTheme.spacing.md,
+    marginBottom: ChildrenTheme.spacing.xl,
+  },
+  underlineBox: {
+    alignItems: "center",
+    width: 60,
+  },
+  underlineChar: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: ChildrenTheme.colors.primary,
+    marginBottom: ChildrenTheme.spacing.xs,
+    minHeight: 40,
+    textAlign: "center",
+  },
+  underline: {
+    width: 50,
+    height: 2,
+    backgroundColor: ChildrenTheme.colors.text,
+  },
+  playButton: {
+    marginBottom: ChildrenTheme.spacing.lg,
+  },
+  charButtonsContainer: {
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  charButtonsTitle: {
+    textAlign: "center",
+    marginBottom: ChildrenTheme.spacing.md,
+    color: ChildrenTheme.colors.text,
+  },
+  charButtonsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: ChildrenTheme.spacing.sm,
+  },
+  charButton: {
+    minWidth: 60,
+  },
+  removeButton: {
+    marginTop: ChildrenTheme.spacing.md,
   },
 });
