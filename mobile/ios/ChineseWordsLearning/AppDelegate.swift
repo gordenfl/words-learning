@@ -57,38 +57,14 @@ class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
 
   override func sourceURL(for bridge: RCTBridge) -> URL? {
     // needed to return the correct URL for expo-dev-client.
-    #if DEBUG
-    return bridge.bundleURL ?? bundleURL()
-    #else
-    // In production, always use local bundle, never try to connect to dev server
-    // Force use local bundle and never fall back to dev server
-    return bundleURL()
-    #endif
+    bridge.bundleURL ?? bundleURL()
   }
 
   override func bundleURL() -> URL? {
 #if DEBUG
     return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: ".expo/.virtual-metro-entry")
 #else
-    // In production, use local bundle file
-    // Try multiple possible locations for the bundle
-    if let bundleURL = Bundle.main.url(forResource: "main", withExtension: "jsbundle") {
-      return bundleURL
-    }
-    
-    // Also check in the main bundle path
-    if let bundlePath = Bundle.main.path(forResource: "main", ofType: "jsbundle") {
-      return URL(fileURLWithPath: bundlePath)
-    }
-    
-    // If bundle doesn't exist, this is a critical error
-    // Don't fall back to dev server in production - crash instead
-    let errorMessage = """
-    main.jsbundle not found in app bundle.
-    Make sure to bundle JavaScript before building.
-    Bundle path: \(Bundle.main.bundlePath)
-    """
-    fatalError(errorMessage)
+    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
   }
 }

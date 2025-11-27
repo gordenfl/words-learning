@@ -18,6 +18,7 @@ import {
   useTheme,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import { authAPI } from "../services/api";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import FacebookSignInButton from "../components/FacebookSignInButton";
@@ -30,6 +31,11 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // 获取版本信息
+  const appVersion = Constants.expoConfig?.version || "1.0.1";
+  const buildNumber = Constants.expoConfig?.ios?.buildNumber || "11";
+  const versionText = `v${appVersion}(${buildNumber})`;
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -243,6 +249,9 @@ export default function LoginScreen({ navigation }) {
           >
             👀 Preview Loading Screen (Temporary)
           </Button>
+
+          {/* Version Info */}
+          <Text style={styles.versionText}>{versionText}</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -357,5 +366,13 @@ const styles = StyleSheet.create({
   previewButtonLabel: {
     fontSize: ChildrenTheme.typography.body.fontSize,
     color: ChildrenTheme.colors.accent,
+  },
+  versionText: {
+    fontSize: 12,
+    color: ChildrenTheme.colors.textLight,
+    textAlign: "center",
+    marginTop: ChildrenTheme.spacing.xl,
+    marginBottom: ChildrenTheme.spacing.md,
+    opacity: 0.6,
   },
 });

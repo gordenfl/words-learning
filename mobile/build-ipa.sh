@@ -186,15 +186,13 @@ fi
 
 # 1. Archive
 echo "📦 步骤 1/4: 创建 Archive..."
+echo "   注意: 使用 Xcode 项目配置中的代码签名设置"
 xcodebuild archive \
     -workspace "$WORKSPACE" \
     -scheme "$SCHEME" \
     -configuration "$CONFIGURATION" \
     -archivePath "$ARCHIVE_PATH" \
-    -allowProvisioningUpdates \
-    CODE_SIGN_IDENTITY="" \
-    CODE_SIGNING_REQUIRED=NO \
-    CODE_SIGNING_ALLOWED=NO
+    -allowProvisioningUpdates
 
 if [ ! -d "$ARCHIVE_PATH" ]; then
     echo "❌ Archive 创建失败"

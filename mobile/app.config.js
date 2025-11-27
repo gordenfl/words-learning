@@ -107,7 +107,7 @@ const baseConfig = {
           "This identifier will be used to deliver personalized ads to you.",
       },
     ],
-    // "expo-apple-authentication", // 暂时注释，等包安装成功后再取消注释
+    "expo-apple-authentication", // 暂时注释，等包安装成功后再取消注释
   ],
   extra: {
     eas: {

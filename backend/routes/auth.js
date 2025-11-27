@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/auth");
+const { verifyIdentityToken } = require("../services/appleAuthService");
 
 // Register
 router.post("/register", async (req, res) => {
@@ -264,16 +265,45 @@ router.post("/facebook", async (req, res) => {
 router.post("/apple", async (req, res) => {
   const { userInfo } = req.body; // Apple Sign-In 提供用户信息
 
-  if (!userInfo || !userInfo.userId) {
-    return res.status(400).json({ message: "User information not provided" });
+  if (!userInfo || !userInfo.identityToken) {
+    return res.status(400).json({ 
+      message: "Identity token is required for Apple Sign-In" 
+    });
   }
 
   try {
-    console.log("🔍 UserInfo from Apple Sign-In:", userInfo);
+    console.log("🔍 UserInfo from Apple Sign-In:", {
+      userId: userInfo.userId,
+      hasIdentityToken: !!userInfo.identityToken,
+      hasEmail: !!userInfo.email,
+    });
 
-    const { userId: appleId, email, fullName, identityToken } = userInfo;
+    // 1. 验证 identityToken（必须步骤）
+    let verifiedToken;
+    try {
+      verifiedToken = await verifyIdentityToken(userInfo.identityToken);
+      console.log("✅ Identity token verified:", {
+        userId: verifiedToken.userId,
+        email: verifiedToken.email,
+        emailVerified: verifiedToken.emailVerified,
+      });
+    } catch (verifyError) {
+      console.error("❌ Identity token verification failed:", verifyError.message);
+      console.error("❌ Full verify error:", JSON.stringify(verifyError, null, 2));
+      console.error("❌ Identity token preview:", userInfo.identityToken?.substring(0, 50) + "...");
+      return res.status(401).json({
+        error: "Invalid identity token",
+        message: verifyError.message,
+        details: "请确保使用最新版本的应用，并确保设备已登录 Apple ID",
+      });
+    }
 
-    // 在数据库中查找或创建用户
+    // 2. 使用验证后的 token 数据
+    const appleId = verifiedToken.userId; // 使用验证后的 sub (user ID)
+    const email = verifiedToken.email || userInfo.email || null; // 优先使用 token 中的 email
+    const fullName = userInfo.fullName || null; // fullName 不在 token 中，使用客户端提供的
+
+    // 3. 在数据库中查找或创建用户（使用验证后的 appleId）
     let user = await User.findOne({ appleId: appleId });
 
     if (!user) {
