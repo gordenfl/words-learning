@@ -41,6 +41,16 @@ export default function WordDetailScreen({ route, navigation }) {
     loadWordDetail();
   }, []);
 
+  // 监听屏幕焦点，当从其他页面返回时刷新数据
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      // 当屏幕获得焦点时，重新加载单词详情
+      loadWordDetail();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   const loadWordDetail = async () => {
     try {
       // 获取单词列表，找到对应的单词
@@ -296,6 +306,23 @@ export default function WordDetailScreen({ route, navigation }) {
             <Text variant="bodySmall" style={styles.tapHint}>
               Tap 🔊 to hear • Tap 字 to see strokes
             </Text>
+          </Card.Content>
+        </Card>
+
+        {/* Writing 按钮 */}
+        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
+          <Card.Content>
+            <Button
+              mode="contained"
+              onPress={createPressHandler(() => 
+                navigation.navigate("WordWriting", { word })
+              )}
+              style={styles.writingButton}
+              buttonColor={ChildrenTheme.colors.primary}
+              icon="pencil"
+            >
+              Writing • 书写练习
+            </Button>
           </Card.Content>
         </Card>
 
@@ -1180,5 +1207,8 @@ const styles = StyleSheet.create({
   strokeLoadingText: {
     marginTop: ChildrenTheme.spacing.md,
     color: ChildrenTheme.colors.textLight,
+  },
+  writingButton: {
+    marginVertical: ChildrenTheme.spacing.xs,
   },
 });
