@@ -140,4 +140,10 @@ export const ocrAPI = {
     api.post("/ocr/extract-base64", { imageBase64 }),
 };
 
+// Speech API
+export const speechAPI = {
+  recognizeAudio: (audioBase64, languageCode = "zh-CN") =>
+    api.post("/speech/recognize-base64", { audioBase64, languageCode }),
+};
+
 export default api;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -24,6 +24,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useScrollDragHandler } from "../utils/touchHandler";
+import paperTheme from "../theme/paperTheme";
 
 export default function WordDetailScreen({ route, navigation }) {
   const theme = useTheme();
@@ -36,16 +37,29 @@ export default function WordDetailScreen({ route, navigation }) {
   const [generatingCompounds, setGeneratingCompounds] = useState(false);
   const [generatingExamples, setGeneratingExamples] = useState(false);
   const [showStrokeOrder, setShowStrokeOrder] = useState(false);
-  const [showCompoundPractice, setShowCompoundPractice] = useState(false);
-  const [currentPracticeCompound, setCurrentPracticeCompound] = useState(null);
-  const [userInput, setUserInput] = useState([]);
   const [isWritingCompleted, setIsWritingCompleted] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
     loadWordDetail();
   }, []);
+
+  // 设置导航栏左上角的删除按钮
+  useLayoutEffect(() => {
+    if (word) {
+      navigation.setOptions({
+        headerLeft: () => (
+          <IconButton
+            icon="delete"
+            size={24}
+            iconColor={paperTheme.colors.onPrimary}
+            onPress={createPressHandler(deleteWord)}
+            style={styles.headerDeleteButton}
+          />
+        ),
+      });
+    }
+  }, [navigation, word]);
 
   // 监听屏幕焦点，当从其他页面返回时刷新数据
   useEffect(() => {
@@ -108,64 +122,6 @@ export default function WordDetailScreen({ route, navigation }) {
       pitch: 1.0,
       rate: 0.1, // 极慢速播放，便于初学者
     });
-  };
-
-  // 组词练习相关函数
-  const handlePlayCompound = () => {
-    if (currentPracticeCompound) {
-      // 播放组词
-      Speech.speak(currentPracticeCompound.word, {
-        language: "zh-CN",
-        pitch: 1.0,
-        rate: 0.3,
-      });
-    }
-  };
-
-  // 处理语音识别结果
-  const handleSpeechResult = (recognizedText) => {
-    if (!currentPracticeCompound || !recognizedText) {
-      return;
-    }
-
-    // 检查识别的文本是否包含主字符
-    const mainChar = word.word;
-    if (recognizedText.includes(mainChar)) {
-      // 包含主字符，显示在横线上
-      const chars = recognizedText.split("");
-      // 只取前N个字符（N为目标组词长度）
-      const maxLength = currentPracticeCompound.word.length;
-      const displayChars = chars.slice(0, maxLength);
-      setUserInput(displayChars);
-
-      // 如果长度达到目标长度，验证是否正确
-      if (displayChars.length === maxLength) {
-        const userWord = displayChars.join("");
-        if (userWord === currentPracticeCompound.word) {
-          // 正确
-          setTimeout(() => {
-            setUserInput([]);
-            setShowCompoundPractice(false);
-            Alert.alert(
-              "🎉 正确！Correct!",
-              `你组词正确！\nYou got it right!`,
-              [{ text: "确认 / OK" }]
-            );
-          }, 500);
-        } else {
-          // 不正确，但包含主字符，保留显示
-          // 用户可以继续说话来修正
-        }
-      }
-    } else {
-      // 不包含主字符，播放错误提示
-      Speech.speak("The word you formed is incorrect. Please try again.", {
-        language: "en-US",
-        pitch: 1.0,
-        rate: 0.5,
-      });
-      setUserInput([]);
-    }
   };
 
   // 检查 Writing 练习是否完成（只检查 Writing 完成标记，不依赖单词状态）
@@ -233,9 +189,11 @@ export default function WordDetailScreen({ route, navigation }) {
     // Writing 练习已完成，可以进入组词练习
     const randomIndex = Math.floor(Math.random() * word.compounds.length);
     const selectedCompound = word.compounds[randomIndex];
-    setCurrentPracticeCompound(selectedCompound);
-    setUserInput([]);
-    setShowCompoundPractice(true);
+    // 导航到组词练习界面
+    navigation.navigate("CompoundPractice", {
+      word,
+      compound: selectedCompound,
+    });
   };
 
   const showToastMessage = (message) => {
@@ -635,17 +593,6 @@ export default function WordDetailScreen({ route, navigation }) {
             </Card.Content>
           </Card>
         )}
-
-        {/* 删除按钮 */}
-        <Button
-          mode="contained"
-          onPress={createPressHandler(deleteWord)}
-          style={styles.deleteButton}
-          buttonColor={ChildrenTheme.colors.error}
-          icon="delete"
-        >
-          Delete Word
-        </Button>
       </View>
 
       {/* 笔顺动画 Modal */}
@@ -1075,244 +1022,6 @@ export default function WordDetailScreen({ route, navigation }) {
           </Card>
         </View>
       </Modal>
-
-      {/* 组词练习 Modal */}
-      <Modal
-        visible={showCompoundPractice}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => {
-          setShowCompoundPractice(false);
-          setUserInput([]);
-          setCurrentPracticeCompound(null);
-        }}
-      >
-        <View style={styles.compoundModalOverlay}>
-          <Card
-            style={styles.compoundModalContent}
-            mode="elevated"
-            elevation={8}
-          >
-            <Card.Content style={styles.compoundModalHeaderContent}>
-              <View style={styles.compoundModalHeader}>
-                <Text variant="headlineSmall" style={styles.compoundModalTitle}>
-                  Compound Practice • 组词练习
-                </Text>
-                <IconButton
-                  icon="close"
-                  size={24}
-                  iconColor={ChildrenTheme.colors.text}
-                  onPress={createPressHandler(() => {
-                    setShowCompoundPractice(false);
-                    setUserInput([]);
-                    setCurrentPracticeCompound(null);
-                  })}
-                  style={styles.compoundModalClose}
-                />
-              </View>
-            </Card.Content>
-
-            <Card.Content style={styles.compoundPracticeContent}>
-              {/* 主字符 */}
-              <View style={styles.mainCharContainer}>
-                <Text style={styles.mainCharText}>{word.word}</Text>
-              </View>
-
-              {/* 下划线位置 */}
-              {currentPracticeCompound && (
-                <View style={styles.underlineContainer}>
-                  {currentPracticeCompound.word.split("").map((_, index) => (
-                    <View key={index} style={styles.underlineBox}>
-                      <Text style={styles.underlineChar}>
-                        {userInput[index] || ""}
-                      </Text>
-                      <View style={styles.underline} />
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* 播放按钮 */}
-              <Button
-                mode="contained"
-                onPress={createPressHandler(handlePlayCompound)}
-                style={styles.playButton}
-                buttonColor={ChildrenTheme.colors.primary}
-                icon="volume-high"
-              >
-                Play Compound • 播放组词
-              </Button>
-
-              {/* 语音输入按钮 */}
-              <View style={styles.speechInputContainer}>
-                <Text variant="bodyMedium" style={styles.speechInputTitle}>
-                  Hold to Speak • 按住说话
-                </Text>
-                <WebView
-                  source={{
-                    html: `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <style>
-                          body {
-                            margin: 0;
-                            padding: 0;
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            height: 100vh;
-                            background: transparent;
-                          }
-                          #recordButton {
-                            width: 120px;
-                            height: 120px;
-                            border-radius: 60px;
-                            border: none;
-                            background: ${isRecording ? "#f44336" : "#4CAF50"};
-                            color: white;
-                            font-size: 16px;
-                            font-weight: bold;
-                            cursor: pointer;
-                            transition: all 0.3s;
-                            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                          }
-                          #recordButton:active {
-                            transform: scale(0.95);
-                          }
-                          #status {
-                            margin-top: 10px;
-                            text-align: center;
-                            color: #666;
-                            font-size: 14px;
-                          }
-                        </style>
-                      </head>
-                      <body>
-                        <div style="text-align: center;">
-                          <button id="recordButton">${
-                            isRecording ? "Recording..." : "Hold to Speak"
-                          }</button>
-                          <div id="status"></div>
-                        </div>
-                        <script>
-                          let recognition = null;
-                          let isRecording = false;
-
-                          // 初始化语音识别
-                          if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                            recognition = new SpeechRecognition();
-                            recognition.continuous = false;
-                            recognition.interimResults = false;
-                            recognition.lang = 'zh-CN';
-
-                            recognition.onstart = function() {
-                              isRecording = true;
-                              document.getElementById('recordButton').textContent = 'Recording...';
-                              document.getElementById('recordButton').style.background = '#f44336';
-                              document.getElementById('status').textContent = 'Listening...';
-                              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'recordingStarted' }));
-                            };
-
-                            recognition.onresult = function(event) {
-                              const transcript = event.results[0][0].transcript;
-                              document.getElementById('status').textContent = 'Recognized: ' + transcript;
-                              window.ReactNativeWebView.postMessage(JSON.stringify({ 
-                                type: 'speechResult', 
-                                text: transcript 
-                              }));
-                            };
-
-                            recognition.onerror = function(event) {
-                              console.error('Speech recognition error:', event.error);
-                              document.getElementById('status').textContent = 'Error: ' + event.error;
-                              window.ReactNativeWebView.postMessage(JSON.stringify({ 
-                                type: 'recordingError', 
-                                error: event.error 
-                              }));
-                            };
-
-                            recognition.onend = function() {
-                              isRecording = false;
-                              document.getElementById('recordButton').textContent = 'Hold to Speak';
-                              document.getElementById('recordButton').style.background = '#4CAF50';
-                              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'recordingEnded' }));
-                            };
-                          } else {
-                            document.getElementById('status').textContent = 'Speech recognition not supported';
-                          }
-
-                          const button = document.getElementById('recordButton');
-                          
-                          button.addEventListener('mousedown', function() {
-                            if (recognition && !isRecording) {
-                              recognition.start();
-                            }
-                          });
-
-                          button.addEventListener('mouseup', function() {
-                            if (recognition && isRecording) {
-                              recognition.stop();
-                            }
-                          });
-
-                          button.addEventListener('mouseleave', function() {
-                            if (recognition && isRecording) {
-                              recognition.stop();
-                            }
-                          });
-
-                          // 触摸事件支持
-                          button.addEventListener('touchstart', function(e) {
-                            e.preventDefault();
-                            if (recognition && !isRecording) {
-                              recognition.start();
-                            }
-                          });
-
-                          button.addEventListener('touchend', function(e) {
-                            e.preventDefault();
-                            if (recognition && isRecording) {
-                              recognition.stop();
-                            }
-                          });
-                        </script>
-                      </body>
-                      </html>
-                    `,
-                  }}
-                  style={styles.speechWebView}
-                  originWhitelist={["*"]}
-                  javaScriptEnabled={true}
-                  onMessage={(event) => {
-                    try {
-                      const data = JSON.parse(event.nativeEvent.data);
-                      if (data.type === "recordingStarted") {
-                        setIsRecording(true);
-                      } else if (data.type === "recordingEnded") {
-                        setIsRecording(false);
-                      } else if (data.type === "speechResult") {
-                        handleSpeechResult(data.text);
-                      } else if (data.type === "recordingError") {
-                        setIsRecording(false);
-                        console.error("Speech recognition error:", data.error);
-                        Alert.alert(
-                          "Error",
-                          "Speech recognition failed. Please try again."
-                        );
-                      }
-                    } catch (error) {
-                      console.error("Error parsing message:", error);
-                    }
-                  }}
-                />
-              </View>
-            </Card.Content>
-          </Card>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -1486,9 +1195,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginTop: ChildrenTheme.spacing.xs,
   },
-  deleteButton: {
-    marginBottom: ChildrenTheme.spacing.lg,
-  },
   snackbar: {
     marginBottom: ChildrenTheme.spacing.xl,
   },
@@ -1556,85 +1262,7 @@ const styles = StyleSheet.create({
   compoundPracticeButton: {
     marginVertical: ChildrenTheme.spacing.xs,
   },
-  compoundModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: ChildrenTheme.spacing.lg,
-  },
-  compoundModalContent: {
-    width: "100%",
-    maxWidth: 500,
-    backgroundColor: ChildrenTheme.colors.card,
-    borderRadius: 16,
-  },
-  compoundModalHeaderContent: {
-    paddingBottom: ChildrenTheme.spacing.sm,
-  },
-  compoundModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  compoundModalTitle: {
-    color: ChildrenTheme.colors.text,
-    fontWeight: "bold",
-    flex: 1,
-  },
-  compoundModalClose: {
-    margin: 0,
-  },
-  compoundPracticeContent: {
-    paddingTop: ChildrenTheme.spacing.md,
-  },
-  mainCharContainer: {
-    alignItems: "center",
-    marginBottom: ChildrenTheme.spacing.xl,
-  },
-  mainCharText: {
-    fontSize: 64,
-    fontWeight: "bold",
-    color: ChildrenTheme.colors.text,
-  },
-  underlineContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: ChildrenTheme.spacing.md,
-    marginBottom: ChildrenTheme.spacing.xl,
-  },
-  underlineBox: {
-    alignItems: "center",
-    width: 60,
-  },
-  underlineChar: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: ChildrenTheme.colors.primary,
-    marginBottom: ChildrenTheme.spacing.xs,
-    minHeight: 40,
-    textAlign: "center",
-  },
-  underline: {
-    width: 50,
-    height: 2,
-    backgroundColor: ChildrenTheme.colors.text,
-  },
-  playButton: {
-    marginBottom: ChildrenTheme.spacing.lg,
-  },
-  speechInputContainer: {
-    marginTop: ChildrenTheme.spacing.lg,
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  speechInputTitle: {
-    textAlign: "center",
-    marginBottom: ChildrenTheme.spacing.md,
-    color: ChildrenTheme.colors.text,
-  },
-  speechWebView: {
-    width: "100%",
-    height: 200,
-    backgroundColor: "transparent",
+  headerDeleteButton: {
+    marginLeft: 8,
   },
 });
