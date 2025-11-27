@@ -59,6 +59,20 @@ export default function WordWritingScreen({ route, navigation }) {
 
   const loadProgress = async () => {
     try {
+      // 首先检查是否有 Writing 完成标记
+      const completedKey = `writingCompleted_${word._id}`;
+      const writingCompleted = await AsyncStorage.getItem(completedKey);
+      if (writingCompleted === "true") {
+        // Writing 已完成，所有字符都已完成
+        const allIndices = new Set(
+          Array.from({ length: practiceChars.length }, (_, i) => i)
+        );
+        setCompletedIndices(allIndices);
+        setLoadingProgress(false);
+        return;
+      }
+
+      // 检查是否有保存的进度
       const savedProgress = await AsyncStorage.getItem(progressStorageKey);
       if (savedProgress) {
         const indices = JSON.parse(savedProgress);
@@ -88,12 +102,13 @@ export default function WordWritingScreen({ route, navigation }) {
     }
   };
 
-  // 清除进度（当所有练习完成且状态已更新为 known 时）
-  const clearProgress = async () => {
+  // 保存 Writing 完成标记
+  const saveWritingCompleted = async () => {
     try {
-      await AsyncStorage.removeItem(progressStorageKey);
+      const completedKey = `writingCompleted_${word._id}`;
+      await AsyncStorage.setItem(completedKey, "true");
     } catch (error) {
-      console.error("Error clearing writing progress:", error);
+      console.error("Error saving writing completed:", error);
     }
   };
 
@@ -126,12 +141,11 @@ export default function WordWritingScreen({ route, navigation }) {
 
       // 检查是否完成了所有10个练习
       if (newCompletedIndices.size === practiceChars.length) {
-        // 所有练习完成，更新单词状态为 "known"
+        // 所有练习完成，保存完成标记（不清除进度，用于显示状态）
+        // 注意：单词状态只有在完成 Writing 和 Compound Practice 后才会更新为 "known"
+        // 这里只标记 Writing 完成，不更新单词状态
         try {
-          await wordsAPI.updateStatus(word._id, "known");
-
-          // 清除本地进度（因为已经完成并更新状态）
-          await clearProgress();
+          await saveWritingCompleted();
 
           // 通知 WordDetailScreen 更新状态（通过 navigation params）
           navigation.setParams({ wordStatusUpdated: true });
@@ -139,7 +153,7 @@ export default function WordWritingScreen({ route, navigation }) {
           // 显示恭喜确认框
           Alert.alert(
             "🎉 恭喜！Congratulations!",
-            `你已经完成了 "${word.word}" 的所有书写练习！\n\nThe word has been marked as "Known".`,
+            `你已经完成了 "${word.word}" 的所有书写练习！\n\nWriting practice completed!`,
             [
               {
                 text: "确认 / OK",
@@ -152,15 +166,15 @@ export default function WordWritingScreen({ route, navigation }) {
             { cancelable: false }
           );
         } catch (error) {
-          console.error("Error updating word status:", error);
+          console.error("Error saving writing completed:", error);
           Alert.alert(
             "错误 / Error",
-            "更新单词状态失败 / Failed to update word status",
+            "保存完成状态失败 / Failed to save completion status",
             [
               {
                 text: "确认 / OK",
                 onPress: () => {
-                  // 即使更新失败，也返回 Word Details 界面
+                  // 即使保存失败，也返回 Word Details 界面
                   navigation.goBack();
                 },
               },

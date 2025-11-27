@@ -39,6 +39,7 @@ export default function WordDetailScreen({ route, navigation }) {
   const [showCompoundPractice, setShowCompoundPractice] = useState(false);
   const [currentPracticeCompound, setCurrentPracticeCompound] = useState(null);
   const [userInput, setUserInput] = useState([]);
+  const [isWritingCompleted, setIsWritingCompleted] = useState(false);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
@@ -47,13 +48,32 @@ export default function WordDetailScreen({ route, navigation }) {
 
   // 监听屏幕焦点，当从其他页面返回时刷新数据
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
+    const unsubscribe = navigation.addListener("focus", async () => {
       // 当屏幕获得焦点时，重新加载单词详情
-      loadWordDetail();
+      await loadWordDetail();
+      // 重新检查 Writing 完成状态（loadWordDetail 会更新 word 状态）
+      // 使用 setTimeout 确保 word 状态已更新
+      setTimeout(() => {
+        if (word) {
+          checkWritingCompletedStatus();
+        }
+      }, 100);
     });
 
     return unsubscribe;
   }, [navigation]);
+
+  // 检查 Writing 是否完成（当 word 更新时）
+  useEffect(() => {
+    if (word) {
+      checkWritingCompletedStatus();
+    }
+  }, [word?.status, word?._id]);
+
+  const checkWritingCompletedStatus = async () => {
+    const completed = await checkWritingCompleted();
+    setIsWritingCompleted(completed);
+  };
 
   const loadWordDetail = async () => {
     try {
@@ -138,40 +158,45 @@ export default function WordDetailScreen({ route, navigation }) {
     }
   };
 
-  // 检查 Writing 练习是否完成
+  // 检查 Writing 练习是否完成（只检查 Writing 完成标记，不依赖单词状态）
   const checkWritingCompleted = async () => {
-    // 如果单词状态已经是 "known"，说明已完成 Writing 训练
-    if (word.status === "known") {
-      return true;
+    if (!word || !word._id) {
+      return false;
     }
 
-    // 检查是否有保存的 Writing 进度
+    // 首先检查是否有 Writing 完成标记
+    const completedKey = `writingCompleted_${word._id}`;
+    try {
+      const writingCompleted = await AsyncStorage.getItem(completedKey);
+      if (writingCompleted === "true") {
+        return true;
+      }
+    } catch (error) {
+      console.error("Error checking writing completed:", error);
+    }
+
+    // 如果没有完成标记，检查是否有保存的 Writing 进度（已完成10个）
     const progressStorageKey = `writingProgress_${word._id}`;
     try {
       const savedProgress = await AsyncStorage.getItem(progressStorageKey);
       if (savedProgress) {
         const indices = JSON.parse(savedProgress);
-        // 如果完成了所有10个练习，进度会被清除
-        // 如果还有进度，检查是否完成了10个
+        // 如果完成了所有10个练习，返回 true
         if (indices.length >= 10) {
-          // 已完成10个，但状态可能还没更新，返回 true
           return true;
-        } else {
-          // 还有进度但未完成10个，返回 false
-          return false;
         }
       }
     } catch (error) {
       console.error("Error checking writing progress:", error);
     }
 
-    // 如果没有进度且状态不是 "known"，说明未完成
+    // 如果都没有，说明未完成
     return false;
   };
 
   // 处理 Compound Practice 按钮点击
   const handleCompoundPracticeClick = async () => {
-    // 检查 Writing 练习是否完成
+    // 检查 Writing 练习是否完成（只检查 Writing 进度）
     const isWritingCompleted = await checkWritingCompleted();
 
     if (!isWritingCompleted) {
@@ -415,9 +440,9 @@ export default function WordDetailScreen({ route, navigation }) {
               )}
               style={styles.writingButton}
               buttonColor={ChildrenTheme.colors.primary}
-              icon="pencil"
+              icon={isWritingCompleted ? "check-circle" : "pencil"}
             >
-              Writing • 书写练习
+              {isWritingCompleted && "✓ "}Writing • 书写练习
             </Button>
           </Card.Content>
         </Card>
