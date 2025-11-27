@@ -40,6 +40,7 @@ export default function WordDetailScreen({ route, navigation }) {
   const [currentPracticeCompound, setCurrentPracticeCompound] = useState(null);
   const [userInput, setUserInput] = useState([]);
   const [isWritingCompleted, setIsWritingCompleted] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
@@ -121,40 +122,49 @@ export default function WordDetailScreen({ route, navigation }) {
     }
   };
 
-  const handleAddCharacter = (char) => {
-    if (
-      currentPracticeCompound &&
-      userInput.length < currentPracticeCompound.word.length
-    ) {
-      const newInput = [...userInput, char];
-      setUserInput(newInput);
+  // 处理语音识别结果
+  const handleSpeechResult = (recognizedText) => {
+    if (!currentPracticeCompound || !recognizedText) {
+      return;
+    }
 
-      // 如果输入长度达到目标组词长度，自动验证
-      if (newInput.length === currentPracticeCompound.word.length) {
-        const userWord = newInput.join("");
+    // 检查识别的文本是否包含主字符
+    const mainChar = word.word;
+    if (recognizedText.includes(mainChar)) {
+      // 包含主字符，显示在横线上
+      const chars = recognizedText.split("");
+      // 只取前N个字符（N为目标组词长度）
+      const maxLength = currentPracticeCompound.word.length;
+      const displayChars = chars.slice(0, maxLength);
+      setUserInput(displayChars);
+
+      // 如果长度达到目标长度，验证是否正确
+      if (displayChars.length === maxLength) {
+        const userWord = displayChars.join("");
         if (userWord === currentPracticeCompound.word) {
           // 正确
-          setUserInput([]);
-          setShowCompoundPractice(false);
-          Alert.alert("🎉 正确！Correct!", `你组词正确！\nYou got it right!`, [
-            { text: "确认 / OK" },
-          ]);
+          setTimeout(() => {
+            setUserInput([]);
+            setShowCompoundPractice(false);
+            Alert.alert(
+              "🎉 正确！Correct!",
+              `你组词正确！\nYou got it right!`,
+              [{ text: "确认 / OK" }]
+            );
+          }, 500);
         } else {
-          // 错误
-          Speech.speak("The word you formed is incorrect. Please try again.", {
-            language: "en-US",
-            pitch: 1.0,
-            rate: 0.5,
-          });
-          setUserInput([]);
+          // 不正确，但包含主字符，保留显示
+          // 用户可以继续说话来修正
         }
       }
-    }
-  };
-
-  const handleRemoveCharacter = () => {
-    if (userInput.length > 0) {
-      setUserInput(userInput.slice(0, -1));
+    } else {
+      // 不包含主字符，播放错误提示
+      Speech.speak("The word you formed is incorrect. Please try again.", {
+        language: "en-US",
+        pitch: 1.0,
+        rate: 0.5,
+      });
+      setUserInput([]);
     }
   };
 
@@ -1133,43 +1143,172 @@ export default function WordDetailScreen({ route, navigation }) {
                 Play Compound • 播放组词
               </Button>
 
-              {/* 字符选择按钮 */}
-              {currentPracticeCompound && (
-                <View style={styles.charButtonsContainer}>
-                  <Text variant="bodyMedium" style={styles.charButtonsTitle}>
-                    Select Characters • 选择字符
-                  </Text>
-                  <View style={styles.charButtonsGrid}>
-                    {currentPracticeCompound.word
-                      .split("")
-                      .map((char, index) => (
-                        <Button
-                          key={index}
-                          mode="outlined"
-                          onPress={createPressHandler(() =>
-                            handleAddCharacter(char)
-                          )}
-                          style={styles.charButton}
-                          disabled={userInput.length >= 4}
-                        >
-                          {char}
-                        </Button>
-                      ))}
-                  </View>
-                </View>
-              )}
+              {/* 语音输入按钮 */}
+              <View style={styles.speechInputContainer}>
+                <Text variant="bodyMedium" style={styles.speechInputTitle}>
+                  Hold to Speak • 按住说话
+                </Text>
+                <WebView
+                  source={{
+                    html: `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <style>
+                          body {
+                            margin: 0;
+                            padding: 0;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            background: transparent;
+                          }
+                          #recordButton {
+                            width: 120px;
+                            height: 120px;
+                            border-radius: 60px;
+                            border: none;
+                            background: ${isRecording ? "#f44336" : "#4CAF50"};
+                            color: white;
+                            font-size: 16px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                          }
+                          #recordButton:active {
+                            transform: scale(0.95);
+                          }
+                          #status {
+                            margin-top: 10px;
+                            text-align: center;
+                            color: #666;
+                            font-size: 14px;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div style="text-align: center;">
+                          <button id="recordButton">${
+                            isRecording ? "Recording..." : "Hold to Speak"
+                          }</button>
+                          <div id="status"></div>
+                        </div>
+                        <script>
+                          let recognition = null;
+                          let isRecording = false;
 
-              {/* 删除按钮 */}
-              {userInput.length > 0 && (
-                <Button
-                  mode="outlined"
-                  onPress={createPressHandler(handleRemoveCharacter)}
-                  style={styles.removeButton}
-                  icon="backspace"
-                >
-                  Remove • 删除
-                </Button>
-              )}
+                          // 初始化语音识别
+                          if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                            recognition = new SpeechRecognition();
+                            recognition.continuous = false;
+                            recognition.interimResults = false;
+                            recognition.lang = 'zh-CN';
+
+                            recognition.onstart = function() {
+                              isRecording = true;
+                              document.getElementById('recordButton').textContent = 'Recording...';
+                              document.getElementById('recordButton').style.background = '#f44336';
+                              document.getElementById('status').textContent = 'Listening...';
+                              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'recordingStarted' }));
+                            };
+
+                            recognition.onresult = function(event) {
+                              const transcript = event.results[0][0].transcript;
+                              document.getElementById('status').textContent = 'Recognized: ' + transcript;
+                              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                                type: 'speechResult', 
+                                text: transcript 
+                              }));
+                            };
+
+                            recognition.onerror = function(event) {
+                              console.error('Speech recognition error:', event.error);
+                              document.getElementById('status').textContent = 'Error: ' + event.error;
+                              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                                type: 'recordingError', 
+                                error: event.error 
+                              }));
+                            };
+
+                            recognition.onend = function() {
+                              isRecording = false;
+                              document.getElementById('recordButton').textContent = 'Hold to Speak';
+                              document.getElementById('recordButton').style.background = '#4CAF50';
+                              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'recordingEnded' }));
+                            };
+                          } else {
+                            document.getElementById('status').textContent = 'Speech recognition not supported';
+                          }
+
+                          const button = document.getElementById('recordButton');
+                          
+                          button.addEventListener('mousedown', function() {
+                            if (recognition && !isRecording) {
+                              recognition.start();
+                            }
+                          });
+
+                          button.addEventListener('mouseup', function() {
+                            if (recognition && isRecording) {
+                              recognition.stop();
+                            }
+                          });
+
+                          button.addEventListener('mouseleave', function() {
+                            if (recognition && isRecording) {
+                              recognition.stop();
+                            }
+                          });
+
+                          // 触摸事件支持
+                          button.addEventListener('touchstart', function(e) {
+                            e.preventDefault();
+                            if (recognition && !isRecording) {
+                              recognition.start();
+                            }
+                          });
+
+                          button.addEventListener('touchend', function(e) {
+                            e.preventDefault();
+                            if (recognition && isRecording) {
+                              recognition.stop();
+                            }
+                          });
+                        </script>
+                      </body>
+                      </html>
+                    `,
+                  }}
+                  style={styles.speechWebView}
+                  originWhitelist={["*"]}
+                  javaScriptEnabled={true}
+                  onMessage={(event) => {
+                    try {
+                      const data = JSON.parse(event.nativeEvent.data);
+                      if (data.type === "recordingStarted") {
+                        setIsRecording(true);
+                      } else if (data.type === "recordingEnded") {
+                        setIsRecording(false);
+                      } else if (data.type === "speechResult") {
+                        handleSpeechResult(data.text);
+                      } else if (data.type === "recordingError") {
+                        setIsRecording(false);
+                        console.error("Speech recognition error:", data.error);
+                        Alert.alert(
+                          "Error",
+                          "Speech recognition failed. Please try again."
+                        );
+                      }
+                    } catch (error) {
+                      console.error("Error parsing message:", error);
+                    }
+                  }}
+                />
+              </View>
             </Card.Content>
           </Card>
         </View>
@@ -1484,24 +1623,18 @@ const styles = StyleSheet.create({
   playButton: {
     marginBottom: ChildrenTheme.spacing.lg,
   },
-  charButtonsContainer: {
+  speechInputContainer: {
+    marginTop: ChildrenTheme.spacing.lg,
     marginBottom: ChildrenTheme.spacing.md,
   },
-  charButtonsTitle: {
+  speechInputTitle: {
     textAlign: "center",
     marginBottom: ChildrenTheme.spacing.md,
     color: ChildrenTheme.colors.text,
   },
-  charButtonsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: ChildrenTheme.spacing.sm,
-  },
-  charButton: {
-    minWidth: 60,
-  },
-  removeButton: {
-    marginTop: ChildrenTheme.spacing.md,
+  speechWebView: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "transparent",
   },
 });
