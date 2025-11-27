@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
   Modal,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import {
   Text,
@@ -14,6 +15,7 @@ import {
   ActivityIndicator,
 } from "react-native-paper";
 import { WebView } from "react-native-webview";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useScrollDragHandler } from "../utils/touchHandler";
 import { wordsAPI } from "../services/api";
@@ -37,6 +39,7 @@ export default function WordWritingScreen({ route, navigation }) {
 
   // 记录已完成的字符索引（红色实体）
   const [completedIndices, setCompletedIndices] = useState(new Set());
+  const [loadingProgress, setLoadingProgress] = useState(true);
 
   // 当前正在练习的字符索引
   const [currentPracticeIndex, setCurrentPracticeIndex] = useState(null);
@@ -45,6 +48,54 @@ export default function WordWritingScreen({ route, navigation }) {
   // Toast 消息
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
+  // 存储键，基于单词ID
+  const progressStorageKey = `writingProgress_${word._id}`;
+
+  // 加载保存的进度
+  useEffect(() => {
+    loadProgress();
+  }, []);
+
+  const loadProgress = async () => {
+    try {
+      const savedProgress = await AsyncStorage.getItem(progressStorageKey);
+      if (savedProgress) {
+        const indices = JSON.parse(savedProgress);
+        // 确保索引在有效范围内
+        const validIndices = indices.filter(
+          (idx) => idx >= 0 && idx < practiceChars.length
+        );
+        setCompletedIndices(new Set(validIndices));
+      }
+    } catch (error) {
+      console.error("Error loading writing progress:", error);
+    } finally {
+      setLoadingProgress(false);
+    }
+  };
+
+  // 保存进度到本地存储
+  const saveProgress = async (indices) => {
+    try {
+      const indicesArray = Array.from(indices);
+      await AsyncStorage.setItem(
+        progressStorageKey,
+        JSON.stringify(indicesArray)
+      );
+    } catch (error) {
+      console.error("Error saving writing progress:", error);
+    }
+  };
+
+  // 清除进度（当所有练习完成且状态已更新为 known 时）
+  const clearProgress = async () => {
+    try {
+      await AsyncStorage.removeItem(progressStorageKey);
+    } catch (error) {
+      console.error("Error clearing writing progress:", error);
+    }
+  };
 
   const handleCharPress = (index) => {
     // 如果已经完成，不处理
@@ -66,6 +117,9 @@ export default function WordWritingScreen({ route, navigation }) {
       ]);
       setCompletedIndices(newCompletedIndices);
 
+      // 保存进度到本地存储
+      await saveProgress(newCompletedIndices);
+
       // 关闭书写界面
       setShowWritingModal(false);
       setCurrentPracticeIndex(null);
@@ -76,17 +130,42 @@ export default function WordWritingScreen({ route, navigation }) {
         try {
           await wordsAPI.updateStatus(word._id, "known");
 
-          // 显示成功消息
-          setToastMessage("🎉 All practice completed! Word marked as Known!");
-          setShowToast(true);
+          // 清除本地进度（因为已经完成并更新状态）
+          await clearProgress();
 
           // 通知 WordDetailScreen 更新状态（通过 navigation params）
-          // 当用户返回 WordDetailScreen 时，它会检测到这个参数并刷新
           navigation.setParams({ wordStatusUpdated: true });
+
+          // 显示恭喜确认框
+          Alert.alert(
+            "🎉 恭喜！Congratulations!",
+            `你已经完成了 "${word.word}" 的所有书写练习！\n\nThe word has been marked as "Known".`,
+            [
+              {
+                text: "确认 / OK",
+                onPress: () => {
+                  // 返回 Word Details 界面
+                  navigation.goBack();
+                },
+              },
+            ],
+            { cancelable: false }
+          );
         } catch (error) {
           console.error("Error updating word status:", error);
-          setToastMessage("❌ Failed to update word status");
-          setShowToast(true);
+          Alert.alert(
+            "错误 / Error",
+            "更新单词状态失败 / Failed to update word status",
+            [
+              {
+                text: "确认 / OK",
+                onPress: () => {
+                  // 即使更新失败，也返回 Word Details 界面
+                  navigation.goBack();
+                },
+              },
+            ]
+          );
         }
       }
     }
