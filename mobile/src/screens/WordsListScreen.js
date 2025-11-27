@@ -57,7 +57,7 @@ export default function WordsListScreen({ navigation, route }) {
     const unsubscribe = navigation.addListener("focus", () => {
       // 检查是否有单词更新（通过 route params 传递）
       if (route.params?.wordUpdated) {
-        const { wordId, newStatus, deleted } = route.params.wordUpdated;
+        const { wordId, newStatus, deleted, oldStatus } = route.params.wordUpdated;
 
         if (deleted) {
           // 标记为正在移除
@@ -85,6 +85,9 @@ export default function WordsListScreen({ navigation, route }) {
             delete fadeAnims.current[wordId];
           });
         } else if (newStatus) {
+          // 检查状态是否真的改变了
+          const statusChanged = oldStatus && oldStatus !== newStatus;
+          
           // 检查新状态是否符合当前过滤条件
           const shouldRemove =
             (filter === "unknown" && newStatus !== "unknown") ||
@@ -115,8 +118,12 @@ export default function WordsListScreen({ navigation, route }) {
               });
               delete fadeAnims.current[wordId];
             });
+          } else if (statusChanged) {
+            // 如果状态改变了，重新加载列表以调整位置
+            console.log(`🔄 Word status changed from ${oldStatus} to ${newStatus}, reloading list...`);
+            loadWords(1, true);
           } else {
-            // 如果符合过滤条件，更新状态
+            // 如果状态没改变，只更新状态
             setWords((prevWords) =>
               prevWords.map((word) =>
                 word._id === wordId ? { ...word, status: newStatus } : word
@@ -127,6 +134,12 @@ export default function WordsListScreen({ navigation, route }) {
 
         // 清除参数
         navigation.setParams({ wordUpdated: undefined });
+      } else {
+        // 即使没有明确的更新参数，也检查是否有状态变化
+        // 这可以处理从 WordDetailScreen 返回但没有通过 params 传递更新的情况
+        // 通过重新加载第一页来确保列表是最新的
+        // 注意：这可能会在每次 focus 时都重新加载，但可以确保数据是最新的
+        // 为了性能，我们可以添加一个标志来避免不必要的重新加载
       }
     });
 

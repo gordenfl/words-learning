@@ -85,12 +85,35 @@ async function verifyIdentityToken(identityToken) {
     // 4. 使用 jose 库验证 token
     // jose 库可以直接使用 JWK 验证 JWT，无需转换为 PEM
     const JWKS = createLocalJWKSet({ keys: [key] });
+    
+    // 支持多个 audience（开发环境和生产环境）
+    // Expo 开发环境使用 "host.exp.Exponent"，生产环境使用实际的 Bundle ID
+    const allowedAudiences = [
+      APPLE_AUDIENCE, // 生产环境: com.gordenfl.wordslearning
+      "host.exp.Exponent", // Expo 开发环境
+    ];
+    
+    // 先解码 token 查看实际的 audience
+    const decoded = jwt.decode(identityToken, { complete: true });
+    const tokenAudience = decoded?.payload?.aud;
+    
+    console.log("📋 Token audience:", tokenAudience);
+    console.log("📋 Allowed audiences:", allowedAudiences);
+    
+    if (!allowedAudiences.includes(tokenAudience)) {
+      throw new Error(
+        `Token audience "${tokenAudience}" does not match any allowed audience. ` +
+        `Expected one of: ${allowedAudiences.join(", ")}`
+      );
+    }
+    
+    // 使用实际的 token audience 进行验证
     const { payload, protectedHeader } = await jwtVerify(
       identityToken,
       JWKS,
       {
         issuer: APPLE_ISSUER,
-        audience: APPLE_AUDIENCE,
+        audience: tokenAudience, // 使用 token 中的实际 audience
       }
     );
 
