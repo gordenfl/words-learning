@@ -29,6 +29,8 @@ const baseConfig = {
         "We need photo library access to select images for Chinese character recognition.",
       NSPhotoLibraryAddUsageDescription:
         "We need permission to save processed images to your photo library.",
+      NSMicrophoneUsageDescription:
+        "We need microphone access to record your voice for speech recognition in compound practice.",
       ITSAppUsesNonExemptEncryption: false,
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: true,
@@ -65,6 +67,7 @@ const baseConfig = {
       "android.permission.WRITE_EXTERNAL_STORAGE",
       "android.permission.INTERNET",
       "android.permission.ACCESS_NETWORK_STATE",
+      "android.permission.RECORD_AUDIO",
     ],
     intentFilters: [
       {

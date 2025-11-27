@@ -99,7 +99,7 @@ export const wordsAPI = {
 
   deleteWord: (wordId) => api.delete(`/words/${wordId}`),
 
-  generateDetails: (wordId, force = false, updateType = 'both') => 
+  generateDetails: (wordId, force = false, updateType = "both") =>
     api.post(`/words/${wordId}/generate-details`, { force, updateType }),
 };
 

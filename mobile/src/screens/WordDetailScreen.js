@@ -38,6 +38,8 @@ export default function WordDetailScreen({ route, navigation }) {
   const [generatingExamples, setGeneratingExamples] = useState(false);
   const [showStrokeOrder, setShowStrokeOrder] = useState(false);
   const [isWritingCompleted, setIsWritingCompleted] = useState(false);
+  const [isCompoundPracticeCompleted, setIsCompoundPracticeCompleted] =
+    useState(false);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
@@ -66,11 +68,12 @@ export default function WordDetailScreen({ route, navigation }) {
     const unsubscribe = navigation.addListener("focus", async () => {
       // 当屏幕获得焦点时，重新加载单词详情
       await loadWordDetail();
-      // 重新检查 Writing 完成状态（loadWordDetail 会更新 word 状态）
+      // 重新检查 Writing 和 Compound Practice 完成状态（loadWordDetail 会更新 word 状态）
       // 使用 setTimeout 确保 word 状态已更新
       setTimeout(() => {
         if (word) {
           checkWritingCompletedStatus();
+          checkCompoundPracticeCompletedStatus();
         }
       }, 100);
     });
@@ -82,12 +85,18 @@ export default function WordDetailScreen({ route, navigation }) {
   useEffect(() => {
     if (word) {
       checkWritingCompletedStatus();
+      checkCompoundPracticeCompletedStatus();
     }
   }, [word?.status, word?._id]);
 
   const checkWritingCompletedStatus = async () => {
     const completed = await checkWritingCompleted();
     setIsWritingCompleted(completed);
+  };
+
+  const checkCompoundPracticeCompletedStatus = async () => {
+    const completed = await checkCompoundPracticeCompleted();
+    setIsCompoundPracticeCompleted(completed);
   };
 
   const loadWordDetail = async () => {
@@ -122,6 +131,29 @@ export default function WordDetailScreen({ route, navigation }) {
       pitch: 1.0,
       rate: 0.1, // 极慢速播放，便于初学者
     });
+  };
+
+  // 检查 Compound Practice 是否完成
+  const checkCompoundPracticeCompleted = async () => {
+    if (!word || !word._id) {
+      return false;
+    }
+
+    const compoundStorageKey = `compoundPractice_${word._id}`;
+    try {
+      const saved = await AsyncStorage.getItem(compoundStorageKey);
+      if (saved) {
+        const words = JSON.parse(saved);
+        // 检查是否完成了3个组词
+        if (words.length >= 3) {
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking compound practice completed:", error);
+    }
+
+    return false;
   };
 
   // 检查 Writing 练习是否完成（只检查 Writing 完成标记，不依赖单词状态）
@@ -488,9 +520,10 @@ export default function WordDetailScreen({ route, navigation }) {
                 onPress={createPressHandler(handleCompoundPracticeClick)}
                 style={styles.compoundPracticeButton}
                 buttonColor={ChildrenTheme.colors.secondary}
-                icon="puzzle"
+                icon={isCompoundPracticeCompleted ? "check-circle" : "puzzle"}
               >
-                Compound Practice • 组词练习
+                {isCompoundPracticeCompleted && "✓ "}Compound Practice •
+                组词练习
               </Button>
             </Card.Content>
           </Card>

@@ -30,30 +30,40 @@ async function recognizeWithGoogle(audioBuffer, languageCode = "zh-CN") {
     // 将音频转换为 base64
     const audioBase64 = audioBuffer.toString("base64");
 
+    // 对于 M4A/AAC 格式，使用 MP3 编码类型
+    // Google Speech API 支持自动检测，但明确指定可以提高成功率
     const response = await axios.post(
       `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_SPEECH_API_KEY}`,
       {
         config: {
-          encoding: "LINEAR16", // 或根据实际格式调整
-          sampleRateHertz: 16000,
+          encoding: "MP3", // M4A/AAC 格式使用 MP3 编码类型
+          sampleRateHertz: 44100, // 匹配录音的采样率
           languageCode: languageCode,
           alternativeLanguageCodes: ["zh-TW", "en-US"],
+          enableAutomaticPunctuation: true,
         },
         audio: {
           content: audioBase64,
         },
       },
       {
-        timeout: 15000,
+        timeout: 30000, // 增加超时时间
       }
     );
 
+    console.log("📋 Google Speech API response:", JSON.stringify(response.data, null, 2));
+    
     if (response.data.results && response.data.results.length > 0) {
       const transcript = response.data.results[0].alternatives[0].transcript;
       console.log("✅ Google Speech recognized:", transcript);
       return transcript;
     } else {
-      console.log("⚠️ No speech detected");
+      console.log("⚠️ No speech detected in response");
+      console.log("📋 Full response:", response.data);
+      // 如果 API 返回错误，抛出更详细的错误信息
+      if (response.data.error) {
+        throw new Error(`Google Speech API error: ${JSON.stringify(response.data.error)}`);
+      }
       return "";
     }
   } catch (error) {
