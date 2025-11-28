@@ -108,6 +108,33 @@ router.patch('/learning-plan', async (req, res) => {
   }
 });
 
+// Update user theme (must be before /profile)
+router.patch('/theme', async (req, res) => {
+  try {
+    const { theme } = req.body;
+
+    if (!theme || !['pink', 'green', 'blue'].includes(theme)) {
+      return res.status(400).json({ error: 'Invalid theme. Must be pink, green, or blue' });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.theme = theme;
+    await user.save();
+
+    res.json({ 
+      message: 'Theme updated successfully',
+      theme: user.theme
+    });
+  } catch (error) {
+    console.error('Error in PATCH /theme:', error);
+    res.status(500).json({ error: 'Failed to update theme', message: error.message });
+  }
+});
+
 // Update user profile (must be before /:userId)
 router.patch('/profile', async (req, res) => {
   try {

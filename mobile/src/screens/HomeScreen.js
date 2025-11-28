@@ -21,11 +21,15 @@ import * as ImagePicker from "expo-image-picker";
 import { wordsAPI, articlesAPI, usersAPI, authAPI } from "../services/api";
 // 引入儿童友好主题和组件
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 import ProgressCard from "../components/children/ProgressCard";
 
 export default function HomeScreen({ navigation, route }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeContext();
+  // 使用动态主题
+  const dynamicTheme = currentTheme;
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generatingArticle, setGeneratingArticle] = useState(false);
@@ -308,9 +312,9 @@ export default function HomeScreen({ navigation, route }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: ChildrenTheme.colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={ChildrenTheme.colors.primary} />
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: ChildrenTheme.colors.primary }]}>
+    <View style={[styles.container, { backgroundColor: dynamicTheme.colors.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={dynamicTheme.colors.primary} />
+      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: dynamicTheme.colors.primary }]}>
         <View style={styles.headerLeft}>
           <Image
             source={require("../../assets/icon.png")}
@@ -328,7 +332,7 @@ export default function HomeScreen({ navigation, route }) {
           <IconButton
             icon="camera"
             size={32}
-            iconColor={ChildrenTheme.colors.textInverse}
+            iconColor={dynamicTheme.colors.textInverse}
             onPress={handleScanBook}
             style={styles.cameraButton}
           />

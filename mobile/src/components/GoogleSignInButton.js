@@ -11,6 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Config from "../../config";
 import { authAPI } from "../services/api";
 import { isExpoGo } from "../utils/runtime";
+import { useThemeContext } from "../context/ThemeContext";
 
 let GoogleSignin = null;
 let statusCodes = {};
@@ -26,6 +27,7 @@ if (!isExpoGo) {
 }
 
 export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
+  const { loadThemeFromServer } = useThemeContext();
   const [loading, setLoading] = useState(false);
   const [isConfigured, setIsConfigured] = useState(true);
 
@@ -183,6 +185,11 @@ export default function GoogleSignInButton({ onSignInSuccess, onSignInError }) {
       await AsyncStorage.setItem("authToken", response.data.token);
       await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
       await AsyncStorage.setItem("authProvider", "google");
+
+      // 加载用户主题（如果服务器返回了主题）
+      if (response.data.user?.theme) {
+        await loadThemeFromServer(response.data.user.theme);
+      }
 
       console.log("✅ Google Sign-In completed successfully");
       onSignInSuccess && onSignInSuccess(response.data);

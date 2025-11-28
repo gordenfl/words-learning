@@ -236,3 +236,14 @@ export const ChildrenTheme = {
 // 导出默认主题
 export default ChildrenTheme;
 
+// 导出主题创建函数（用于动态主题）
+export const createChildrenTheme = (colorOverrides) => {
+  return {
+    ...ChildrenTheme,
+    colors: {
+      ...ChildrenTheme.colors,
+      ...colorOverrides,
+    },
+  };
+};
+

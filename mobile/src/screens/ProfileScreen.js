@@ -23,11 +23,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usersAPI, authAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 import { useScrollDragHandler } from "../utils/touchHandler";
 
 export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentThemeName, currentTheme, setTheme, themeVariants } = useThemeContext();
+  // 使用动态主题而不是静态的 ChildrenTheme
+  const dynamicTheme = currentTheme;
+  // 创建动态样式
+  const styles = createStyles(dynamicTheme);
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -194,14 +200,14 @@ export default function ProfileScreen({ navigation }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: ChildrenTheme.colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={ChildrenTheme.colors.primary} />
+    <View style={[styles.container, { backgroundColor: dynamicTheme.colors.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={dynamicTheme.colors.primary} />
       <View
         style={[
           styles.header,
           {
             paddingTop: (insets.top + 10) / 2,
-            backgroundColor: ChildrenTheme.colors.primary,
+            backgroundColor: dynamicTheme.colors.primary,
           },
         ]}
       >
@@ -229,6 +235,13 @@ export default function ProfileScreen({ navigation }) {
                     {user?.email || ""}
                   </Text>
                 </View>
+                <IconButton
+                  icon="delete-outline"
+                  size={24}
+                  iconColor={dynamicTheme.colors.error}
+                  onPress={createPressHandler(handleDeleteAccount)}
+                  style={styles.deleteIconButton}
+                />
               </View>
             </Card.Content>
           </Card>
@@ -272,11 +285,43 @@ export default function ProfileScreen({ navigation }) {
                 loading={saving}
                 disabled={saving}
                 style={styles.updateButton}
-                buttonColor={ChildrenTheme.colors.primary}
+                buttonColor={dynamicTheme.colors.primary}
                 icon="content-save"
               >
                 Update Profile
               </Button>
+            </Card.Content>
+          </Card>
+
+          {/* Theme Selection Card */}
+          <Card style={styles.settingsCard} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleMedium" style={styles.sectionTitle}>
+                Theme • 主题
+              </Text>
+              <Text variant="bodySmall" style={styles.sectionHint}>
+                Choose your favorite color theme
+              </Text>
+              <View style={styles.themeContainer}>
+                {Object.values(themeVariants).map((themeVariant) => (
+                  <Button
+                    key={themeVariant.name}
+                    mode={currentThemeName === themeVariant.name ? "contained" : "outlined"}
+                    onPress={createPressHandler(() => setTheme(themeVariant.name))}
+                    style={[
+                      styles.themeButton,
+                      currentThemeName === themeVariant.name && {
+                        backgroundColor: themeVariant.colors.primary,
+                      },
+                    ]}
+                    buttonColor={currentThemeName === themeVariant.name ? themeVariant.colors.primary : undefined}
+                    textColor={currentThemeName === themeVariant.name ? themeVariant.colors.textInverse : themeVariant.colors.primary}
+                    icon={currentThemeName === themeVariant.name ? "check-circle" : "circle-outline"}
+                  >
+                    {themeVariant.displayName}
+                  </Button>
+                ))}
+              </View>
             </Card.Content>
           </Card>
 
@@ -296,7 +341,7 @@ export default function ProfileScreen({ navigation }) {
                   <IconButton
                     icon="lock-reset"
                     size={24}
-                    iconColor={ChildrenTheme.colors.primary}
+                    iconColor={dynamicTheme.colors.primary}
                     style={styles.settingIcon}
                   />
                   <Text variant="bodyLarge" style={styles.settingText}>
@@ -306,7 +351,7 @@ export default function ProfileScreen({ navigation }) {
                 <IconButton
                   icon="chevron-right"
                   size={24}
-                  iconColor={ChildrenTheme.colors.textLight}
+                  iconColor={dynamicTheme.colors.textLight}
                   style={styles.chevronIcon}
                 />
               </Surface>
@@ -322,7 +367,7 @@ export default function ProfileScreen({ navigation }) {
                   <IconButton
                     icon="logout"
                     size={24}
-                    iconColor={ChildrenTheme.colors.warning}
+                    iconColor={dynamicTheme.colors.warning}
                     style={styles.settingIcon}
                   />
                   <Text variant="bodyLarge" style={styles.settingText}>
@@ -332,23 +377,12 @@ export default function ProfileScreen({ navigation }) {
                 <IconButton
                   icon="chevron-right"
                   size={24}
-                  iconColor={ChildrenTheme.colors.textLight}
+                  iconColor={dynamicTheme.colors.textLight}
                   style={styles.chevronIcon}
                 />
               </Surface>
             </Card.Content>
           </Card>
-
-          {/* Delete Account Button */}
-          <Button
-            mode="contained"
-            onPress={createPressHandler(handleDeleteAccount)}
-            style={styles.deleteButton}
-            buttonColor={ChildrenTheme.colors.error}
-            icon="delete"
-          >
-            Delete Account
-          </Button>
         </View>
       </ScrollView>
 
@@ -369,7 +403,7 @@ export default function ProfileScreen({ navigation }) {
                 <IconButton
                   icon="close"
                   size={24}
-                  iconColor={ChildrenTheme.colors.text}
+                  iconColor={dynamicTheme.colors.text}
                   onPress={handleCancelPasswordChange}
                   style={styles.modalCloseButton}
                 />
@@ -435,7 +469,7 @@ export default function ProfileScreen({ navigation }) {
                 onPress={handleCancelPasswordChange}
                 disabled={changingPassword}
                 style={styles.modalCancelButton}
-                textColor={ChildrenTheme.colors.textLight}
+                textColor={dynamicTheme.colors.textLight}
               >
                 Cancel
               </Button>
@@ -445,7 +479,7 @@ export default function ProfileScreen({ navigation }) {
                 loading={changingPassword}
                 disabled={changingPassword}
                 style={styles.modalConfirmButton}
-                buttonColor={ChildrenTheme.colors.primary}
+                buttonColor={dynamicTheme.colors.primary}
                 icon="check"
               >
                 Change
@@ -458,10 +492,11 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// 注意：样式中的颜色需要在组件内部动态设置，因为 StyleSheet.create 是静态的
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -470,7 +505,7 @@ const styles = StyleSheet.create({
     padding: ChildrenTheme.spacing.xl,
   },
   loaderText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginTop: ChildrenTheme.spacing.md,
   },
   header: {
@@ -478,7 +513,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingBottom: ChildrenTheme.spacing.sm,
-    backgroundColor: ChildrenTheme.colors.primary,
+    backgroundColor: theme.colors.primary,
     ...ChildrenTheme.shadows.medium,
   },
   headerLeft: {
@@ -495,12 +530,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...ChildrenTheme.typography.h3,
-    color: ChildrenTheme.colors.textInverse,
+    color: theme.colors.textInverse,
     marginBottom: 4,
   },
   headerSubtitle: {
     ...ChildrenTheme.typography.body,
-    color: ChildrenTheme.colors.textInverse,
+    color: theme.colors.textInverse,
     opacity: 0.9,
   },
   scrollContent: {
@@ -516,6 +551,10 @@ const styles = StyleSheet.create({
   profileCardContent: {
     padding: ChildrenTheme.spacing.lg,
   },
+  deleteIconButton: {
+    margin: 0,
+    marginLeft: 'auto', // 将图标推到最右边
+  },
   avatarContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -524,7 +563,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: ChildrenTheme.colors.primary,
+    backgroundColor: theme.colors.primary,
     justifyContent: "center",
     alignItems: "center",
     marginRight: ChildrenTheme.spacing.md,
@@ -533,25 +572,25 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 36,
     fontWeight: "bold",
-    color: ChildrenTheme.colors.textInverse,
+    color: theme.colors.textInverse,
   },
   userInfo: {
     flex: 1,
   },
   username: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginBottom: ChildrenTheme.spacing.xs,
   },
   email: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
   },
   formCard: {
     marginBottom: ChildrenTheme.spacing.md,
     borderRadius: ChildrenTheme.borderRadius.large,
   },
   sectionTitle: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginBottom: ChildrenTheme.spacing.md,
   },
@@ -592,7 +631,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   settingText: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     marginLeft: ChildrenTheme.spacing.xs,
   },
   chevronIcon: {
@@ -617,7 +656,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 400,
-    backgroundColor: ChildrenTheme.colors.card,
+    backgroundColor: theme.colors.card,
     borderRadius: ChildrenTheme.borderRadius.xlarge,
     overflow: "hidden",
   },
@@ -631,7 +670,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalTitle: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     flex: 1,
   },
@@ -646,7 +685,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginBottom: ChildrenTheme.spacing.sm,
     paddingHorizontal: ChildrenTheme.spacing.xs,
     fontStyle: 'italic',
@@ -661,6 +700,17 @@ const styles = StyleSheet.create({
   },
   modalConfirmButton: {
     flex: 1,
+  },
+  themeContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: ChildrenTheme.spacing.sm,
+    marginTop: ChildrenTheme.spacing.md,
+  },
+  themeButton: {
+    flex: 1,
+    minWidth: 100,
+    marginBottom: ChildrenTheme.spacing.xs,
   },
 });
 
