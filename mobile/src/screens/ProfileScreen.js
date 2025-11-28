@@ -8,6 +8,7 @@ import {
   Modal,
   Image,
   StatusBar,
+  TouchableOpacity,
 } from "react-native";
 import {
   Text,
@@ -21,6 +22,8 @@ import {
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { usersAPI, authAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useThemeContext } from "../context/ThemeContext";
@@ -29,7 +32,8 @@ import { useScrollDragHandler } from "../utils/touchHandler";
 export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const { currentThemeName, currentTheme, setTheme, themeVariants } = useThemeContext();
+  const { currentThemeName, currentTheme, setTheme, themeVariants } =
+    useThemeContext();
   // 使用动态主题而不是静态的 ChildrenTheme
   const dynamicTheme = currentTheme;
   // 创建动态样式
@@ -44,27 +48,48 @@ export default function ProfileScreen({ navigation }) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
 
   useEffect(() => {
     loadProfile();
-  }, []);
+
+    // 监听屏幕焦点，当返回时重新加载数据
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadProfile();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const loadProfile = async () => {
     try {
-      const userStr = await AsyncStorage.getItem('user');
+      const userStr = await AsyncStorage.getItem("user");
       if (userStr) {
         const userData = JSON.parse(userStr);
         setUser(userData);
-        
+
         const response = await authAPI.getProfile();
         const fullUser = response.data.user;
-        setDisplayName(fullUser.profile?.displayName || '');
-        setBio(fullUser.profile?.bio || '');
+        setDisplayName(fullUser.profile?.displayName || "");
+        setBio(fullUser.profile?.bio || "");
+
+        // 确保 avatar 有正确的格式（如果是 base64 字符串，添加前缀）
+        if (fullUser.profile?.avatar) {
+          let avatar = fullUser.profile.avatar;
+          // 如果 avatar 是纯 base64 字符串（没有 data: 前缀），添加前缀
+          if (!avatar.startsWith("data:") && !avatar.startsWith("http")) {
+            avatar = `data:image/jpeg;base64,${avatar}`;
+          }
+          fullUser.profile.avatar = avatar;
+        }
+
+        // 更新本地存储
+        await AsyncStorage.setItem("user", JSON.stringify(fullUser));
         setUser(fullUser);
       }
     } catch (error) {
-      console.log('Error loading profile:', error);
+      console.log("Error loading profile:", error);
     } finally {
       setLoading(false);
     }
@@ -74,14 +99,14 @@ export default function ProfileScreen({ navigation }) {
     setSaving(true);
     try {
       await usersAPI.updateProfile(displayName, null, bio);
-      Alert.alert('Success', 'Profile updated successfully');
-      
+      Alert.alert("Success", "Profile updated successfully");
+
       // Update local storage
       const updatedUser = { ...user, profile: { displayName, bio } };
-      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
       setUser(updatedUser);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert("Error", "Failed to update profile");
     } finally {
       setSaving(false);
     }
@@ -93,94 +118,212 @@ export default function ProfileScreen({ navigation }) {
 
   const handleCancelPasswordChange = () => {
     setShowPasswordModal(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   const handleConfirmPasswordChange = async () => {
     // 检查用户是否通过 OAuth 登录（Google/Facebook/Apple）
-    const isOAuthUser = user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple';
-    
+    const isOAuthUser =
+      user?.authProvider === "google" ||
+      user?.authProvider === "facebook" ||
+      user?.authProvider === "apple";
+
     // 对于 OAuth 用户首次设置密码，不需要当前密码
     // 对于邮箱登录用户或已有密码的用户，需要当前密码
     const requiresCurrentPassword = !isOAuthUser;
 
     // 验证输入
     if (requiresCurrentPassword && !currentPassword) {
-      Alert.alert('Error', 'Please enter your current password');
+      Alert.alert("Error", "Please enter your current password");
       return;
     }
 
     if (!newPassword || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in new password fields');
+      Alert.alert("Error", "Please fill in new password fields");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      Alert.alert("Error", "New passwords do not match");
       return;
     }
 
     if (newPassword.length < 6) {
-      Alert.alert('Error', 'New password must be at least 6 characters');
+      Alert.alert("Error", "New password must be at least 6 characters");
       return;
     }
 
     setChangingPassword(true);
     try {
       // 如果是 OAuth 用户首次设置密码，不发送 oldPassword（或发送 null）
-      const oldPasswordToSend = requiresCurrentPassword ? currentPassword : null;
+      const oldPasswordToSend = requiresCurrentPassword
+        ? currentPassword
+        : null;
       await authAPI.changePassword(oldPasswordToSend, newPassword);
-      Alert.alert('Success', isOAuthUser ? 'Password set successfully' : 'Password changed successfully');
+      Alert.alert(
+        "Success",
+        isOAuthUser
+          ? "Password set successfully"
+          : "Password changed successfully"
+      );
       handleCancelPasswordChange();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to change password');
+      Alert.alert(
+        "Error",
+        error.response?.data?.error || "Failed to change password"
+      );
     } finally {
       setChangingPassword(false);
     }
   };
 
   const handleLogout = async () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.removeItem("authToken");
+          await AsyncStorage.removeItem("user");
+          navigation.replace("Login");
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Logout',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: async () => {
-            await AsyncStorage.removeItem('authToken');
-            await AsyncStorage.removeItem('user');
-            navigation.replace('Login');
+            try {
+              await usersAPI.deleteAccount();
+              await AsyncStorage.clear();
+              navigation.replace("Login");
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete account");
+            }
           },
         },
       ]
     );
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
+  const handleAvatarPress = () => {
+    Alert.alert("Change Avatar", "Choose how to update your avatar", [
+      {
+        text: "Take Photo",
+        onPress: () => takePhoto(),
+      },
+      {
+        text: "Choose from Gallery",
+        onPress: () => pickImage(),
+      },
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+    ]);
+  };
+
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Needed",
+          "Please allow camera access to take photos"
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadAvatar(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "Failed to take photo");
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Needed",
+          "Please allow photo access to select images"
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadAvatar(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image");
+    }
+  };
+
+  const uploadAvatar = async (imageUri) => {
+    setUploadingAvatar(true);
+    try {
+      // 压缩图片
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ resize: { width: 400 } }],
         {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await usersAPI.deleteAccount();
-              await AsyncStorage.clear();
-              navigation.replace('Login');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete account');
-            }
-          },
+          compress: 0.8,
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: true,
+        }
+      );
+
+      // 使用 base64 数据（ImageManipulator 返回的 base64 已经包含前缀）
+      const base64 = manipulatedImage.base64;
+
+      // 上传到服务器（只发送 base64 字符串，不包含前缀）
+      await usersAPI.updateProfile(displayName, base64, bio);
+
+      // 更新本地状态（包含完整的数据 URI）
+      const updatedUser = {
+        ...user,
+        profile: {
+          ...user.profile,
+          avatar: `data:image/jpeg;base64,${base64}`,
         },
-      ]
-    );
+      };
+      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      Alert.alert("Error", "Failed to upload avatar");
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   if (loading) {
@@ -200,8 +343,16 @@ export default function ProfileScreen({ navigation }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: dynamicTheme.colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={dynamicTheme.colors.primary} />
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: dynamicTheme.colors.background },
+      ]}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={dynamicTheme.colors.primary}
+      />
       <View
         style={[
           styles.header,
@@ -210,23 +361,40 @@ export default function ProfileScreen({ navigation }) {
             backgroundColor: dynamicTheme.colors.primary,
           },
         ]}
-      >
-      </View>
+      ></View>
 
-      <ScrollView 
-        style={styles.scrollContent}
-        {...scrollHandlers}
-      >
+      <ScrollView style={styles.scrollContent} {...scrollHandlers}>
         <View style={styles.content}>
           {/* Profile Header Card */}
           <Card style={styles.profileCard} mode="elevated" elevation={2}>
             <Card.Content style={styles.profileCardContent}>
               <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {user?.username?.charAt(0).toUpperCase() || "👤"}
-                  </Text>
-                </View>
+                <TouchableOpacity
+                  onPress={createPressHandler(handleAvatarPress)}
+                  disabled={uploadingAvatar}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.avatar}>
+                    {user?.profile?.avatar ? (
+                      <Image
+                        source={{ uri: user.profile.avatar }}
+                        style={styles.avatarImage}
+                      />
+                    ) : (
+                      <Text style={styles.avatarText}>
+                        {user?.username?.charAt(0).toUpperCase() || "👤"}
+                      </Text>
+                    )}
+                    {uploadingAvatar && (
+                      <View style={styles.avatarOverlay}>
+                        <ActivityIndicator
+                          size="small"
+                          color={dynamicTheme.colors.textInverse}
+                        />
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
                 <View style={styles.userInfo}>
                   <Text variant="headlineSmall" style={styles.username}>
                     {user?.username || "User"}
@@ -306,17 +474,35 @@ export default function ProfileScreen({ navigation }) {
                 {Object.values(themeVariants).map((themeVariant) => (
                   <Button
                     key={themeVariant.name}
-                    mode={currentThemeName === themeVariant.name ? "contained" : "outlined"}
-                    onPress={createPressHandler(() => setTheme(themeVariant.name))}
+                    mode={
+                      currentThemeName === themeVariant.name
+                        ? "contained"
+                        : "outlined"
+                    }
+                    onPress={createPressHandler(() =>
+                      setTheme(themeVariant.name)
+                    )}
                     style={[
                       styles.themeButton,
                       currentThemeName === themeVariant.name && {
                         backgroundColor: themeVariant.colors.primary,
                       },
                     ]}
-                    buttonColor={currentThemeName === themeVariant.name ? themeVariant.colors.primary : undefined}
-                    textColor={currentThemeName === themeVariant.name ? themeVariant.colors.textInverse : themeVariant.colors.primary}
-                    icon={currentThemeName === themeVariant.name ? "check-circle" : "circle-outline"}
+                    buttonColor={
+                      currentThemeName === themeVariant.name
+                        ? themeVariant.colors.primary
+                        : undefined
+                    }
+                    textColor={
+                      currentThemeName === themeVariant.name
+                        ? themeVariant.colors.textInverse
+                        : themeVariant.colors.primary
+                    }
+                    icon={
+                      currentThemeName === themeVariant.name
+                        ? "check-circle"
+                        : "circle-outline"
+                    }
                   >
                     {themeVariant.displayName}
                   </Button>
@@ -412,16 +598,28 @@ export default function ProfileScreen({ navigation }) {
 
             <Card.Content style={styles.modalContent}>
               {/* 对于 OAuth 用户首次设置密码，当前密码字段可选 */}
-              {(user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple') ? (
+              {user?.authProvider === "google" ||
+              user?.authProvider === "facebook" ||
+              user?.authProvider === "apple" ? (
                 <Text style={styles.helperText}>
-                  You're using {user.authProvider === 'google' ? 'Google' : user.authProvider === 'facebook' ? 'Facebook' : 'Apple'} login. 
-                  You can set a password without entering your current password.
+                  You're using{" "}
+                  {user.authProvider === "google"
+                    ? "Google"
+                    : user.authProvider === "facebook"
+                    ? "Facebook"
+                    : "Apple"}{" "}
+                  login. You can set a password without entering your current
+                  password.
                 </Text>
               ) : null}
               <TextInput
-                label={user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple'
-                  ? "Current Password (Optional)" 
-                  : "Current Password"}
+                label={
+                  user?.authProvider === "google" ||
+                  user?.authProvider === "facebook" ||
+                  user?.authProvider === "apple"
+                    ? "Current Password (Optional)"
+                    : "Current Password"
+                }
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 mode="outlined"
@@ -431,9 +629,13 @@ export default function ProfileScreen({ navigation }) {
                 outlineColor={theme.colors.outline}
                 activeOutlineColor={theme.colors.primary}
                 left={<TextInput.Icon icon="lock" />}
-                placeholder={user?.authProvider === 'google' || user?.authProvider === 'facebook' || user?.authProvider === 'apple'
-                  ? "Leave empty if setting password for the first time" 
-                  : ""}
+                placeholder={
+                  user?.authProvider === "google" ||
+                  user?.authProvider === "facebook" ||
+                  user?.authProvider === "apple"
+                    ? "Leave empty if setting password for the first time"
+                    : ""
+                }
               />
 
               <TextInput
@@ -493,224 +695,242 @@ export default function ProfileScreen({ navigation }) {
 }
 
 // 注意：样式中的颜色需要在组件内部动态设置，因为 StyleSheet.create 是静态的
-const createStyles = (theme) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: ChildrenTheme.spacing.xl,
-  },
-  loaderText: {
-    color: theme.colors.textLight,
-    marginTop: ChildrenTheme.spacing.md,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingBottom: ChildrenTheme.spacing.sm,
-    backgroundColor: theme.colors.primary,
-    ...ChildrenTheme.shadows.medium,
-  },
-  headerLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerIcon: {
-    width: 60,
-    height: 60,
-    marginRight: ChildrenTheme.spacing.sm,
-    borderRadius: ChildrenTheme.borderRadius.medium,
-    overflow: "hidden",
-  },
-  headerTitle: {
-    ...ChildrenTheme.typography.h3,
-    color: theme.colors.textInverse,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    ...ChildrenTheme.typography.body,
-    color: theme.colors.textInverse,
-    opacity: 0.9,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-  content: {
-    padding: ChildrenTheme.spacing.md,
-  },
-  profileCard: {
-    marginBottom: ChildrenTheme.spacing.md,
-    borderRadius: ChildrenTheme.borderRadius.large,
-  },
-  profileCardContent: {
-    padding: ChildrenTheme.spacing.lg,
-  },
-  deleteIconButton: {
-    margin: 0,
-    marginLeft: 'auto', // 将图标推到最右边
-  },
-  avatarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: ChildrenTheme.spacing.md,
-    ...ChildrenTheme.shadows.medium,
-  },
-  avatarText: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: theme.colors.textInverse,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  username: {
-    color: theme.colors.text,
-    fontWeight: "bold",
-    marginBottom: ChildrenTheme.spacing.xs,
-  },
-  email: {
-    color: theme.colors.textLight,
-  },
-  formCard: {
-    marginBottom: ChildrenTheme.spacing.md,
-    borderRadius: ChildrenTheme.borderRadius.large,
-  },
-  sectionTitle: {
-    color: theme.colors.text,
-    fontWeight: "bold",
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  input: {
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  inputContent: {
-    fontSize: ChildrenTheme.typography.body.fontSize,
-  },
-  textAreaContent: {
-    fontSize: ChildrenTheme.typography.body.fontSize,
-    minHeight: 80,
-  },
-  updateButton: {
-    marginTop: ChildrenTheme.spacing.md,
-    borderRadius: ChildrenTheme.borderRadius.medium,
-  },
-  settingsCard: {
-    marginBottom: ChildrenTheme.spacing.md,
-    borderRadius: ChildrenTheme.borderRadius.large,
-  },
-  settingItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: ChildrenTheme.spacing.sm,
-    paddingHorizontal: ChildrenTheme.spacing.xs,
-    borderRadius: ChildrenTheme.borderRadius.small,
-    marginBottom: ChildrenTheme.spacing.xs,
-  },
-  settingItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  settingIcon: {
-    margin: 0,
-    padding: 0,
-  },
-  settingText: {
-    color: theme.colors.text,
-    marginLeft: ChildrenTheme.spacing.xs,
-  },
-  chevronIcon: {
-    margin: 0,
-    padding: 0,
-  },
-  divider: {
-    marginVertical: ChildrenTheme.spacing.xs,
-  },
-  deleteButton: {
-    marginTop: ChildrenTheme.spacing.sm,
-    marginBottom: ChildrenTheme.spacing.lg,
-    borderRadius: ChildrenTheme.borderRadius.medium,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: ChildrenTheme.spacing.lg,
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: theme.colors.card,
-    borderRadius: ChildrenTheme.borderRadius.xlarge,
-    overflow: "hidden",
-  },
-  modalHeaderContent: {
-    padding: ChildrenTheme.spacing.md,
-    paddingBottom: ChildrenTheme.spacing.sm,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  modalTitle: {
-    color: theme.colors.text,
-    fontWeight: "bold",
-    flex: 1,
-  },
-  modalCloseButton: {
-    margin: 0,
-  },
-  modalContent: {
-    padding: ChildrenTheme.spacing.md,
-  },
-  modalInput: {
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  helperText: {
-    fontSize: 12,
-    color: theme.colors.textLight,
-    marginBottom: ChildrenTheme.spacing.sm,
-    paddingHorizontal: ChildrenTheme.spacing.xs,
-    fontStyle: 'italic',
-  },
-  modalActions: {
-    flexDirection: "row",
-    padding: ChildrenTheme.spacing.md,
-    gap: ChildrenTheme.spacing.sm,
-  },
-  modalCancelButton: {
-    flex: 1,
-  },
-  modalConfirmButton: {
-    flex: 1,
-  },
-  themeContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: ChildrenTheme.spacing.sm,
-    marginTop: ChildrenTheme.spacing.md,
-  },
-  themeButton: {
-    flex: 1,
-    minWidth: 100,
-    marginBottom: ChildrenTheme.spacing.xs,
-  },
-});
-
+const createStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: ChildrenTheme.spacing.xl,
+    },
+    loaderText: {
+      color: theme.colors.textLight,
+      marginTop: ChildrenTheme.spacing.md,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingBottom: ChildrenTheme.spacing.sm,
+      backgroundColor: theme.colors.primary,
+      ...ChildrenTheme.shadows.medium,
+    },
+    headerLeft: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    headerIcon: {
+      width: 60,
+      height: 60,
+      marginRight: ChildrenTheme.spacing.sm,
+      borderRadius: ChildrenTheme.borderRadius.medium,
+      overflow: "hidden",
+    },
+    headerTitle: {
+      ...ChildrenTheme.typography.h3,
+      color: theme.colors.textInverse,
+      marginBottom: 4,
+    },
+    headerSubtitle: {
+      ...ChildrenTheme.typography.body,
+      color: theme.colors.textInverse,
+      opacity: 0.9,
+    },
+    scrollContent: {
+      flex: 1,
+    },
+    content: {
+      padding: ChildrenTheme.spacing.md,
+    },
+    profileCard: {
+      marginBottom: ChildrenTheme.spacing.md,
+      borderRadius: ChildrenTheme.borderRadius.large,
+    },
+    profileCardContent: {
+      padding: ChildrenTheme.spacing.lg,
+    },
+    deleteIconButton: {
+      margin: 0,
+      marginLeft: "auto", // 将图标推到最右边
+    },
+    avatarContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: ChildrenTheme.spacing.md,
+      ...ChildrenTheme.shadows.medium,
+      overflow: "hidden",
+      position: "relative",
+    },
+    avatarImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    avatarText: {
+      fontSize: 36,
+      fontWeight: "bold",
+      color: theme.colors.textInverse,
+    },
+    avatarOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      borderRadius: 40,
+    },
+    userInfo: {
+      flex: 1,
+    },
+    username: {
+      color: theme.colors.text,
+      fontWeight: "bold",
+      marginBottom: ChildrenTheme.spacing.xs,
+    },
+    email: {
+      color: theme.colors.textLight,
+    },
+    formCard: {
+      marginBottom: ChildrenTheme.spacing.md,
+      borderRadius: ChildrenTheme.borderRadius.large,
+    },
+    sectionTitle: {
+      color: theme.colors.text,
+      fontWeight: "bold",
+      marginBottom: ChildrenTheme.spacing.md,
+    },
+    input: {
+      marginBottom: ChildrenTheme.spacing.md,
+    },
+    inputContent: {
+      fontSize: ChildrenTheme.typography.body.fontSize,
+    },
+    textAreaContent: {
+      fontSize: ChildrenTheme.typography.body.fontSize,
+      minHeight: 80,
+    },
+    updateButton: {
+      marginTop: ChildrenTheme.spacing.md,
+      borderRadius: ChildrenTheme.borderRadius.medium,
+    },
+    settingsCard: {
+      marginBottom: ChildrenTheme.spacing.md,
+      borderRadius: ChildrenTheme.borderRadius.large,
+    },
+    settingItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: ChildrenTheme.spacing.sm,
+      paddingHorizontal: ChildrenTheme.spacing.xs,
+      borderRadius: ChildrenTheme.borderRadius.small,
+      marginBottom: ChildrenTheme.spacing.xs,
+    },
+    settingItemLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    settingIcon: {
+      margin: 0,
+      padding: 0,
+    },
+    settingText: {
+      color: theme.colors.text,
+      marginLeft: ChildrenTheme.spacing.xs,
+    },
+    chevronIcon: {
+      margin: 0,
+      padding: 0,
+    },
+    divider: {
+      marginVertical: ChildrenTheme.spacing.xs,
+    },
+    deleteButton: {
+      marginTop: ChildrenTheme.spacing.sm,
+      marginBottom: ChildrenTheme.spacing.lg,
+      borderRadius: ChildrenTheme.borderRadius.medium,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: ChildrenTheme.spacing.lg,
+    },
+    modalCard: {
+      width: "100%",
+      maxWidth: 400,
+      backgroundColor: theme.colors.card,
+      borderRadius: ChildrenTheme.borderRadius.xlarge,
+      overflow: "hidden",
+    },
+    modalHeaderContent: {
+      padding: ChildrenTheme.spacing.md,
+      paddingBottom: ChildrenTheme.spacing.sm,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    modalTitle: {
+      color: theme.colors.text,
+      fontWeight: "bold",
+      flex: 1,
+    },
+    modalCloseButton: {
+      margin: 0,
+    },
+    modalContent: {
+      padding: ChildrenTheme.spacing.md,
+    },
+    modalInput: {
+      marginBottom: ChildrenTheme.spacing.md,
+    },
+    helperText: {
+      fontSize: 12,
+      color: theme.colors.textLight,
+      marginBottom: ChildrenTheme.spacing.sm,
+      paddingHorizontal: ChildrenTheme.spacing.xs,
+      fontStyle: "italic",
+    },
+    modalActions: {
+      flexDirection: "row",
+      padding: ChildrenTheme.spacing.md,
+      gap: ChildrenTheme.spacing.sm,
+    },
+    modalCancelButton: {
+      flex: 1,
+    },
+    modalConfirmButton: {
+      flex: 1,
+    },
+    themeContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: ChildrenTheme.spacing.sm,
+      marginTop: ChildrenTheme.spacing.md,
+    },
+    themeButton: {
+      flex: 1,
+      minWidth: 100,
+      marginBottom: ChildrenTheme.spacing.xs,
+    },
+  });
