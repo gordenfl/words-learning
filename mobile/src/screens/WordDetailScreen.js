@@ -1445,7 +1445,7 @@ const createStyles = (theme) => StyleSheet.create({
     padding: 0,
   },
   strokeWebViewContainer: {
-    height: 550,
+    height: 600,
     width: "100%",
     backgroundColor: theme.colors.card,
   },

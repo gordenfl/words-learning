@@ -10,9 +10,9 @@ const baseConfig = {
   userInterfaceStyle: "light",
   icon: "./assets/icon.png",
   splash: {
-    image: "./assets/splash.png",
+    image: "./assets/icon.png",
     resizeMode: "contain",
-    backgroundColor: "#4A90E2",
+    backgroundColor: "#FFF8F0", // 与 LoadingScreen 相同的背景色（米白色）
   },
   updates: {
     fallbackToCacheTimeout: 0,

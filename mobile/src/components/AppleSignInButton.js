@@ -142,12 +142,31 @@ export default function AppleSignInButton({ onSignInSuccess, onSignInError }) {
       console.error("❌ Error message:", error.message);
       console.error("❌ Full error object:", JSON.stringify(error, null, 2));
 
+      // 处理用户取消的情况
       if (error.code === "ERR_CANCELED") {
-        console.log("❌ User cancelled Apple Sign-In");
+        console.log("ℹ️ User cancelled Apple Sign-In - silently ignoring");
         // 用户取消登录，不显示错误，直接返回
         return;
-      } else if (error.code === "ERR_REQUEST_UNKOWN") {
-        // ERR_REQUEST_UNKOWN 特定错误处理
+      }
+
+      // ERR_REQUEST_UNKOWN 可能是用户取消，也可能是其他错误
+      // 当错误消息是 "The authorization attempt failed for an unknown reason" 时，通常是用户取消
+      if (error.code === "ERR_REQUEST_UNKOWN") {
+        const isLikelyUserCancel =
+          error.message ===
+            "The authorization attempt failed for an unknown reason" ||
+          error.message?.toLowerCase().includes("cancel") ||
+          error.message?.toLowerCase().includes("user cancelled");
+
+        if (isLikelyUserCancel) {
+          console.log(
+            "ℹ️ User likely cancelled Apple Sign-In (ERR_REQUEST_UNKOWN) - silently ignoring"
+          );
+          // 用户可能取消了登录，不显示错误，直接返回
+          return;
+        }
+
+        // ERR_REQUEST_UNKOWN 其他情况（非用户取消）的错误处理
         console.log("❌ ERR_REQUEST_UNKOWN - 授权请求失败");
         const troubleshootingSteps =
           "ERR_REQUEST_UNKOWN 常见原因：\n\n" +
@@ -192,6 +211,7 @@ export default function AppleSignInButton({ onSignInSuccess, onSignInError }) {
           ]
         );
         onSignInError && onSignInError(error);
+        return;
       } else {
         // 其他错误
         const errorDetails = error.code

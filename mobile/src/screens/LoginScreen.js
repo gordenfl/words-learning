@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  Dimensions,
 } from "react-native";
 import {
   Text,
@@ -38,6 +39,32 @@ export default function LoginScreen({ navigation }) {
   const appVersion = Constants.expoConfig?.version || "1.0.1";
   const buildNumber = Constants.expoConfig?.ios?.buildNumber || "11";
   const versionText = `v${appVersion}(${buildNumber})`;
+  
+  // 获取屏幕尺寸
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  
+  // 根据屏幕尺寸计算图标大小
+  const getIconSize = () => {
+    const minDimension = Math.min(screenWidth, screenHeight);
+    if (minDimension < 400) {
+      // 小屏设备
+      return 100;
+    } else if (minDimension < 500) {
+      // 中等设备
+      return 120;
+    } else if (minDimension < 800) {
+      // 大屏手机
+      return 150;
+    } else {
+      // iPad
+      return 180;
+    }
+  };
+  
+  const iconSize = getIconSize();
+  
+  // 创建动态样式
+  const styles = useMemo(() => createStyles(iconSize), [iconSize]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -265,7 +292,7 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (iconSize) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -286,8 +313,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: iconSize,
+    height: iconSize,
     marginBottom: ChildrenTheme.spacing.md,
     borderRadius: ChildrenTheme.borderRadius.large,
     overflow: "hidden",
