@@ -14,6 +14,7 @@ import {
   Surface,
   useTheme,
   Snackbar,
+  Button,
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Speech from "expo-speech";
@@ -732,12 +733,15 @@ export default function ArticleScreen({ route, navigation }) {
 
         {renderContent()}
 
-        <TouchableOpacity
-          style={styles.completeButton}
+        <Button
+          mode="contained"
           onPress={markArticleAsRead}
+          style={styles.completeButton}
+          contentStyle={styles.completeButtonContent}
+          labelStyle={styles.completeButtonLabel}
         >
-          <Text style={styles.completeButtonText}>Complete Article</Text>
-        </TouchableOpacity>
+          Complete Article
+        </Button>
       </View>
       </ScrollView>
     </View>
@@ -988,14 +992,15 @@ const createStyles = (theme) => StyleSheet.create({
     fontWeight: "600",
   },
   completeButton: {
-    padding: 15,
-    borderRadius: 10,
-    alignItems: "center",
     marginTop: 20,
     marginBottom: 40,
+    borderRadius: 12,
   },
-  completeButtonText: {
-    fontSize: 18,
+  completeButtonContent: {
+    paddingVertical: 8,
+  },
+  completeButtonLabel: {
+    fontSize: 16,
     fontWeight: "bold",
   },
   snackbar: {
