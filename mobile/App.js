@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { PaperProvider } from "react-native-paper";
-import paperTheme from "./src/theme/paperTheme";
+import { createPaperTheme } from "./src/theme/paperTheme";
+import { ThemeProvider, useThemeContext } from "./src/context/ThemeContext";
 // 配置 Paper 使用 Expo 图标库
 import "./src/config/paperIcons";
 
@@ -27,8 +28,42 @@ import ErrorBoundary from "./src/components/ErrorBoundary";
 const Stack = createStackNavigator();
 
 function AppContent() {
+  // 安全地获取主题上下文，如果未初始化则使用默认值
+  let currentTheme;
+  try {
+    const context = useThemeContext();
+    currentTheme = context?.currentTheme;
+  } catch (error) {
+    console.warn("⚠️ ThemeContext not available, using default theme:", error);
+    const { defaultTheme } = require("./src/theme/themeVariants");
+    currentTheme = defaultTheme;
+  }
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // 根据当前主题创建 Paper 主题（使用 useMemo 确保主题变化时重新计算）
+  // 添加安全检查，确保 currentTheme 存在
+  const paperTheme = useMemo(() => {
+    if (!currentTheme || !currentTheme.colors) {
+      // 如果 currentTheme 未定义，使用默认主题
+      const { defaultTheme } = require("./src/theme/themeVariants");
+      return createPaperTheme(defaultTheme);
+    }
+    return createPaperTheme(currentTheme);
+  }, [currentTheme]);
+  
+  // 导航选项（响应主题变化）
+  const screenOptions = useMemo(() => ({
+    headerStyle: {
+      backgroundColor: paperTheme.colors.primary,
+    },
+    headerTintColor: paperTheme.colors.onPrimary,
+    headerTitleStyle: {
+      fontWeight: "bold",
+      fontSize: 20,
+    },
+  }), [paperTheme]);
 
   useEffect(() => {
     checkAuthStatus();
@@ -54,20 +89,12 @@ function AppContent() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName={isAuthenticated ? "Home" : "Login"}
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: paperTheme.colors.primary,
-          },
-          headerTintColor: paperTheme.colors.onPrimary,
-          headerTitleStyle: {
-            fontWeight: "bold",
-            fontSize: 20,
-          },
-        }}
-      >
+    <PaperProvider theme={paperTheme}>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName={isAuthenticated ? "Home" : "Login"}
+          screenOptions={screenOptions}
+        >
         {/* Auth Screens */}
         <Stack.Screen
           name="Login"
@@ -143,15 +170,16 @@ function AppContent() {
         />
       </Stack.Navigator>
     </NavigationContainer>
+    </PaperProvider>
   );
 }
 
 export default function App() {
   return (
     <ErrorBoundary>
-      <PaperProvider theme={paperTheme}>
+      <ThemeProvider>
         <AppContent />
-      </PaperProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usersAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 import { useScrollDragHandler } from "../utils/touchHandler";
 
 const DIFFICULTY_LEVELS = [
@@ -56,6 +57,9 @@ const STUDY_TIMES = [
 export default function LearningPlanScreen({ navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeContext();
+  // 使用动态主题
+  const dynamicTheme = currentTheme;
   const [loading, setLoading] = useState(true);
   const [showSavedToast, setShowSavedToast] = useState(false);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
@@ -128,15 +132,18 @@ export default function LearningPlanScreen({ navigation }) {
     autoSave({ preferredStudyTime: newStudyTimes });
   };
 
+  // 创建动态样式（必须在所有 return 之前）
+  const styles = createStyles(dynamicTheme);
+
   if (loading) {
     return (
       <View
         style={[
           styles.loadingContainer,
-          { backgroundColor: theme.colors.background },
+          { backgroundColor: dynamicTheme.colors.background },
         ]}
       >
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={dynamicTheme.colors.primary} />
         <Text variant="bodyMedium" style={styles.loaderText}>
           Loading plan...
         </Text>
@@ -145,14 +152,14 @@ export default function LearningPlanScreen({ navigation }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: ChildrenTheme.colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={ChildrenTheme.colors.primary} />
+    <View style={[styles.container, { backgroundColor: dynamicTheme.colors.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={dynamicTheme.colors.primary} />
       <View
         style={[
           styles.header,
           {
             paddingTop: (insets.top + 10) / 2,
-            backgroundColor: ChildrenTheme.colors.primary,
+            backgroundColor: dynamicTheme.colors.primary,
           },
         ]}
       >
@@ -185,7 +192,7 @@ export default function LearningPlanScreen({ navigation }) {
                       selected={dailyGoal === goal}
                       onPress={createPressHandler(() => handleDailyGoalChange(goal))}
                       style={styles.optionChip}
-                      selectedColor={ChildrenTheme.colors.textInverse}
+                      selectedColor={dynamicTheme.colors.textInverse}
                       mode={dailyGoal === goal ? "flat" : "outlined"}
                     >
                       {goal}
@@ -209,7 +216,7 @@ export default function LearningPlanScreen({ navigation }) {
                       selected={weeklyGoal === goal}
                       onPress={createPressHandler(() => handleWeeklyGoalChange(goal))}
                       style={styles.optionChip}
-                      selectedColor={ChildrenTheme.colors.textInverse}
+                      selectedColor={dynamicTheme.colors.textInverse}
                       mode={weeklyGoal === goal ? "flat" : "outlined"}
                     >
                       {goal}
@@ -233,7 +240,7 @@ export default function LearningPlanScreen({ navigation }) {
                       selected={monthlyGoal === goal}
                       onPress={createPressHandler(() => handleMonthlyGoalChange(goal))}
                       style={styles.optionChip}
-                      selectedColor={ChildrenTheme.colors.textInverse}
+                      selectedColor={dynamicTheme.colors.textInverse}
                       mode={monthlyGoal === goal ? "flat" : "outlined"}
                     >
                       {goal}
@@ -351,10 +358,11 @@ export default function LearningPlanScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// 创建动态样式函数
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -363,7 +371,7 @@ const styles = StyleSheet.create({
     padding: ChildrenTheme.spacing.xl,
   },
   loaderText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginTop: ChildrenTheme.spacing.md,
   },
   header: {
@@ -371,7 +379,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingBottom: ChildrenTheme.spacing.sm,
-    backgroundColor: ChildrenTheme.colors.primary,
+    backgroundColor: theme.colors.primary,
     ...ChildrenTheme.shadows.medium,
   },
   scrollContent: {
@@ -385,19 +393,19 @@ const styles = StyleSheet.create({
     borderRadius: ChildrenTheme.borderRadius.large,
   },
   sectionTitle: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginBottom: ChildrenTheme.spacing.xs,
   },
   sectionDesc: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginBottom: ChildrenTheme.spacing.md,
   },
   goalSection: {
     marginBottom: ChildrenTheme.spacing.lg,
   },
   goalLabel: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginBottom: ChildrenTheme.spacing.sm,
   },
@@ -412,7 +420,7 @@ const styles = StyleSheet.create({
     marginBottom: ChildrenTheme.spacing.xs,
   },
   helperText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     fontStyle: "italic",
     marginTop: ChildrenTheme.spacing.xs,
   },
@@ -421,12 +429,12 @@ const styles = StyleSheet.create({
     borderRadius: ChildrenTheme.borderRadius.medium,
     marginBottom: ChildrenTheme.spacing.sm,
     borderWidth: 2,
-    borderColor: ChildrenTheme.colors.border,
-    backgroundColor: ChildrenTheme.colors.card,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
   },
   difficultyCardActive: {
-    borderColor: ChildrenTheme.colors.primary,
-    backgroundColor: ChildrenTheme.colors.primary + "20",
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + "20",
   },
   difficultyHeader: {
     flexDirection: "row",
@@ -438,23 +446,23 @@ const styles = StyleSheet.create({
     marginRight: ChildrenTheme.spacing.sm,
   },
   difficultyLabel: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     flex: 1,
   },
   difficultyLabelActive: {
-    color: ChildrenTheme.colors.primary,
+    color: theme.colors.primary,
   },
   checkmarkChip: {
-    backgroundColor: ChildrenTheme.colors.primary,
+    backgroundColor: theme.colors.primary,
     height: 28,
   },
   checkmarkText: {
-    color: ChildrenTheme.colors.textInverse,
+    color: theme.colors.textInverse,
     fontSize: 12,
   },
   difficultyDesc: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginLeft: 34,
     marginTop: ChildrenTheme.spacing.xs,
   },
@@ -470,24 +478,24 @@ const styles = StyleSheet.create({
     borderRadius: ChildrenTheme.borderRadius.medium,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: ChildrenTheme.colors.border,
-    backgroundColor: ChildrenTheme.colors.card,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
   },
   timeCardActive: {
-    borderColor: ChildrenTheme.colors.primary,
-    backgroundColor: ChildrenTheme.colors.primary + "20",
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + "20",
   },
   timeIcon: {
     fontSize: 32,
     marginBottom: ChildrenTheme.spacing.xs,
   },
   timeLabel: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "600",
     textAlign: "center",
   },
   timeLabelActive: {
-    color: ChildrenTheme.colors.primary,
+    color: theme.colors.primary,
   },
   snackbar: {
     marginBottom: ChildrenTheme.spacing.xl,

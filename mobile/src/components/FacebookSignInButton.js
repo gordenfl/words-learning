@@ -11,6 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Config from "../../config";
 import { authAPI } from "../services/api";
 import { isExpoGo } from "../utils/runtime";
+import { useThemeContext } from "../context/ThemeContext";
 
 let LoginManager = null;
 let AccessToken = null;
@@ -33,6 +34,7 @@ export default function FacebookSignInButton({
   onSignInSuccess,
   onSignInError,
 }) {
+  const { loadThemeFromServer } = useThemeContext();
   const [loading, setLoading] = useState(false);
   const [isConfigured, setIsConfigured] = useState(true);
 
@@ -220,6 +222,11 @@ export default function FacebookSignInButton({
       await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
       await AsyncStorage.setItem("authProvider", "facebook");
       console.log("✅ Authentication data saved");
+
+      // 加载用户主题（如果服务器返回了主题）
+      if (response.data.user?.theme) {
+        await loadThemeFromServer(response.data.user.theme);
+      }
 
       console.log("✅ Facebook Sign-In completed successfully");
       onSignInSuccess && onSignInSuccess(response.data);

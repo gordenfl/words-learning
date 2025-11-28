@@ -15,17 +15,22 @@ import {
   IconButton,
   useTheme,
   Text as PaperText,
+  Card,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { wordsAPI, articlesAPI, usersAPI, authAPI } from "../services/api";
 // 引入儿童友好主题和组件
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 import ProgressCard from "../components/children/ProgressCard";
 
 export default function HomeScreen({ navigation, route }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeContext();
+  // 使用动态主题
+  const dynamicTheme = currentTheme;
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generatingArticle, setGeneratingArticle] = useState(false);
@@ -308,9 +313,9 @@ export default function HomeScreen({ navigation, route }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: ChildrenTheme.colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={ChildrenTheme.colors.primary} />
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: ChildrenTheme.colors.primary }]}>
+    <View style={[styles.container, { backgroundColor: dynamicTheme.colors.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={dynamicTheme.colors.primary} />
+      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: dynamicTheme.colors.primary }]}>
         <View style={styles.headerLeft}>
           <Image
             source={require("../../assets/icon.png")}
@@ -328,7 +333,7 @@ export default function HomeScreen({ navigation, route }) {
           <IconButton
             icon="camera"
             size={32}
-            iconColor={ChildrenTheme.colors.textInverse}
+            iconColor={dynamicTheme.colors.textInverse}
             onPress={handleScanBook}
             style={styles.cameraButton}
           />
@@ -368,14 +373,15 @@ export default function HomeScreen({ navigation, route }) {
             onPress={() => navigation.navigate("WordsList", { filter: "all" })}
             activeOpacity={0.7}
           >
-            <ProgressCard
-              emoji="📝"
-              label="Total Words"
-              current={stats?.total || 0}
-              total={learningPlan?.monthlyWordGoal || 200}
-              color={ChildrenTheme.colors.primary}
-              showPercentage={false}
-            />
+            <Card style={styles.totalWordsCard} mode="elevated" elevation={2}>
+              <Card.Content style={styles.totalWordsContent}>
+                <Text style={styles.totalWordsEmoji}>📝</Text>
+                <Text style={styles.totalWordsLabel}>Total Words</Text>
+                <Text style={[styles.totalWordsValue, { color: dynamicTheme.colors.primary }]}>
+                  {(stats?.known || 0) + (stats?.unknown || 0)}
+                </Text>
+              </Card.Content>
+            </Card>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -583,6 +589,30 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     padding: ChildrenTheme.spacing.md,
+  },
+  totalWordsCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
+  },
+  totalWordsContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: ChildrenTheme.spacing.md,
+    paddingHorizontal: ChildrenTheme.spacing.sm,
+  },
+  totalWordsEmoji: {
+    fontSize: 32,
+    marginRight: ChildrenTheme.spacing.sm,
+  },
+  totalWordsLabel: {
+    ...ChildrenTheme.typography.h4,
+    color: ChildrenTheme.colors.text,
+    flex: 1,
+  },
+  totalWordsValue: {
+    ...ChildrenTheme.typography.h3,
+    fontWeight: "bold",
   },
   bottomNav: {
     flexDirection: "row",

@@ -49,6 +49,12 @@ const userSchema = new mongoose.Schema(
       avatar: String,
       bio: String,
     },
+    // 用户主题偏好
+    theme: {
+      type: String,
+      enum: ['pink', 'green', 'blue'],
+      default: 'blue', // 默认天蓝色
+    },
     // 学习计划和目标
     learningPlan: {
       dailyWordGoal: {

@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
+import { useThemeContext } from '../context/ThemeContext';
 
 export default function RegisterScreen({ navigation }) {
+  const { loadThemeFromServer } = useThemeContext();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,6 +44,11 @@ export default function RegisterScreen({ navigation }) {
       const response = await authAPI.register(username, email, password);
       await AsyncStorage.setItem('authToken', response.data.token);
       await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      // 加载用户主题（如果服务器返回了主题）
+      if (response.data.user?.theme) {
+        await loadThemeFromServer(response.data.user.theme);
+      }
       
       // Navigate to Home
       Alert.alert('Success', 'Account created successfully!');

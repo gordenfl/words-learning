@@ -119,6 +119,9 @@ export const usersAPI = {
   updateProfile: (displayName, avatar, bio) =>
     api.patch("/users/profile", { displayName, avatar, bio }),
 
+  updateTheme: (theme) =>
+    api.patch("/users/theme", { theme }),
+
   followUser: (userId) => api.post(`/users/${userId}/follow`),
 
   unfollowUser: (userId) => api.delete(`/users/${userId}/follow`),

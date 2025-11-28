@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -18,10 +18,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { articlesAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 
 export default function ArticleListScreen({ navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeContext();
+  const dynamicTheme = currentTheme;
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -70,7 +73,8 @@ export default function ArticleListScreen({ navigation }) {
 
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -85,36 +89,37 @@ export default function ArticleListScreen({ navigation }) {
     return date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+      year:
+        date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
     });
   };
+
+  // Create dynamic styles
+  const styles = useMemo(() => createStyles(dynamicTheme), [dynamicTheme]);
 
   if (loading) {
     return (
       <View
         style={[
           styles.container,
-          { backgroundColor: ChildrenTheme.colors.background },
+          { backgroundColor: dynamicTheme.colors.background },
         ]}
       >
         <StatusBar
           barStyle="light-content"
-          backgroundColor={ChildrenTheme.colors.primary}
+          backgroundColor={dynamicTheme.colors.primary}
         />
         <View
           style={[
             styles.header,
             {
               paddingTop: (insets.top + 10) / 3,
-              backgroundColor: ChildrenTheme.colors.primary,
+              backgroundColor: dynamicTheme.colors.primary,
             },
           ]}
         ></View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            size="large"
-            color={ChildrenTheme.colors.primary}
-          />
+          <ActivityIndicator size="large" color={dynamicTheme.colors.primary} />
           <Text variant="bodyMedium" style={styles.loaderText}>
             Loading articles...
           </Text>
@@ -127,19 +132,19 @@ export default function ArticleListScreen({ navigation }) {
     <View
       style={[
         styles.container,
-        { backgroundColor: ChildrenTheme.colors.background },
+        { backgroundColor: dynamicTheme.colors.background },
       ]}
     >
       <StatusBar
         barStyle="light-content"
-        backgroundColor={ChildrenTheme.colors.primary}
+        backgroundColor={dynamicTheme.colors.primary}
       />
       <View
         style={[
           styles.header,
           {
             paddingTop: (insets.top + 10) / 3,
-            backgroundColor: ChildrenTheme.colors.primary,
+            backgroundColor: dynamicTheme.colors.primary,
           },
         ]}
       >
@@ -151,7 +156,7 @@ export default function ArticleListScreen({ navigation }) {
         <IconButton
           icon="book-plus"
           size={24}
-          iconColor={ChildrenTheme.colors.textInverse}
+          iconColor={dynamicTheme.colors.textInverse}
           onPress={handleGenerateNewArticle}
           disabled={generating}
           style={styles.generateButton}
@@ -169,11 +174,19 @@ export default function ArticleListScreen({ navigation }) {
               Generate your first article to start reading!
             </Text>
             <TouchableOpacity
-              style={styles.generateFirstButton}
+              style={[
+                styles.generateFirstButton,
+                { backgroundColor: dynamicTheme.colors.primary },
+              ]}
               onPress={handleGenerateNewArticle}
               disabled={generating}
             >
-              <Text style={styles.generateFirstButtonText}>
+              <Text
+                style={[
+                  styles.generateFirstButtonText,
+                  { color: dynamicTheme.colors.textInverse },
+                ]}
+              >
                 Generate New Article
               </Text>
             </TouchableOpacity>
@@ -184,93 +197,103 @@ export default function ArticleListScreen({ navigation }) {
               <TouchableOpacity
                 key={article._id}
                 activeOpacity={0.7}
-                onPress={() =>
-                  navigation.navigate("Article", { article })
-                }
+                onPress={() => navigation.navigate("Article", { article })}
               >
-                <Card
-                  style={styles.articleCard}
-                  mode="elevated"
-                  elevation={1}
-                >
-                <Card.Content>
-                  <View style={styles.articleHeader}>
-                    <Text variant="titleMedium" style={styles.articleTitle}>
-                      {article.title}
-                    </Text>
-                    {article.completed && (
-                      <Chip
-                        icon="check-circle"
-                        style={styles.completedChip}
-                        textStyle={styles.completedChipText}
-                      >
-                        Read
-                      </Chip>
-                    )}
-                  </View>
-
-                  <View style={styles.articleMeta}>
-                    <View style={styles.metaRow}>
-                      <Text variant="bodySmall" style={styles.metaLabel}>
-                        📝 Generated:
+                <Card style={styles.articleCard} mode="elevated" elevation={1}>
+                  <Card.Content>
+                    <View style={styles.articleHeader}>
+                      <Text variant="titleMedium" style={styles.articleTitle}>
+                        Reading
                       </Text>
-                      <Text variant="bodySmall" style={styles.metaValue}>
-                        {formatCreatedDate(article.createdAt)}
-                      </Text>
+                      {article.completed && (
+                        <Chip
+                          icon="check-circle"
+                          style={[
+                            styles.completedChip,
+                            {
+                              backgroundColor:
+                                dynamicTheme.colors.success + "20",
+                            },
+                          ]}
+                          textStyle={[
+                            styles.completedChipText,
+                            { color: dynamicTheme.colors.success },
+                          ]}
+                        >
+                          Read
+                        </Chip>
+                      )}
                     </View>
-                    {article.readAt && (
+
+                    <View style={styles.articleMeta}>
                       <View style={styles.metaRow}>
                         <Text variant="bodySmall" style={styles.metaLabel}>
-                          ✅ Read:
+                          📝 Generated:
                         </Text>
                         <Text variant="bodySmall" style={styles.metaValue}>
-                          {formatDate(article.readAt)}
+                          {formatCreatedDate(article.createdAt)}
                         </Text>
                       </View>
-                    )}
-                    <View style={styles.metaRow}>
-                      <Text variant="bodySmall" style={styles.metaLabel}>
-                        📖 Words:
-                      </Text>
-                      <Text variant="bodySmall" style={styles.metaValue}>
-                        {article.targetWords?.length || 0} target words
-                      </Text>
+                      {article.readAt && (
+                        <View style={styles.metaRow}>
+                          <Text variant="bodySmall" style={styles.metaLabel}>
+                            ✅ Read:
+                          </Text>
+                          <Text variant="bodySmall" style={styles.metaValue}>
+                            {formatDate(article.readAt)}
+                          </Text>
+                        </View>
+                      )}
+                      <View style={styles.metaRow}>
+                        <Text variant="bodySmall" style={styles.metaLabel}>
+                          📖 Words:
+                        </Text>
+                        <Text variant="bodySmall" style={styles.metaValue}>
+                          {article.targetWords?.length || 0} target words
+                        </Text>
+                      </View>
+                      <View style={styles.metaRow}>
+                        <Chip
+                          icon={
+                            article.difficulty === "beginner"
+                              ? "star"
+                              : article.difficulty === "intermediate"
+                              ? "star-outline"
+                              : "star-four-points"
+                          }
+                          style={[
+                            styles.difficultyChip,
+                            {
+                              backgroundColor:
+                                article.difficulty === "beginner"
+                                  ? dynamicTheme.colors.success + "20"
+                                  : article.difficulty === "intermediate"
+                                  ? dynamicTheme.colors.warning + "20"
+                                  : dynamicTheme.colors.accent + "20",
+                            },
+                          ]}
+                          textStyle={[
+                            styles.difficultyChipText,
+                            {
+                              color:
+                                article.difficulty === "beginner"
+                                  ? dynamicTheme.colors.success
+                                  : article.difficulty === "intermediate"
+                                  ? dynamicTheme.colors.warning
+                                  : dynamicTheme.colors.accent,
+                            },
+                          ]}
+                        >
+                          {article.difficulty === "beginner"
+                            ? "Beginner"
+                            : article.difficulty === "intermediate"
+                            ? "Intermediate"
+                            : "Advanced"}
+                        </Chip>
+                      </View>
                     </View>
-                    <View style={styles.metaRow}>
-                      <Chip
-                        style={[
-                          styles.difficultyChip,
-                          {
-                            backgroundColor:
-                              article.difficulty === "beginner"
-                                ? ChildrenTheme.colors.success + "20"
-                                : article.difficulty === "intermediate"
-                                ? ChildrenTheme.colors.warning + "20"
-                                : ChildrenTheme.colors.accent + "20",
-                          },
-                        ]}
-                        textStyle={[
-                          styles.difficultyChipText,
-                          {
-                            color:
-                              article.difficulty === "beginner"
-                                ? ChildrenTheme.colors.success
-                                : article.difficulty === "intermediate"
-                                ? ChildrenTheme.colors.warning
-                                : ChildrenTheme.colors.accent,
-                          },
-                        ]}
-                      >
-                        {article.difficulty === "beginner"
-                          ? "🌟 Beginner"
-                          : article.difficulty === "intermediate"
-                          ? "⭐ Intermediate"
-                          : "✨ Advanced"}
-                      </Chip>
-                    </View>
-                  </View>
-                </Card.Content>
-              </Card>
+                  </Card.Content>
+                </Card>
               </TouchableOpacity>
             ))}
           </View>
@@ -280,125 +303,134 @@ export default function ArticleListScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: ChildrenTheme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingBottom: ChildrenTheme.spacing.xs,
-    backgroundColor: ChildrenTheme.colors.primary,
-    ...ChildrenTheme.shadows.medium,
-  },
-  headerContent: {
-    flex: 1,
-    paddingHorizontal: ChildrenTheme.spacing.md,
-    paddingVertical: ChildrenTheme.spacing.xs,
-  },
-  headerTitle: {
-    color: ChildrenTheme.colors.textInverse,
-    fontWeight: "bold",
-  },
-  generateButton: {
-    marginRight: ChildrenTheme.spacing.xs,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: ChildrenTheme.spacing.xl,
-  },
-  loaderText: {
-    color: ChildrenTheme.colors.textLight,
-    marginTop: ChildrenTheme.spacing.md,
-  },
-  content: {
-    padding: ChildrenTheme.spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: ChildrenTheme.spacing.xl,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  emptyTitle: {
-    color: ChildrenTheme.colors.text,
-    fontWeight: "bold",
-    marginBottom: ChildrenTheme.spacing.sm,
-  },
-  emptyText: {
-    color: ChildrenTheme.colors.textLight,
-    textAlign: "center",
-    marginBottom: ChildrenTheme.spacing.xl,
-  },
-  generateFirstButton: {
-    backgroundColor: ChildrenTheme.colors.primary,
-    paddingVertical: ChildrenTheme.spacing.md,
-    paddingHorizontal: ChildrenTheme.spacing.xl,
-    borderRadius: ChildrenTheme.borderRadius.medium,
-  },
-  generateFirstButtonText: {
-    color: ChildrenTheme.colors.textInverse,
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  articleCard: {
-    marginBottom: ChildrenTheme.spacing.md,
-    borderRadius: ChildrenTheme.borderRadius.large,
-  },
-  articleHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: ChildrenTheme.spacing.sm,
-  },
-  articleTitle: {
-    flex: 1,
-    color: ChildrenTheme.colors.text,
-    fontWeight: "bold",
-    marginRight: ChildrenTheme.spacing.sm,
-  },
-  completedChip: {
-    backgroundColor: ChildrenTheme.colors.success + "20",
-    height: 28,
-  },
-  completedChipText: {
-    color: ChildrenTheme.colors.success,
-    fontSize: 11,
-  },
-  articleMeta: {
-    marginTop: ChildrenTheme.spacing.xs,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: ChildrenTheme.spacing.xs,
-  },
-  metaLabel: {
-    color: ChildrenTheme.colors.textLight,
-    marginRight: ChildrenTheme.spacing.xs,
-  },
-  metaValue: {
-    color: ChildrenTheme.colors.text,
-    fontWeight: "500",
-  },
-  difficultyChip: {
-    height: 24,
-    marginTop: ChildrenTheme.spacing.xs,
-  },
-  difficultyChipText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-});
-
+// Create dynamic styles function
+const createStyles = (theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingBottom: ChildrenTheme.spacing.xs,
+      backgroundColor: theme.colors.primary,
+      ...ChildrenTheme.shadows.medium,
+    },
+    headerContent: {
+      flex: 1,
+      paddingHorizontal: ChildrenTheme.spacing.md,
+      paddingVertical: ChildrenTheme.spacing.xs,
+    },
+    headerTitle: {
+      color: theme.colors.textInverse,
+      fontWeight: "bold",
+    },
+    generateButton: {
+      marginRight: ChildrenTheme.spacing.xs,
+    },
+    scrollContent: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: ChildrenTheme.spacing.xl,
+    },
+    loaderText: {
+      color: theme.colors.textLight,
+      marginTop: ChildrenTheme.spacing.md,
+    },
+    content: {
+      padding: ChildrenTheme.spacing.md,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: ChildrenTheme.spacing.xl,
+    },
+    emptyEmoji: {
+      fontSize: 64,
+      marginBottom: ChildrenTheme.spacing.md,
+    },
+    emptyTitle: {
+      color: theme.colors.text,
+      fontWeight: "bold",
+      marginBottom: ChildrenTheme.spacing.sm,
+    },
+    emptyText: {
+      color: theme.colors.textLight,
+      textAlign: "center",
+      marginBottom: ChildrenTheme.spacing.xl,
+    },
+    generateFirstButton: {
+      paddingVertical: ChildrenTheme.spacing.md,
+      paddingHorizontal: ChildrenTheme.spacing.xl,
+      borderRadius: ChildrenTheme.borderRadius.medium,
+    },
+    generateFirstButtonText: {
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    articleCard: {
+      marginBottom: ChildrenTheme.spacing.md,
+      borderRadius: ChildrenTheme.borderRadius.large,
+    },
+    articleHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: ChildrenTheme.spacing.sm,
+    },
+    articleTitle: {
+      flex: 1,
+      color: theme.colors.text,
+      fontWeight: "bold",
+      marginRight: ChildrenTheme.spacing.sm,
+      fontSize: 18, // titleMedium 使用 bodyLarge (20)，减小 2 个单位
+    },
+    completedChip: {
+      // backgroundColor 和 color 在 JSX 中动态设置，这里只定义其他样式
+      height: 32, // 增加高度，确保文字完整显示
+      paddingVertical: 0, // 移除垂直内边距
+      paddingHorizontal: 4, // 减小左右内边距
+      marginLeft: ChildrenTheme.spacing.xs,
+      minWidth: 45, // 减小最小宽度
+    },
+    completedChipText: {
+      // color 在 JSX 中动态设置，这里只定义其他样式
+      fontSize: 12, // 稍微增大字体
+      paddingHorizontal: 0,
+      marginHorizontal: 0,
+      lineHeight: 16, // 设置行高，确保文字垂直居中
+      includeFontPadding: false, // Android 上移除字体额外内边距
+    },
+    articleMeta: {
+      marginTop: ChildrenTheme.spacing.xs,
+    },
+    metaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: ChildrenTheme.spacing.xs,
+    },
+    metaLabel: {
+      color: theme.colors.textLight,
+      marginRight: ChildrenTheme.spacing.xs,
+    },
+    metaValue: {
+      color: theme.colors.text,
+      fontWeight: "500",
+    },
+    difficultyChip: {
+      height: 32,
+      marginTop: ChildrenTheme.spacing.xs,
+      paddingHorizontal: ChildrenTheme.spacing.sm,
+    },
+    difficultyChipText: {
+      fontSize: 13,
+      fontWeight: "600",
+    },
+  });

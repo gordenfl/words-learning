@@ -24,8 +24,10 @@ import GoogleSignInButton from "../components/GoogleSignInButton";
 import FacebookSignInButton from "../components/FacebookSignInButton";
 import AppleSignInButton from "../components/AppleSignInButton";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 
 export default function LoginScreen({ navigation }) {
+  const { loadThemeFromServer } = useThemeContext();
   const theme = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,6 +54,11 @@ export default function LoginScreen({ navigation }) {
 
       await AsyncStorage.setItem("authToken", response.data.token);
       await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
+
+      // 加载用户主题（如果服务器返回了主题）
+      if (response.data.user?.theme) {
+        await loadThemeFromServer(response.data.user.theme);
+      }
 
       // 验证 token 是否保存成功
       const savedToken = await AsyncStorage.getItem("authToken");

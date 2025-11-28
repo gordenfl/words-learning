@@ -39,6 +39,7 @@ router.post("/register", async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        theme: user.theme || 'blue', // 返回用户主题，默认为天蓝色
       },
     });
   } catch (error) {
@@ -79,6 +80,7 @@ router.post("/login", async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        theme: user.theme || 'blue', // 返回用户主题，默认为天蓝色
       },
     });
   } catch (error) {
@@ -166,6 +168,7 @@ router.post("/google", async (req, res) => {
         name: user.profile.displayName,
         avatar: user.profile.avatar,
         authProvider: "google",
+        theme: user.theme || 'blue', // 返回用户主题，默认为天蓝色
       },
     });
   } catch (error) {
@@ -250,6 +253,7 @@ router.post("/facebook", async (req, res) => {
         name: user.profile.displayName,
         avatar: user.profile.avatar,
         authProvider: "facebook",
+        theme: user.theme || 'blue', // 返回用户主题，默认为天蓝色
       },
     });
   } catch (error) {
@@ -372,6 +376,7 @@ router.post("/apple", async (req, res) => {
         name: user.profile.displayName,
         avatar: user.profile.avatar,
         authProvider: "apple",
+        theme: user.theme || 'blue', // 返回用户主题，默认为天蓝色
       },
     });
   } catch (error) {
