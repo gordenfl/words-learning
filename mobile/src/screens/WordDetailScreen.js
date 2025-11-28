@@ -60,13 +60,13 @@ export default function WordDetailScreen({ route, navigation }) {
         <IconButton
           icon="arrow-left"
           size={24}
-          iconColor={paperTheme.colors.onPrimary}
+          iconColor={dynamicTheme?.colors?.textInverse || theme.colors.onPrimary}
           onPress={() => navigation.goBack()}
           style={styles.headerBackButton}
         />
       ),
     });
-  }, [navigation]);
+  }, [navigation, dynamicTheme, theme, styles]);
 
   // 刷新所有状态的函数
   const refreshAllStatuses = async () => {

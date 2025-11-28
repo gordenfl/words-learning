@@ -203,7 +203,7 @@ router.post("/:wordId/generate-details", async (req, res) => {
   try {
     const { wordId } = req.params;
     const { force = false, updateType = "both" } = req.body; // updateType: 'compounds', 'examples', 'both'
-    const word = await Word.findOne({ _id: wordId, userId: req.userId });
+    let word = await Word.findOne({ _id: wordId, userId: req.userId });
 
     if (!word) {
       return res.status(404).json({ error: "Word not found" });

@@ -28,14 +28,24 @@ import ErrorBoundary from "./src/components/ErrorBoundary";
 const Stack = createStackNavigator();
 
 function AppContent() {
-  const { currentTheme } = useThemeContext();
+  // 安全地获取主题上下文，如果未初始化则使用默认值
+  let currentTheme;
+  try {
+    const context = useThemeContext();
+    currentTheme = context?.currentTheme;
+  } catch (error) {
+    console.warn("⚠️ ThemeContext not available, using default theme:", error);
+    const { defaultTheme } = require("./src/theme/themeVariants");
+    currentTheme = defaultTheme;
+  }
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   // 根据当前主题创建 Paper 主题（使用 useMemo 确保主题变化时重新计算）
   // 添加安全检查，确保 currentTheme 存在
   const paperTheme = useMemo(() => {
-    if (!currentTheme) {
+    if (!currentTheme || !currentTheme.colors) {
       // 如果 currentTheme 未定义，使用默认主题
       const { defaultTheme } = require("./src/theme/themeVariants");
       return createPaperTheme(defaultTheme);
