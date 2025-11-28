@@ -19,8 +19,10 @@ export const useThemeContext = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
+  // 确保初始主题始终有效
+  const initialTheme = themeVariants.blue || defaultTheme;
   const [currentThemeName, setCurrentThemeName] = useState('blue');
-  const [currentTheme, setCurrentTheme] = useState(themeVariants.blue || defaultTheme);
+  const [currentTheme, setCurrentTheme] = useState(initialTheme);
 
   // 加载保存的主题（仅从本地存储，不依赖服务器）
   useEffect(() => {
@@ -30,7 +32,12 @@ export const ThemeProvider = ({ children }) => {
   // 当主题名称改变时，更新主题对象
   useEffect(() => {
     const theme = themeVariants[currentThemeName] || defaultTheme;
-    setCurrentTheme(theme);
+    if (theme && theme.colors) {
+      setCurrentTheme(theme);
+    } else {
+      console.warn('⚠️ Invalid theme, using default:', currentThemeName);
+      setCurrentTheme(defaultTheme);
+    }
   }, [currentThemeName]);
 
   // 从本地存储加载主题（用于未登录状态或首次启动）
@@ -81,13 +88,27 @@ export const ThemeProvider = ({ children }) => {
   };
 
   // 创建完整的主题对象（包含所有 ChildrenTheme 的其他属性）
-  const fullTheme = useMemo(() => ({
-    ...ChildrenTheme,
-    colors: {
-      ...ChildrenTheme.colors,
-      ...currentTheme.colors,
-    },
-  }), [currentTheme]);
+  const fullTheme = useMemo(() => {
+    // 确保 currentTheme 和 colors 存在
+    if (!currentTheme || !currentTheme.colors) {
+      console.warn('⚠️ currentTheme is invalid, using default theme');
+      const safeTheme = defaultTheme;
+      return {
+        ...ChildrenTheme,
+        colors: {
+          ...ChildrenTheme.colors,
+          ...safeTheme.colors,
+        },
+      };
+    }
+    return {
+      ...ChildrenTheme,
+      colors: {
+        ...ChildrenTheme.colors,
+        ...currentTheme.colors,
+      },
+    };
+  }, [currentTheme]);
 
   const value = useMemo(() => ({
     currentThemeName,

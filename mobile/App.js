@@ -33,7 +33,15 @@ function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
   
   // 根据当前主题创建 Paper 主题（使用 useMemo 确保主题变化时重新计算）
-  const paperTheme = useMemo(() => createPaperTheme(currentTheme), [currentTheme]);
+  // 添加安全检查，确保 currentTheme 存在
+  const paperTheme = useMemo(() => {
+    if (!currentTheme) {
+      // 如果 currentTheme 未定义，使用默认主题
+      const { defaultTheme } = require("./src/theme/themeVariants");
+      return createPaperTheme(defaultTheme);
+    }
+    return createPaperTheme(currentTheme);
+  }, [currentTheme]);
   
   // 导航选项（响应主题变化）
   const screenOptions = useMemo(() => ({

@@ -261,16 +261,31 @@ router.post("/:wordId/generate-details", async (req, res) => {
     );
 
     // 根据 updateType 更新对应的数据
+    // 使用 findOneAndUpdate 避免版本冲突（乐观锁错误）
+    const updateData = {};
     if (updateType === "compounds") {
-      word.compounds = details.compounds || [];
+      updateData.compounds = details.compounds || [];
     } else if (updateType === "examples") {
-      word.examples = details.examples || [];
+      updateData.examples = details.examples || [];
     } else {
       // both - 更新全部
-      word.compounds = details.compounds || [];
-      word.examples = details.examples || [];
+      updateData.compounds = details.compounds || [];
+      updateData.examples = details.examples || [];
     }
-    await word.save();
+
+    // 使用 findOneAndUpdate 避免版本冲突
+    const updatedWord = await Word.findOneAndUpdate(
+      { _id: wordId, userId: req.userId },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedWord) {
+      return res.status(404).json({ error: "Word not found or update failed" });
+    }
+
+    // 将更新后的文档赋值给 word 变量，用于后续日志和响应
+    word = updatedWord;
 
     const actionCompleted = force ? "Updated" : "Generated";
     if (updateType === "compounds") {

@@ -1,8 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, StyleSheet, Image, Text, ActivityIndicator } from "react-native";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 
 export default function LoadingScreen() {
+  const { currentTheme } = useThemeContext();
+  const dynamicTheme = currentTheme;
+
+  // Create dynamic styles
+  const styles = useMemo(() => createStyles(dynamicTheme), [dynamicTheme]);
+
   return (
     <View style={styles.loadingContainer}>
       <Image
@@ -18,19 +25,20 @@ export default function LoadingScreen() {
       </Text>
       <ActivityIndicator
         size="large"
-        color={ChildrenTheme.colors.primary}
+        color={dynamicTheme.colors.primary}
         style={styles.loadingSpinner}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+// Create dynamic styles based on theme
+const createStyles = (theme) => StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
     padding: ChildrenTheme.spacing.xl,
   },
   loadingLogo: {
@@ -42,13 +50,13 @@ const styles = StyleSheet.create({
   },
   loadingTitle: {
     fontSize: 28,
-    color: ChildrenTheme.colors.primary,
+    color: theme.colors.primary,
     fontWeight: "bold",
     marginBottom: ChildrenTheme.spacing.sm,
   },
   loadingSubtitle: {
     fontSize: 16,
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginBottom: ChildrenTheme.spacing.xl,
   },
   loadingSpinner: {

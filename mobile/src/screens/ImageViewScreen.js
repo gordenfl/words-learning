@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImageManipulator from "expo-image-manipulator";
 import { ocrAPI, wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 import cnchar from "cnchar";
 import { useScrollDragHandler } from "../utils/touchHandler";
 
@@ -45,9 +46,181 @@ const getStrokeCount = (char) => {
   }
 };
 
+// Create dynamic styles based on theme (must be defined before component)
+const createStyles = (theme) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: ChildrenTheme.spacing.xs,
+    paddingBottom: ChildrenTheme.spacing.sm,
+    ...ChildrenTheme.shadows.medium,
+  },
+  headerTitle: {
+    flex: 1,
+    color: theme.colors.textInverse,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  scrollContent: {
+    flex: 1,
+  },
+  content: {
+    padding: ChildrenTheme.spacing.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: theme.colors.textLight,
+  },
+  imageContainer: {
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  imageSurface: {
+    backgroundColor: theme.colors.card,
+    borderRadius: ChildrenTheme.borderRadius.large,
+    overflow: "hidden",
+    position: "relative",
+  },
+  image: {
+    width: "100%",
+    height: 300,
+    resizeMode: "contain",
+  },
+  imageOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  overlayText: {
+    marginTop: ChildrenTheme.spacing.md,
+    color: "#fff",
+  },
+  progressCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    backgroundColor: theme.colors.card,
+  },
+  progressContent: {
+    alignItems: "center",
+    paddingVertical: ChildrenTheme.spacing.lg,
+  },
+  progressIndicator: {
+    marginBottom: ChildrenTheme.spacing.md,
+  },
+  progressTitle: {
+    color: theme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.sm,
+  },
+  progressText: {
+    color: theme.colors.textLight,
+    textAlign: "center",
+  },
+  wordsCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    backgroundColor: theme.colors.card,
+  },
+  wordsTitle: {
+    color: theme.colors.text,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.sm,
+  },
+  knownWordsTitle: {
+    color: theme.colors.success,
+    fontWeight: "bold",
+    marginBottom: ChildrenTheme.spacing.sm,
+  },
+  wordsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: ChildrenTheme.spacing.xs,
+  },
+  wordChip: {
+    paddingHorizontal: ChildrenTheme.spacing.sm,
+    paddingVertical: ChildrenTheme.spacing.xs,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    margin: ChildrenTheme.spacing.xs,
+    alignItems: "center",
+    borderWidth: 2,
+    minWidth: 60,
+  },
+  wordChipUnselected: {
+    backgroundColor: theme.colors.background,
+    borderColor: "#CCCCCC",
+  },
+  wordChipSelected: {
+    backgroundColor: theme.colors.primary + "20",
+    borderColor: theme.colors.primary,
+  },
+  wordChipKnown: {
+    backgroundColor: theme.colors.success + "20",
+    paddingHorizontal: ChildrenTheme.spacing.sm,
+    paddingVertical: ChildrenTheme.spacing.xs,
+    borderRadius: ChildrenTheme.borderRadius.medium,
+    margin: ChildrenTheme.spacing.xs,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: theme.colors.success,
+    minWidth: 60,
+  },
+  wordPinyin: {
+    fontSize: 11,
+    color: "#999999",
+    marginBottom: 2,
+  },
+  wordPinyinSelected: {
+    color: theme.colors.primary,
+  },
+  wordText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#999999",
+  },
+  wordTextSelected: {
+    color: theme.colors.text,
+  },
+  wordsHint: {
+    color: theme.colors.textLight,
+    marginBottom: ChildrenTheme.spacing.sm,
+    fontStyle: "italic",
+  },
+  actionCard: {
+    marginTop: ChildrenTheme.spacing.md,
+    marginBottom: ChildrenTheme.spacing.md,
+    backgroundColor: theme.colors.card,
+  },
+  addButton: {
+    paddingVertical: ChildrenTheme.spacing.xs,
+  },
+  wordPinyinKnown: {
+    fontSize: 11,
+    color: theme.colors.success,
+    marginBottom: 2,
+    fontWeight: "500",
+  },
+  wordTextKnown: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: theme.colors.success,
+  },
+});
+
 export default function ImageViewScreen({ route, navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeContext();
+  const dynamicTheme = currentTheme;
   const [imageUri, setImageUri] = useState(route.params?.imageUri);
   const [extractedWords, setExtractedWords] = useState([]);
   const [knownWords, setKnownWords] = useState([]);
@@ -64,6 +237,9 @@ export default function ImageViewScreen({ route, navigation }) {
   const wordsListRef = useRef(null);
   const wordRefs = useRef({});
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
+
+  // Create dynamic styles (must be defined before any use)
+  const styles = useMemo(() => createStyles(dynamicTheme), [dynamicTheme]);
 
   useEffect(() => {
     // 如果从路由参数获取到图片，设置它
@@ -411,25 +587,25 @@ export default function ImageViewScreen({ route, navigation }) {
       <View
         style={[
           styles.container,
-          { backgroundColor: ChildrenTheme.colors.background },
+          { backgroundColor: dynamicTheme.colors.background },
         ]}
       >
         <StatusBar
           barStyle="light-content"
-          backgroundColor={ChildrenTheme.colors.primary}
+          backgroundColor={dynamicTheme.colors.primary}
         />
         <View
           style={[
             styles.header,
             {
               paddingTop: (insets.top + 10) / 2,
-              backgroundColor: ChildrenTheme.colors.primary,
+              backgroundColor: dynamicTheme.colors.primary,
             },
           ]}
         >
           <IconButton
             icon="arrow-left"
-            iconColor={ChildrenTheme.colors.textInverse}
+            iconColor={dynamicTheme.colors.textInverse}
             size={24}
             onPress={() => navigation.goBack()}
           />
@@ -447,25 +623,25 @@ export default function ImageViewScreen({ route, navigation }) {
     <View
       style={[
         styles.container,
-        { backgroundColor: ChildrenTheme.colors.background },
+        { backgroundColor: dynamicTheme.colors.background },
       ]}
     >
       <StatusBar
         barStyle="light-content"
-        backgroundColor={ChildrenTheme.colors.primary}
+        backgroundColor={dynamicTheme.colors.primary}
       />
       <View
         style={[
           styles.header,
           {
             paddingTop: (insets.top + 10) / 2,
-            backgroundColor: ChildrenTheme.colors.primary,
+            backgroundColor: dynamicTheme.colors.primary,
           },
         ]}
       >
         <IconButton
           icon="arrow-left"
-          iconColor={ChildrenTheme.colors.textInverse}
+          iconColor={dynamicTheme.colors.textInverse}
           size={24}
           onPress={() => navigation.goBack()}
         />
@@ -492,7 +668,7 @@ export default function ImageViewScreen({ route, navigation }) {
                 <View style={styles.imageOverlay}>
                   <ActivityIndicator
                     size="large"
-                    color={ChildrenTheme.colors.primary}
+                    color={dynamicTheme.colors.primary}
                   />
                   <PaperText variant="bodyMedium" style={styles.overlayText}>
                     Extracting text...
@@ -508,7 +684,7 @@ export default function ImageViewScreen({ route, navigation }) {
               <Card.Content style={styles.progressContent}>
                 <ActivityIndicator
                   size="large"
-                  color={ChildrenTheme.colors.primary}
+                  color={dynamicTheme.colors.primary}
                   style={styles.progressIndicator}
                 />
                 <PaperText variant="titleMedium" style={styles.progressTitle}>
@@ -655,7 +831,7 @@ export default function ImageViewScreen({ route, navigation }) {
                   disabled={addingWords}
                   loading={addingWords}
                   style={styles.addButton}
-                  buttonColor={ChildrenTheme.colors.primary}
+                  buttonColor={dynamicTheme.colors.primary}
                   icon="plus"
                 >
                   {addingWords
@@ -670,173 +846,4 @@ export default function ImageViewScreen({ route, navigation }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: ChildrenTheme.colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: ChildrenTheme.spacing.xs,
-    paddingBottom: ChildrenTheme.spacing.sm,
-    ...ChildrenTheme.shadows.medium,
-  },
-  headerTitle: {
-    flex: 1,
-    color: ChildrenTheme.colors.textInverse,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  scrollContent: {
-    flex: 1,
-  },
-  content: {
-    padding: ChildrenTheme.spacing.md,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorText: {
-    color: ChildrenTheme.colors.textLight,
-  },
-  imageContainer: {
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  imageSurface: {
-    backgroundColor: ChildrenTheme.colors.card,
-    borderRadius: ChildrenTheme.borderRadius.large,
-    overflow: "hidden",
-    position: "relative",
-  },
-  image: {
-    width: "100%",
-    height: 300,
-    resizeMode: "contain",
-  },
-  imageOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  overlayText: {
-    marginTop: ChildrenTheme.spacing.md,
-    color: "#fff",
-  },
-  progressCard: {
-    marginBottom: ChildrenTheme.spacing.md,
-    backgroundColor: ChildrenTheme.colors.card,
-  },
-  progressContent: {
-    alignItems: "center",
-    paddingVertical: ChildrenTheme.spacing.lg,
-  },
-  progressIndicator: {
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  progressTitle: {
-    color: ChildrenTheme.colors.text,
-    fontWeight: "bold",
-    marginBottom: ChildrenTheme.spacing.sm,
-  },
-  progressText: {
-    color: ChildrenTheme.colors.textLight,
-    textAlign: "center",
-  },
-  wordsCard: {
-    marginBottom: ChildrenTheme.spacing.md,
-    backgroundColor: ChildrenTheme.colors.card,
-  },
-  wordsTitle: {
-    color: ChildrenTheme.colors.text,
-    fontWeight: "bold",
-    marginBottom: ChildrenTheme.spacing.sm,
-  },
-  knownWordsTitle: {
-    color: ChildrenTheme.colors.success,
-    fontWeight: "bold",
-    marginBottom: ChildrenTheme.spacing.sm,
-  },
-  wordsList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: ChildrenTheme.spacing.xs,
-  },
-  wordChip: {
-    paddingHorizontal: ChildrenTheme.spacing.sm,
-    paddingVertical: ChildrenTheme.spacing.xs,
-    borderRadius: ChildrenTheme.borderRadius.medium,
-    margin: ChildrenTheme.spacing.xs,
-    alignItems: "center",
-    borderWidth: 2,
-    minWidth: 60,
-  },
-  wordChipUnselected: {
-    backgroundColor: ChildrenTheme.colors.background,
-    borderColor: "#CCCCCC",
-  },
-  wordChipSelected: {
-    backgroundColor: ChildrenTheme.colors.primary + "20",
-    borderColor: ChildrenTheme.colors.primary,
-  },
-  wordChipKnown: {
-    backgroundColor: ChildrenTheme.colors.success + "20",
-    paddingHorizontal: ChildrenTheme.spacing.sm,
-    paddingVertical: ChildrenTheme.spacing.xs,
-    borderRadius: ChildrenTheme.borderRadius.medium,
-    margin: ChildrenTheme.spacing.xs,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: ChildrenTheme.colors.success,
-    minWidth: 60,
-  },
-  wordPinyin: {
-    fontSize: 11,
-    color: "#999999",
-    marginBottom: 2,
-  },
-  wordPinyinSelected: {
-    color: ChildrenTheme.colors.primary,
-  },
-  wordText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#999999",
-  },
-  wordTextSelected: {
-    color: ChildrenTheme.colors.text,
-  },
-  wordsHint: {
-    color: ChildrenTheme.colors.textLight,
-    marginBottom: ChildrenTheme.spacing.sm,
-    fontStyle: "italic",
-  },
-  actionCard: {
-    marginTop: ChildrenTheme.spacing.md,
-    marginBottom: ChildrenTheme.spacing.md,
-    backgroundColor: ChildrenTheme.colors.card,
-  },
-  addButton: {
-    paddingVertical: ChildrenTheme.spacing.xs,
-  },
-  wordPinyinKnown: {
-    fontSize: 11,
-    color: ChildrenTheme.colors.success,
-    marginBottom: 2,
-    fontWeight: "500",
-  },
-  wordTextKnown: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: ChildrenTheme.colors.success,
-  },
-});
 

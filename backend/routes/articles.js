@@ -88,7 +88,7 @@ router.post('/generate', async (req, res) => {
 
     const article = new Article({
       userId: req.userId,
-      title: `Chinese Learning - ${new Date().toLocaleDateString()}`,
+      title: `Chinese Learning - ${new Date().toLocaleDateString()}`, // 临时标题，保存后会更新
       content,
       targetWords: unknownWords.map(w => ({
         word: w._id,
@@ -98,6 +98,11 @@ router.post('/generate', async (req, res) => {
     });
 
     await article.save();
+    
+    // 更新标题为 Reading
+    article.title = 'Reading';
+    await article.save();
+    
     await article.populate('targetWords.word');
 
     res.status(201).json({ 

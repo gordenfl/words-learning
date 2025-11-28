@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -24,10 +24,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useScrollDragHandler } from "../utils/touchHandler";
-import paperTheme from "../theme/paperTheme";
+import { useThemeContext } from "../context/ThemeContext";
 
 export default function WordDetailScreen({ route, navigation }) {
   const theme = useTheme();
+  const { currentTheme } = useThemeContext();
+  const dynamicTheme = currentTheme;
   const { wordId } = route.params;
   const [word, setWord] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +45,9 @@ export default function WordDetailScreen({ route, navigation }) {
   const [isSentencePracticeCompleted, setIsSentencePracticeCompleted] =
     useState(false);
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
+
+  // Create dynamic styles
+  const styles = useMemo(() => createStyles(dynamicTheme), [dynamicTheme]);
 
   useEffect(() => {
     loadWordDetail();
@@ -485,10 +490,10 @@ export default function WordDetailScreen({ route, navigation }) {
 
   const statusColor =
     word.status === "known"
-      ? ChildrenTheme.colors.success
+      ? dynamicTheme.colors.success
       : word.status === "learning"
-      ? ChildrenTheme.colors.warning
-      : ChildrenTheme.colors.error;
+      ? dynamicTheme.colors.warning
+      : dynamicTheme.colors.error;
 
   return (
     <ScrollView
@@ -516,10 +521,10 @@ export default function WordDetailScreen({ route, navigation }) {
               {
                 backgroundColor:
                   word.status === "known"
-                    ? ChildrenTheme.colors.success + "20"
+                    ? dynamicTheme.colors.success + "20"
                     : word.status === "learning"
-                    ? ChildrenTheme.colors.warning + "20"
-                    : ChildrenTheme.colors.error + "20",
+                    ? dynamicTheme.colors.warning + "20"
+                    : dynamicTheme.colors.error + "20",
               },
             ]}
             textStyle={[styles.statusChipText, { color: statusColor }]}
@@ -573,7 +578,7 @@ export default function WordDetailScreen({ route, navigation }) {
               <IconButton
                 icon="delete-outline"
                 size={24}
-                iconColor={ChildrenTheme.colors.error}
+                iconColor={dynamicTheme.colors.error}
                 onPress={createPressHandler(deleteWord)}
                 style={styles.deleteButton}
               />
@@ -816,7 +821,7 @@ export default function WordDetailScreen({ route, navigation }) {
                 <IconButton
                   icon="close"
                   size={24}
-                  iconColor={ChildrenTheme.colors.text}
+                  iconColor={dynamicTheme.colors.text}
                   onPress={createPressHandler(() => setShowStrokeOrder(false))}
                   style={styles.strokeModalClose}
                 />
@@ -848,7 +853,7 @@ export default function WordDetailScreen({ route, navigation }) {
                           align-items: center;
                           justify-content: center;
                           min-height: 100vh;
-                          background: #F5F5F5;
+                          background: ${dynamicTheme.colors.background};
                           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                           overflow-x: hidden;
                         }
@@ -871,11 +876,11 @@ export default function WordDetailScreen({ route, navigation }) {
                           font-size: 17px;
                           border: none;
                           border-radius: 20px;
-                          background: #FF6B9D;
-                          color: white;
+                          background: ${dynamicTheme.colors.primary};
+                          color: ${dynamicTheme.colors.textInverse};
                           font-weight: 600;
                           cursor: pointer;
-                          box-shadow: 0 4px 8px rgba(255, 107, 157, 0.3);
+                          box-shadow: 0 4px 8px ${dynamicTheme.colors.primary}4D;
                           transition: all 0.2s;
                           flex: 1;
                           min-width: 140px;
@@ -883,20 +888,20 @@ export default function WordDetailScreen({ route, navigation }) {
                         }
                         button:active {
                           transform: scale(0.96);
-                          box-shadow: 0 2px 4px rgba(255, 107, 157, 0.2);
+                          box-shadow: 0 2px 4px ${dynamicTheme.colors.primary}33;
                         }
                         button:hover {
-                          background: #FF5A8A;
+                          background: ${dynamicTheme.colors.primaryDark};
                         }
                         .info {
                           text-align: center;
-                          color: #999;
+                          color: ${dynamicTheme.colors.textLight};
                           margin-top: 18px;
                           font-size: 15px;
                           padding: 0 20px;
                         }
                         #status {
-                          color: #FF6B9D;
+                          color: ${dynamicTheme.colors.primary};
                           font-size: 14px;
                           margin-top: 10px;
                           min-height: 20px;
@@ -1113,9 +1118,9 @@ export default function WordDetailScreen({ route, navigation }) {
                               delayBetweenStrokes: 600,   // 增加笔画间隔（原来 200ms，现在 600ms）
                               delayBetweenLoops: 1000,    // 循环之间的延迟
                               strokeColor: '#333',
-                              radicalColor: '#4A90E2',
+                              radicalColor: '${dynamicTheme.colors.primary}',
                               outlineColor: '#DDD',
-                              drawingColor: '#4A90E2',
+                              drawingColor: '${dynamicTheme.colors.primary}',
                               drawingWidth: 6,
                               showCharacter: true
                             });
@@ -1206,7 +1211,7 @@ export default function WordDetailScreen({ route, navigation }) {
                     <View style={styles.strokeLoadingContainer}>
                       <ActivityIndicator
                         size="large"
-                        color={theme.colors.primary}
+                        color={dynamicTheme.colors.primary}
                       />
                       <Text
                         variant="bodyMedium"
@@ -1230,10 +1235,11 @@ export default function WordDetailScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Create dynamic styles based on theme
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -1242,11 +1248,11 @@ const styles = StyleSheet.create({
     padding: ChildrenTheme.spacing.xl,
   },
   loaderText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginTop: ChildrenTheme.spacing.md,
   },
   errorText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
   },
   content: {
     padding: ChildrenTheme.spacing.md,
@@ -1298,18 +1304,18 @@ const styles = StyleSheet.create({
   wordText: {
     fontSize: 80,
     fontWeight: "bold",
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     textAlign: "center",
     marginBottom: ChildrenTheme.spacing.sm,
     lineHeight: 88,
   },
   translation: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     textAlign: "center",
     marginBottom: ChildrenTheme.spacing.xs,
   },
   tapHint: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     textAlign: "center",
     marginTop: ChildrenTheme.spacing.xs,
   },
@@ -1321,11 +1327,11 @@ const styles = StyleSheet.create({
     gap: ChildrenTheme.spacing.sm,
   },
   generatingText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     fontStyle: "italic",
   },
   emptyText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     fontStyle: "italic",
     textAlign: "center",
   },
@@ -1340,7 +1346,7 @@ const styles = StyleSheet.create({
     marginBottom: ChildrenTheme.spacing.sm,
   },
   sectionTitle: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     flex: 1,
   },
@@ -1352,23 +1358,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: ChildrenTheme.spacing.sm,
     marginBottom: ChildrenTheme.spacing.xs,
     borderRadius: ChildrenTheme.borderRadius.small,
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
   },
   compoundLeft: {
     flex: 1,
     marginRight: ChildrenTheme.spacing.sm,
   },
   compoundWord: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginBottom: 2,
   },
   compoundPinyin: {
-    color: ChildrenTheme.colors.primary,
+    color: theme.colors.primary,
     fontStyle: "italic",
   },
   compoundMeaning: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     textAlign: "right",
     maxWidth: "40%",
   },
@@ -1377,26 +1383,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: ChildrenTheme.spacing.sm,
     marginBottom: ChildrenTheme.spacing.xs,
     borderRadius: ChildrenTheme.borderRadius.small,
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
   },
   exampleChinese: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "500",
     marginBottom: 4,
   },
   examplePinyin: {
-    color: ChildrenTheme.colors.primary,
+    color: theme.colors.primary,
     fontStyle: "italic",
     marginBottom: 4,
   },
   exampleEnglish: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
   },
   exampleText: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
   },
   definition: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     lineHeight: 24,
     marginTop: ChildrenTheme.spacing.xs,
   },
@@ -1411,7 +1417,7 @@ const styles = StyleSheet.create({
     padding: ChildrenTheme.spacing.lg,
   },
   strokeModalContent: {
-    backgroundColor: ChildrenTheme.colors.card,
+    backgroundColor: theme.colors.card,
     borderRadius: ChildrenTheme.borderRadius.xlarge,
     width: "100%",
     maxWidth: 500,
@@ -1428,7 +1434,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   strokeModalTitle: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     flex: 1,
   },
@@ -1441,11 +1447,11 @@ const styles = StyleSheet.create({
   strokeWebViewContainer: {
     height: 550,
     width: "100%",
-    backgroundColor: ChildrenTheme.colors.card,
+    backgroundColor: theme.colors.card,
   },
   strokeWebView: {
     flex: 1,
-    backgroundColor: ChildrenTheme.colors.card,
+    backgroundColor: theme.colors.card,
   },
   strokeLoadingContainer: {
     position: "absolute",
@@ -1455,11 +1461,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: ChildrenTheme.colors.card,
+    backgroundColor: theme.colors.card,
   },
   strokeLoadingText: {
     marginTop: ChildrenTheme.spacing.md,
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
   },
   writingButton: {
     marginVertical: ChildrenTheme.spacing.xs,

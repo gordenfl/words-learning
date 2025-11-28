@@ -432,10 +432,15 @@ export default function ArticleScreen({ route, navigation }) {
       .map((tw) => tw.word?.word || tw.wordText)
       .filter(Boolean);
 
-    // 显示所有目标单词（不再过滤，因为文章生成时已经包含了这些单词）
+    // 只显示真正出现在文章内容中的单词
     const wordsInContent = targetWords.filter((tw) => {
       const wordText = tw.word?.word || tw.wordText;
-      return wordText; // 只要有单词文本就显示
+      if (!wordText) return false;
+      
+      // 检查单词是否出现在文章内容中（不区分大小写，但中文需要精确匹配）
+      // 移除所有空格和标点符号后检查
+      const cleanContent = content.replace(/[\s\.,!?;:，。！？；：\n\r]/g, '');
+      return cleanContent.includes(wordText);
     });
 
     return (
@@ -501,49 +506,37 @@ export default function ArticleScreen({ route, navigation }) {
         {wordsInContent.length > 0 && (
           <View style={styles.wordsSection}>
             <Text style={styles.sectionTitle}>Target Words:</Text>
-            {wordsInContent.map((tw, index) => {
-            const wordId = tw.word?._id || tw.word;
-            const wordText = tw.word?.word || tw.wordText;
-            const wordPinyin = tw.word?.pinyin || "";
-            const isCompleted = completedWords.has(wordId);
+            <View style={styles.wordsContainer}>
+              {wordsInContent.map((tw, index) => {
+              // 获取 wordId，确保是字符串格式
+              const wordId = tw.word?._id 
+                ? (typeof tw.word._id === 'string' ? tw.word._id : tw.word._id.toString())
+                : (tw.word && typeof tw.word === 'string' ? tw.word : null);
+              const wordText = tw.word?.word || tw.wordText;
+              const wordPinyin = tw.word?.pinyin || "";
 
-            return (
-              <View key={index} style={styles.wordCard}>
-                <View style={styles.wordCardContent}>
-                  <View style={styles.wordInfoArea}>
-                    {wordPinyin && (
-                      <View style={styles.pinyinWithSpeaker}>
-                        <Text style={styles.pinyin}>{wordPinyin}</Text>
-                        <TouchableOpacity
-                          onPress={createPressHandler(() => speakWord(wordText))}
-                          activeOpacity={0.6}
-                          style={styles.speakerButton}
-                        >
-                          <Text style={styles.speakerIcon}>🔊</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    <Text style={styles.wordText}>{wordText}</Text>
-                  </View>
-
-                  <View style={styles.wordActions}>
-                    {!isCompleted ? (
-                      <TouchableOpacity
-                        style={[styles.markKnownBtn, { backgroundColor: dynamicTheme.colors.success }]}
-                        onPress={createPressHandler(() => markWordAsKnown(wordId, wordText))}
-                      >
-                        <Text style={[styles.markKnownText, { color: dynamicTheme.colors.textInverse }]}>✓</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={[styles.completedBadge, { backgroundColor: dynamicTheme.colors.success + "20" }]}>
-                        <Text style={[styles.completedText, { color: dynamicTheme.colors.success }]}>✓</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-            );
-            })}
+              return (
+                <TouchableOpacity
+                  key={index}
+                  activeOpacity={0.7}
+                  onPress={createPressHandler(() => {
+                    // 导航到 Word Detail 页面
+                    if (wordId) {
+                      navigation.navigate("WordDetail", { wordId });
+                    } else {
+                      console.warn("⚠️ Cannot navigate: wordId is missing for word:", wordText);
+                    }
+                  })}
+                  style={styles.compactWordCard}
+                >
+                  {wordPinyin && (
+                    <Text style={styles.compactPinyin}>{wordPinyin}</Text>
+                  )}
+                  <Text style={styles.compactWordText}>{wordText}</Text>
+                </TouchableOpacity>
+              );
+              })}
+            </View>
           </View>
         )}
       </View>
@@ -720,7 +713,7 @@ export default function ArticleScreen({ route, navigation }) {
       <View style={styles.content}>
         {/* 标题和朗读按钮 */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{article.title}</Text>
+          <Text style={styles.title}>Reading</Text>
           <TouchableOpacity
             onPress={speakArticle}
             style={[styles.readAloudBtn, { backgroundColor: dynamicTheme.colors.primary }]}
@@ -890,6 +883,35 @@ const createStyles = (theme) => StyleSheet.create({
     fontWeight: "bold",
     color: theme.colors.text,
     marginBottom: 15,
+  },
+  wordsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  compactWordCard: {
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 60,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  compactPinyin: {
+    fontSize: 11,
+    color: theme.colors.textLight,
+    marginBottom: 2,
+  },
+  compactWordText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: theme.colors.text,
   },
   wordCard: {
     backgroundColor: theme.colors.card,
