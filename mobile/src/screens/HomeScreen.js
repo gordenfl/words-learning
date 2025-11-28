@@ -49,7 +49,7 @@ export default function HomeScreen({ navigation, route }) {
       }
       loadData();
     });
-    
+
     return () => {
       unsubscribe();
     };
@@ -59,7 +59,7 @@ export default function HomeScreen({ navigation, route }) {
     try {
       const userStr = await AsyncStorage.getItem("user");
       const newUser = userStr ? JSON.parse(userStr) : null;
-      
+
       // 从服务器获取完整的用户信息（包含 profile）
       try {
         const profileResponse = await authAPI.getProfile();
@@ -162,7 +162,7 @@ export default function HomeScreen({ navigation, route }) {
 
       // 从 CameraScreen 传递过来的照片
       const { scannedImage: imageUri } = route.params;
-      
+
       // 导航到全屏照片显示界面
       navigation.navigate("ImageView", { imageUri });
 
@@ -174,7 +174,6 @@ export default function HomeScreen({ navigation, route }) {
       });
     }
   }, [route.params?.scannedImage, navigation]);
-
 
   const takePhoto = async () => {
     console.log("📷 takePhoto function called");
@@ -305,17 +304,40 @@ export default function HomeScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: ChildrenTheme.colors.background }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: ChildrenTheme.colors.background },
+        ]}
+      >
         <ActivityIndicator size="large" color={ChildrenTheme.colors.primary} />
-        <Text style={[styles.loadingText, ChildrenTheme.typography.body]}>Loading...</Text>
+        <Text style={[styles.loadingText, ChildrenTheme.typography.body]}>
+          Loading...
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: dynamicTheme.colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor={dynamicTheme.colors.primary} />
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: dynamicTheme.colors.primary }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: dynamicTheme.colors.background },
+      ]}
+    >
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={dynamicTheme.colors.primary}
+      />
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + 10,
+            backgroundColor: dynamicTheme.colors.primary,
+          },
+        ]}
+      >
         <View style={styles.headerLeft}>
           <Image
             source={require("../../assets/icon.png")}
@@ -326,7 +348,9 @@ export default function HomeScreen({ navigation, route }) {
             <Text style={styles.welcomeText}>
               Hello, {user?.profile?.displayName || user?.username || "friend"}!
             </Text>
-            <Text style={styles.welcomeSubtext}>Let's learn Chinese today!</Text>
+            <Text style={styles.welcomeSubtext}>
+              Let's learn Chinese today!
+            </Text>
           </View>
         </View>
         <View style={styles.headerRight}>
@@ -340,7 +364,10 @@ export default function HomeScreen({ navigation, route }) {
         </View>
       </View>
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContentContainer}>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContentContainer}
+      >
         {/* Learning Plan Info */}
         {learningPlan && (
           <View style={styles.planInfo}>
@@ -353,7 +380,8 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={styles.planLabel}>📖 Level:</Text>
                 <Text style={styles.planValue}>
                   {learningPlan.difficulty === "beginner" && "🌟 Beginner"}
-                  {learningPlan.difficulty === "intermediate" && "⭐ Intermediate"}
+                  {learningPlan.difficulty === "intermediate" &&
+                    "⭐ Intermediate"}
                   {learningPlan.difficulty === "advanced" && "✨ Advanced"}
                 </Text>
               </View>
@@ -377,7 +405,12 @@ export default function HomeScreen({ navigation, route }) {
               <Card.Content style={styles.totalWordsContent}>
                 <Text style={styles.totalWordsEmoji}>📝</Text>
                 <Text style={styles.totalWordsLabel}>Total Words</Text>
-                <Text style={[styles.totalWordsValue, { color: dynamicTheme.colors.primary }]}>
+                <Text
+                  style={[
+                    styles.totalWordsValue,
+                    { color: dynamicTheme.colors.primary },
+                  ]}
+                >
                   {(stats?.known || 0) + (stats?.unknown || 0)}
                 </Text>
               </Card.Content>
@@ -385,7 +418,9 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate("WordsList", { filter: "known" })}
+            onPress={() =>
+              navigation.navigate("WordsList", { filter: "known" })
+            }
             activeOpacity={0.7}
           >
             <ProgressCard
@@ -398,7 +433,9 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate("WordsList", { filter: "unknown" })}
+            onPress={() =>
+              navigation.navigate("WordsList", { filter: "unknown" })
+            }
             activeOpacity={0.7}
           >
             <ProgressCard
@@ -411,7 +448,9 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate("WordsList", { filter: "unknown" })}
+            onPress={() =>
+              navigation.navigate("WordsList", { filter: "unknown" })
+            }
             activeOpacity={0.7}
           >
             <ProgressCard
@@ -481,7 +520,6 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
-
     </View>
   );
 }
@@ -634,7 +672,7 @@ const styles = StyleSheet.create({
     ...ChildrenTheme.typography.caption,
     color: ChildrenTheme.colors.textLight,
     marginTop: -4,
-    fontSize: 11,
+    fontSize: 15,
     fontWeight: "500",
   },
 });
