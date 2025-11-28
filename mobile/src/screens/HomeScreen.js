@@ -15,6 +15,7 @@ import {
   IconButton,
   useTheme,
   Text as PaperText,
+  Card,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
@@ -372,14 +373,15 @@ export default function HomeScreen({ navigation, route }) {
             onPress={() => navigation.navigate("WordsList", { filter: "all" })}
             activeOpacity={0.7}
           >
-            <ProgressCard
-              emoji="📝"
-              label="Total Words"
-              current={stats?.total || 0}
-              total={learningPlan?.monthlyWordGoal || 200}
-              color={ChildrenTheme.colors.primary}
-              showPercentage={false}
-            />
+            <Card style={styles.totalWordsCard} mode="elevated" elevation={2}>
+              <Card.Content style={styles.totalWordsContent}>
+                <Text style={styles.totalWordsEmoji}>📝</Text>
+                <Text style={styles.totalWordsLabel}>Total Words</Text>
+                <Text style={[styles.totalWordsValue, { color: dynamicTheme.colors.primary }]}>
+                  {(stats?.known || 0) + (stats?.unknown || 0)}
+                </Text>
+              </Card.Content>
+            </Card>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -587,6 +589,30 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     padding: ChildrenTheme.spacing.md,
+  },
+  totalWordsCard: {
+    marginBottom: ChildrenTheme.spacing.md,
+    borderRadius: ChildrenTheme.borderRadius.large,
+  },
+  totalWordsContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: ChildrenTheme.spacing.md,
+    paddingHorizontal: ChildrenTheme.spacing.sm,
+  },
+  totalWordsEmoji: {
+    fontSize: 32,
+    marginRight: ChildrenTheme.spacing.sm,
+  },
+  totalWordsLabel: {
+    ...ChildrenTheme.typography.h4,
+    color: ChildrenTheme.colors.text,
+    flex: 1,
+  },
+  totalWordsValue: {
+    ...ChildrenTheme.typography.h3,
+    fontWeight: "bold",
   },
   bottomNav: {
     flexDirection: "row",
