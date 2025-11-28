@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -20,10 +20,13 @@ import * as Speech from "expo-speech";
 import { articlesAPI, wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useScrollDragHandler } from "../utils/touchHandler";
+import { useThemeContext } from "../context/ThemeContext";
 
 export default function ArticleScreen({ route, navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeContext();
+  const dynamicTheme = currentTheme;
   const [article, setArticle] = useState(route.params?.article);
   const [loading, setLoading] = useState(!route.params?.article);
   const [error, setError] = useState(null);
@@ -221,7 +224,7 @@ export default function ArticleScreen({ route, navigation }) {
       <Text style={styles.articleText}>
         {parts.map((part, index) =>
           part.isTarget ? (
-            <Text key={index} style={styles.highlightedWord}>
+            <Text key={index} style={[styles.highlightedWord, { color: dynamicTheme.colors.primary }]}>
               {part.text}
             </Text>
           ) : (
@@ -456,7 +459,7 @@ export default function ArticleScreen({ route, navigation }) {
               <View key={paraIndex} style={styles.paragraphContainer}>
                 {highlightTargetWords(para.chinese, targetWords)}
                 {para.english && (
-                  <Text style={styles.englishTranslation}>{para.english}</Text>
+                  <Text style={[styles.englishTranslation, { color: dynamicTheme.colors.textLight, borderLeftColor: dynamicTheme.colors.primary }]}>{para.english}</Text>
                 )}
               </View>
             );
@@ -483,7 +486,7 @@ export default function ArticleScreen({ route, navigation }) {
                       targetWords
                     )}
                     {englishSentence && (
-                      <Text style={styles.englishTranslation}>
+                      <Text style={[styles.englishTranslation, { color: dynamicTheme.colors.textLight, borderLeftColor: dynamicTheme.colors.primary }]}>
                         {englishSentence.trim() +
                           (englishSentence.trim().match(/[.!?]$/) ? "" : ".")}
                       </Text>
@@ -526,14 +529,14 @@ export default function ArticleScreen({ route, navigation }) {
                   <View style={styles.wordActions}>
                     {!isCompleted ? (
                       <TouchableOpacity
-                        style={styles.markKnownBtn}
+                        style={[styles.markKnownBtn, { backgroundColor: dynamicTheme.colors.success }]}
                         onPress={createPressHandler(() => markWordAsKnown(wordId, wordText))}
                       >
-                        <Text style={styles.markKnownText}>✓</Text>
+                        <Text style={[styles.markKnownText, { color: dynamicTheme.colors.textInverse }]}>✓</Text>
                       </TouchableOpacity>
                     ) : (
-                      <View style={styles.completedBadge}>
-                        <Text style={styles.completedText}>✓</Text>
+                      <View style={[styles.completedBadge, { backgroundColor: dynamicTheme.colors.success + "20" }]}>
+                        <Text style={[styles.completedText, { color: dynamicTheme.colors.success }]}>✓</Text>
                       </View>
                     )}
                   </View>
@@ -547,25 +550,28 @@ export default function ArticleScreen({ route, navigation }) {
     );
   };
 
+  // Create dynamic styles
+  const styles = useMemo(() => createStyles(dynamicTheme), [dynamicTheme]);
+
   // Loading state
   if (loading) {
     return (
       <View
         style={[
           styles.container,
-          { backgroundColor: ChildrenTheme.colors.background },
+          { backgroundColor: dynamicTheme.colors.background },
         ]}
       >
         <StatusBar
           barStyle="light-content"
-          backgroundColor={ChildrenTheme.colors.primary}
+          backgroundColor={dynamicTheme.colors.primary}
         />
         <View
           style={[
             styles.header,
             {
               paddingTop: (insets.top + 10) / 2,
-              backgroundColor: ChildrenTheme.colors.primary,
+              backgroundColor: dynamicTheme.colors.primary,
             },
           ]}
         ></View>
@@ -575,7 +581,7 @@ export default function ArticleScreen({ route, navigation }) {
               <Text style={styles.loadingEmoji}>📚</Text>
               <ActivityIndicator
                 size="large"
-                color={ChildrenTheme.colors.primary}
+                color={dynamicTheme.colors.primary}
                 style={styles.loader}
               />
               <Text variant="titleLarge" style={styles.loadingTitle}>
@@ -597,19 +603,19 @@ export default function ArticleScreen({ route, navigation }) {
       <View
         style={[
           styles.container,
-          { backgroundColor: ChildrenTheme.colors.background },
+          { backgroundColor: dynamicTheme.colors.background },
         ]}
       >
         <StatusBar
           barStyle="light-content"
-          backgroundColor={ChildrenTheme.colors.primary}
+          backgroundColor={dynamicTheme.colors.primary}
         />
         <View
           style={[
             styles.header,
             {
               paddingTop: (insets.top + 10) / 2,
-              backgroundColor: ChildrenTheme.colors.primary,
+              backgroundColor: dynamicTheme.colors.primary,
             },
           ]}
         ></View>
@@ -626,7 +632,7 @@ export default function ArticleScreen({ route, navigation }) {
                 {error.suggestion}
               </Text>
               <TouchableOpacity
-                style={styles.retryButton}
+                style={[styles.retryButton, { backgroundColor: dynamicTheme.colors.primary }]}
                 onPress={() => {
                   if (error.type === "needMoreWords") {
                     navigation.navigate("Home");
@@ -635,7 +641,7 @@ export default function ArticleScreen({ route, navigation }) {
                   }
                 }}
               >
-                <Text style={styles.retryButtonText}>
+                <Text style={[styles.retryButtonText, { color: dynamicTheme.colors.textInverse }]}>
                   {error.type === "needMoreWords" ? "Go Home" : "Try Again"}
                 </Text>
               </TouchableOpacity>
@@ -652,19 +658,19 @@ export default function ArticleScreen({ route, navigation }) {
       <View
         style={[
           styles.container,
-          { backgroundColor: ChildrenTheme.colors.background },
+          { backgroundColor: dynamicTheme.colors.background },
         ]}
       >
         <StatusBar
           barStyle="light-content"
-          backgroundColor={ChildrenTheme.colors.primary}
+          backgroundColor={dynamicTheme.colors.primary}
         />
         <View
           style={[
             styles.header,
             {
               paddingTop: (insets.top + 10) / 2,
-              backgroundColor: ChildrenTheme.colors.primary,
+              backgroundColor: dynamicTheme.colors.primary,
             },
           ]}
         ></View>
@@ -681,19 +687,19 @@ export default function ArticleScreen({ route, navigation }) {
     <View
       style={[
         styles.container,
-        { backgroundColor: ChildrenTheme.colors.background },
+        { backgroundColor: dynamicTheme.colors.background },
       ]}
     >
       <StatusBar
         barStyle="light-content"
-        backgroundColor={ChildrenTheme.colors.primary}
+        backgroundColor={dynamicTheme.colors.primary}
       />
       <View
         style={[
           styles.header,
           {
             paddingTop: (insets.top + 10) / 2,
-            backgroundColor: ChildrenTheme.colors.primary,
+            backgroundColor: dynamicTheme.colors.primary,
           },
         ]}
       ></View>
@@ -717,7 +723,7 @@ export default function ArticleScreen({ route, navigation }) {
           <Text style={styles.title}>{article.title}</Text>
           <TouchableOpacity
             onPress={speakArticle}
-            style={styles.readAloudBtn}
+            style={[styles.readAloudBtn, { backgroundColor: dynamicTheme.colors.primary }]}
             activeOpacity={0.7}
           >
             <Text style={styles.readAloudIcon}>{isReading ? "⏸" : "🔊"}</Text>
@@ -745,17 +751,18 @@ export default function ArticleScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Create dynamic styles function
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingBottom: ChildrenTheme.spacing.sm,
-    backgroundColor: ChildrenTheme.colors.primary,
+    backgroundColor: theme.colors.primary,
     ...ChildrenTheme.shadows.medium,
   },
   scrollContent: {
@@ -784,25 +791,23 @@ const styles = StyleSheet.create({
     marginVertical: ChildrenTheme.spacing.md,
   },
   loadingTitle: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginBottom: ChildrenTheme.spacing.sm,
     textAlign: "center",
   },
   loadingSubtitle: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     textAlign: "center",
     marginBottom: ChildrenTheme.spacing.lg,
   },
   retryButton: {
-    backgroundColor: ChildrenTheme.colors.primary,
     paddingVertical: ChildrenTheme.spacing.md,
     paddingHorizontal: ChildrenTheme.spacing.xl,
     borderRadius: ChildrenTheme.borderRadius.medium,
     marginTop: ChildrenTheme.spacing.md,
   },
   retryButtonText: {
-    color: ChildrenTheme.colors.textInverse,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -819,13 +824,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 24,
     fontWeight: "bold",
-    color: "#333",
+    color: theme.colors.text,
   },
   readAloudBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#4A90E2",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 10,
@@ -844,11 +848,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
+    borderBottomColor: theme.colors.border,
   },
   metaText: {
     fontSize: 14,
-    color: "#666",
+    color: theme.colors.textLight,
   },
   paragraphContainer: {
     marginBottom: 20,
@@ -859,27 +863,24 @@ const styles = StyleSheet.create({
   articleText: {
     fontSize: 16,
     lineHeight: 24,
-    color: "#333",
+    color: theme.colors.text,
     marginBottom: 8,
   },
   englishTranslation: {
     fontSize: 15,
     lineHeight: 22,
-    color: "#666",
     fontStyle: "italic",
     marginTop: 4,
     marginBottom: 0,
     paddingLeft: 10,
     borderLeftWidth: 3,
-    borderLeftColor: "#4A90E2",
   },
   highlightedWord: {
-    color: "#FF0000",
     fontWeight: "bold",
     fontSize: 18,
   },
   wordsSection: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: theme.colors.backgroundDark,
     padding: 15,
     borderRadius: 10,
     marginBottom: 20,
@@ -887,11 +888,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
+    color: theme.colors.text,
     marginBottom: 15,
   },
   wordCard: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.card,
     padding: 18,
     borderRadius: 12,
     marginBottom: 12,
@@ -917,7 +918,7 @@ const styles = StyleSheet.create({
   },
   pinyin: {
     fontSize: 20,
-    color: "#4A90E2",
+    color: theme.colors.primary,
     fontStyle: "italic",
   },
   speakerButton: {
@@ -931,7 +932,7 @@ const styles = StyleSheet.create({
   wordText: {
     fontSize: 48,
     fontWeight: "bold",
-    color: "#333",
+    color: theme.colors.text,
     marginBottom: 6,
   },
   wordActions: {
@@ -939,7 +940,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   markKnownBtn: {
-    backgroundColor: "#50C878",
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -949,12 +949,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   markKnownText: {
-    color: "#fff",
     fontSize: 20,
     fontWeight: "600",
   },
   completedBadge: {
-    backgroundColor: "#E0F8E0",
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 8,
@@ -964,12 +962,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   completedText: {
-    color: "#50C878",
     fontSize: 20,
     fontWeight: "600",
   },
   completeButton: {
-    backgroundColor: "#50C878",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
@@ -977,21 +973,14 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   completeButtonText: {
-    color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
-  },
-  errorText: {
-    textAlign: "center",
-    marginTop: 50,
-    fontSize: 16,
-    color: "#666",
   },
   snackbar: {
     marginBottom: ChildrenTheme.spacing.xl,
   },
   errorText: {
     textAlign: "center",
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
   },
 });

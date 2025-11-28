@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -18,10 +18,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { articlesAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
+import { useThemeContext } from "../context/ThemeContext";
 
 export default function ArticleListScreen({ navigation }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { currentTheme } = useThemeContext();
+  const dynamicTheme = currentTheme;
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -89,31 +92,34 @@ export default function ArticleListScreen({ navigation }) {
     });
   };
 
+  // Create dynamic styles
+  const styles = useMemo(() => createStyles(dynamicTheme), [dynamicTheme]);
+
   if (loading) {
     return (
       <View
         style={[
           styles.container,
-          { backgroundColor: ChildrenTheme.colors.background },
+          { backgroundColor: dynamicTheme.colors.background },
         ]}
       >
         <StatusBar
           barStyle="light-content"
-          backgroundColor={ChildrenTheme.colors.primary}
+          backgroundColor={dynamicTheme.colors.primary}
         />
         <View
           style={[
             styles.header,
             {
               paddingTop: (insets.top + 10) / 3,
-              backgroundColor: ChildrenTheme.colors.primary,
+              backgroundColor: dynamicTheme.colors.primary,
             },
           ]}
         ></View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="large"
-            color={ChildrenTheme.colors.primary}
+            color={dynamicTheme.colors.primary}
           />
           <Text variant="bodyMedium" style={styles.loaderText}>
             Loading articles...
@@ -127,19 +133,19 @@ export default function ArticleListScreen({ navigation }) {
     <View
       style={[
         styles.container,
-        { backgroundColor: ChildrenTheme.colors.background },
+        { backgroundColor: dynamicTheme.colors.background },
       ]}
     >
       <StatusBar
         barStyle="light-content"
-        backgroundColor={ChildrenTheme.colors.primary}
+        backgroundColor={dynamicTheme.colors.primary}
       />
       <View
         style={[
           styles.header,
           {
             paddingTop: (insets.top + 10) / 3,
-            backgroundColor: ChildrenTheme.colors.primary,
+            backgroundColor: dynamicTheme.colors.primary,
           },
         ]}
       >
@@ -151,7 +157,7 @@ export default function ArticleListScreen({ navigation }) {
         <IconButton
           icon="book-plus"
           size={24}
-          iconColor={ChildrenTheme.colors.textInverse}
+          iconColor={dynamicTheme.colors.textInverse}
           onPress={handleGenerateNewArticle}
           disabled={generating}
           style={styles.generateButton}
@@ -169,11 +175,11 @@ export default function ArticleListScreen({ navigation }) {
               Generate your first article to start reading!
             </Text>
             <TouchableOpacity
-              style={styles.generateFirstButton}
+              style={[styles.generateFirstButton, { backgroundColor: dynamicTheme.colors.primary }]}
               onPress={handleGenerateNewArticle}
               disabled={generating}
             >
-              <Text style={styles.generateFirstButtonText}>
+              <Text style={[styles.generateFirstButtonText, { color: dynamicTheme.colors.textInverse }]}>
                 Generate New Article
               </Text>
             </TouchableOpacity>
@@ -238,15 +244,22 @@ export default function ArticleListScreen({ navigation }) {
                     </View>
                     <View style={styles.metaRow}>
                       <Chip
+                        icon={
+                          article.difficulty === "beginner"
+                            ? "star"
+                            : article.difficulty === "intermediate"
+                            ? "star-outline"
+                            : "star-four-points"
+                        }
                         style={[
                           styles.difficultyChip,
                           {
                             backgroundColor:
                               article.difficulty === "beginner"
-                                ? ChildrenTheme.colors.success + "20"
+                                ? dynamicTheme.colors.success + "20"
                                 : article.difficulty === "intermediate"
-                                ? ChildrenTheme.colors.warning + "20"
-                                : ChildrenTheme.colors.accent + "20",
+                                ? dynamicTheme.colors.warning + "20"
+                                : dynamicTheme.colors.accent + "20",
                           },
                         ]}
                         textStyle={[
@@ -254,18 +267,18 @@ export default function ArticleListScreen({ navigation }) {
                           {
                             color:
                               article.difficulty === "beginner"
-                                ? ChildrenTheme.colors.success
+                                ? dynamicTheme.colors.success
                                 : article.difficulty === "intermediate"
-                                ? ChildrenTheme.colors.warning
-                                : ChildrenTheme.colors.accent,
+                                ? dynamicTheme.colors.warning
+                                : dynamicTheme.colors.accent,
                           },
                         ]}
                       >
                         {article.difficulty === "beginner"
-                          ? "🌟 Beginner"
+                          ? "Beginner"
                           : article.difficulty === "intermediate"
-                          ? "⭐ Intermediate"
-                          : "✨ Advanced"}
+                          ? "Intermediate"
+                          : "Advanced"}
                       </Chip>
                     </View>
                   </View>
@@ -280,17 +293,18 @@ export default function ArticleListScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Create dynamic styles function
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: ChildrenTheme.colors.background,
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingBottom: ChildrenTheme.spacing.xs,
-    backgroundColor: ChildrenTheme.colors.primary,
+    backgroundColor: theme.colors.primary,
     ...ChildrenTheme.shadows.medium,
   },
   headerContent: {
@@ -299,7 +313,7 @@ const styles = StyleSheet.create({
     paddingVertical: ChildrenTheme.spacing.xs,
   },
   headerTitle: {
-    color: ChildrenTheme.colors.textInverse,
+    color: theme.colors.textInverse,
     fontWeight: "bold",
   },
   generateButton: {
@@ -315,7 +329,7 @@ const styles = StyleSheet.create({
     padding: ChildrenTheme.spacing.xl,
   },
   loaderText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginTop: ChildrenTheme.spacing.md,
   },
   content: {
@@ -332,23 +346,21 @@ const styles = StyleSheet.create({
     marginBottom: ChildrenTheme.spacing.md,
   },
   emptyTitle: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginBottom: ChildrenTheme.spacing.sm,
   },
   emptyText: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     textAlign: "center",
     marginBottom: ChildrenTheme.spacing.xl,
   },
   generateFirstButton: {
-    backgroundColor: ChildrenTheme.colors.primary,
     paddingVertical: ChildrenTheme.spacing.md,
     paddingHorizontal: ChildrenTheme.spacing.xl,
     borderRadius: ChildrenTheme.borderRadius.medium,
   },
   generateFirstButtonText: {
-    color: ChildrenTheme.colors.textInverse,
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -364,17 +376,26 @@ const styles = StyleSheet.create({
   },
   articleTitle: {
     flex: 1,
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "bold",
     marginRight: ChildrenTheme.spacing.sm,
+    fontSize: 18, // titleMedium 使用 bodyLarge (20)，减小 2 个单位
   },
   completedChip: {
-    backgroundColor: ChildrenTheme.colors.success + "20",
-    height: 28,
+    backgroundColor: theme.colors.success + "20",
+    height: 32, // 增加高度，确保文字完整显示
+    paddingVertical: 0, // 移除垂直内边距
+    paddingHorizontal: 4, // 减小左右内边距
+    marginLeft: ChildrenTheme.spacing.xs,
+    minWidth: 45, // 减小最小宽度
   },
   completedChipText: {
-    color: ChildrenTheme.colors.success,
-    fontSize: 11,
+    color: theme.colors.success,
+    fontSize: 12, // 稍微增大字体
+    paddingHorizontal: 0,
+    marginHorizontal: 0,
+    lineHeight: 16, // 设置行高，确保文字垂直居中
+    includeFontPadding: false, // Android 上移除字体额外内边距
   },
   articleMeta: {
     marginTop: ChildrenTheme.spacing.xs,
@@ -385,19 +406,20 @@ const styles = StyleSheet.create({
     marginBottom: ChildrenTheme.spacing.xs,
   },
   metaLabel: {
-    color: ChildrenTheme.colors.textLight,
+    color: theme.colors.textLight,
     marginRight: ChildrenTheme.spacing.xs,
   },
   metaValue: {
-    color: ChildrenTheme.colors.text,
+    color: theme.colors.text,
     fontWeight: "500",
   },
   difficultyChip: {
-    height: 24,
+    height: 32,
     marginTop: ChildrenTheme.spacing.xs,
+    paddingHorizontal: ChildrenTheme.spacing.sm,
   },
   difficultyChipText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "600",
   },
 });
