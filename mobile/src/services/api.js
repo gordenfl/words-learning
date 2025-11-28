@@ -99,7 +99,7 @@ export const wordsAPI = {
 
   deleteWord: (wordId) => api.delete(`/words/${wordId}`),
 
-  generateDetails: (wordId, force = false, updateType = 'both') => 
+  generateDetails: (wordId, force = false, updateType = "both") =>
     api.post(`/words/${wordId}/generate-details`, { force, updateType }),
 };
 
@@ -138,6 +138,12 @@ export const usersAPI = {
 export const ocrAPI = {
   extractText: (imageBase64) =>
     api.post("/ocr/extract-base64", { imageBase64 }),
+};
+
+// Speech API
+export const speechAPI = {
+  recognizeAudio: (audioBase64, languageCode = "zh-CN") =>
+    api.post("/speech/recognize-base64", { audioBase64, languageCode }),
 };
 
 export default api;

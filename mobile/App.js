@@ -17,6 +17,9 @@ import ArticleListScreen from "./src/screens/ArticleListScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import LearningPlanScreen from "./src/screens/LearningPlanScreen";
 import WordDetailScreen from "./src/screens/WordDetailScreen";
+import WordWritingScreen from "./src/screens/WordWritingScreen";
+import CompoundPracticeScreen from "./src/screens/CompoundPracticeScreen";
+import SentencePracticeScreen from "./src/screens/SentencePracticeScreen";
 import ImageViewScreen from "./src/screens/ImageViewScreen";
 import LoadingScreen from "./src/screens/LoadingScreen";
 import ErrorBoundary from "./src/components/ErrorBoundary";
@@ -117,6 +120,21 @@ function AppContent() {
           name="WordDetail"
           component={WordDetailScreen}
           options={{ title: "Word Details" }}
+        />
+        <Stack.Screen
+          name="WordWriting"
+          component={WordWritingScreen}
+          options={{ title: "Writing Practice" }}
+        />
+        <Stack.Screen
+          name="CompoundPractice"
+          component={CompoundPracticeScreen}
+          options={{ title: "Compound Practice" }}
+        />
+        <Stack.Screen
+          name="SentencePractice"
+          component={SentencePracticeScreen}
+          options={{ title: "Sentence Practice" }}
         />
         <Stack.Screen
           name="ImageView"
