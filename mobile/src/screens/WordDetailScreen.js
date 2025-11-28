@@ -48,22 +48,20 @@ export default function WordDetailScreen({ route, navigation }) {
     loadWordDetail();
   }, []);
 
-  // 设置导航栏左上角的删除按钮
+  // 确保导航栏显示返回按钮
   useLayoutEffect(() => {
-    if (word) {
-      navigation.setOptions({
-        headerLeft: () => (
-          <IconButton
-            icon="delete"
-            size={24}
-            iconColor={paperTheme.colors.onPrimary}
-            onPress={createPressHandler(deleteWord)}
-            style={styles.headerDeleteButton}
-          />
-        ),
-      });
-    }
-  }, [navigation, word]);
+    navigation.setOptions({
+      headerLeft: () => (
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor={paperTheme.colors.onPrimary}
+          onPress={() => navigation.goBack()}
+          style={styles.headerBackButton}
+        />
+      ),
+    });
+  }, [navigation]);
 
   // 刷新所有状态的函数
   const refreshAllStatuses = async () => {
@@ -570,6 +568,16 @@ export default function WordDetailScreen({ route, navigation }) {
             <Text variant="bodySmall" style={styles.tapHint}>
               Tap 🔊 to hear • Tap 字 to see strokes
             </Text>
+            {/* 删除按钮 - 放在右下角 */}
+            <View style={styles.deleteButtonContainer}>
+              <IconButton
+                icon="delete-outline"
+                size={24}
+                iconColor={ChildrenTheme.colors.error}
+                onPress={createPressHandler(deleteWord)}
+                style={styles.deleteButton}
+              />
+            </View>
           </Card.Content>
         </Card>
 
@@ -1260,6 +1268,7 @@ const styles = StyleSheet.create({
     borderRadius: ChildrenTheme.borderRadius.large,
   },
   mainContent: {
+    position: "relative",
     padding: ChildrenTheme.spacing.lg,
     alignItems: "center",
   },
@@ -1461,7 +1470,15 @@ const styles = StyleSheet.create({
   compoundPracticeButton: {
     marginVertical: ChildrenTheme.spacing.xs,
   },
-  headerDeleteButton: {
+  deleteButtonContainer: {
+    position: "absolute",
+    bottom: ChildrenTheme.spacing.xs,
+    right: ChildrenTheme.spacing.xs,
+  },
+  deleteButton: {
+    margin: 0,
+  },
+  headerBackButton: {
     marginLeft: 8,
   },
 });
