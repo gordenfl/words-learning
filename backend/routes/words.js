@@ -273,18 +273,20 @@ router.post("/:wordId/generate-details", async (req, res) => {
         ? "examples"
         : "details";
     console.log(`🎯 ${action} ${target} for word: ${word.word}`);
-    
+
     // 确保 pinyin 和 translation 有值
     const wordText = word.word || "";
     const wordPinyin = word.pinyin || "";
     const wordTranslation = word.translation || word.definition || "";
-    
+
     if (!wordText) {
       return res.status(400).json({ error: "Word text is required" });
     }
-    
-    console.log(`📝 Generating details for: "${wordText}" (${wordPinyin}, ${wordTranslation})`);
-    
+
+    console.log(
+      `📝 Generating details for: "${wordText}" (${wordPinyin}, ${wordTranslation})`
+    );
+
     let details;
     try {
       details = await generateWordDetails(
@@ -296,39 +298,53 @@ router.post("/:wordId/generate-details", async (req, res) => {
       console.error("❌ AI generation failed:", error.message);
       return res.status(500).json({
         error: "Failed to generate word details",
-        message: error.message || "AI service failed. Please check AI API configuration.",
+        message:
+          error.message ||
+          "AI service failed. Please check AI API configuration.",
       });
     }
-    
+
     // 检查生成结果
     if (!details || (!details.compounds && !details.examples)) {
       console.error("❌ AI generation returned empty result");
       return res.status(500).json({
         error: "Failed to generate word details",
-        message: "AI service returned empty result. Please check AI API configuration.",
+        message:
+          "AI service returned empty result. Please check AI API configuration.",
       });
     }
-    
+
     // 确保至少有一些数据
-    if (updateType === "compounds" && (!details.compounds || details.compounds.length === 0)) {
+    if (
+      updateType === "compounds" &&
+      (!details.compounds || details.compounds.length === 0)
+    ) {
       return res.status(500).json({
         error: "Failed to generate compounds",
         message: "AI service did not generate any compounds.",
       });
     }
-    if (updateType === "examples" && (!details.examples || details.examples.length === 0)) {
+    if (
+      updateType === "examples" &&
+      (!details.examples || details.examples.length === 0)
+    ) {
       return res.status(500).json({
         error: "Failed to generate examples",
         message: "AI service did not generate any examples.",
       });
     }
-    if (updateType === "both" && (
-      (!details.compounds || details.compounds.length === 0) ||
-      (!details.examples || details.examples.length === 0)
-    )) {
+    if (
+      updateType === "both" &&
+      (!details.compounds ||
+        details.compounds.length === 0 ||
+        !details.examples ||
+        details.examples.length === 0)
+    ) {
       return res.status(500).json({
         error: "Failed to generate word details",
-        message: `AI service did not generate complete details. Compounds: ${details.compounds?.length || 0}, Examples: ${details.examples?.length || 0}`,
+        message: `AI service did not generate complete details. Compounds: ${
+          details.compounds?.length || 0
+        }, Examples: ${details.examples?.length || 0}`,
       });
     }
 

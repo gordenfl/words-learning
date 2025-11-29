@@ -198,6 +198,11 @@ export default function WordDetailScreen({ route, navigation }) {
       return;
     }
     
+    // 如果正在刷新状态，跳过（避免与 refreshAllStatuses 冲突）
+    if (isRefreshingRef.current) {
+      return;
+    }
+    
     if (wordId && allWords.length > 0) {
       // 如果 allWords 已经有数据，直接加载单词详情
       const foundWord = allWords.find((w) => w._id === wordId);
@@ -390,15 +395,25 @@ export default function WordDetailScreen({ route, navigation }) {
               };
               
               // 只有在数据有变化时才更新，避免不必要的重新渲染
+              // 比较时忽略空数组和 undefined 的差异
+              const currentCompounds = currentWord.compounds || [];
+              const currentExamples = currentWord.examples || [];
+              const newCompounds = mergedWord.compounds || [];
+              const newExamples = mergedWord.examples || [];
+              
               const hasChanged = 
-                JSON.stringify(mergedWord.compounds) !== JSON.stringify(currentWord.compounds) ||
-                JSON.stringify(mergedWord.examples) !== JSON.stringify(currentWord.examples);
+                JSON.stringify(newCompounds) !== JSON.stringify(currentCompounds) ||
+                JSON.stringify(newExamples) !== JSON.stringify(currentExamples) ||
+                // 也检查其他重要字段的变化
+                foundWord.status !== currentWord.status ||
+                foundWord.translation !== currentWord.translation;
               
               if (hasChanged) {
-                console.log(`🔄 Merging word data for ${idToLoad}: compounds=${mergedWord.compounds.length}, examples=${mergedWord.examples.length}`);
+                console.log(`🔄 Merging word data for ${idToLoad}: compounds=${newCompounds.length}, examples=${newExamples.length}`);
                 return mergedWord;
               }
               
+              // 如果数据没有变化，返回当前数据，避免重新渲染
               return currentWord;
             }
             return currentWord;
@@ -412,12 +427,14 @@ export default function WordDetailScreen({ route, navigation }) {
 
         if (!hasCompounds || !hasExamples) {
           // 自动生成（只在缺失数据时）
-          // 静默生成，不显示加载状态，避免闪烁
+          // 延迟生成，避免与 loadWordDetail 和 refreshAllStatuses 冲突
           console.log(`📝 Word ${idToLoad} missing details. Compounds: ${hasCompounds}, Examples: ${hasExamples}`);
-          // 立即开始生成，不延迟，让生成尽快完成
-          generateDetails(false, "both", idToLoad).catch((error) => {
-            console.error("Error in auto-generation:", error);
-          });
+          // 延迟生成，确保 loadWordDetail 完成后再开始生成
+          setTimeout(() => {
+            generateDetails(false, "both", idToLoad).catch((error) => {
+              console.error("Error in auto-generation:", error);
+            });
+          }, 800); // 延迟生成，避免与状态刷新冲突
         }
       } else {
         console.warn("Word not found:", idToLoad);
@@ -870,14 +887,26 @@ export default function WordDetailScreen({ route, navigation }) {
               };
               
               // 只有在数据有变化时才更新
+              // 比较时忽略空数组和 undefined 的差异
+              const currentCompounds = currentWord.compounds || [];
+              const currentExamples = currentWord.examples || [];
+              const newCompounds = mergedWord.compounds || [];
+              const newExamples = mergedWord.examples || [];
+              
               const hasChanged = 
-                JSON.stringify(mergedWord.compounds) !== JSON.stringify(currentWord.compounds || []) ||
-                JSON.stringify(mergedWord.examples) !== JSON.stringify(currentWord.examples || []);
+                JSON.stringify(newCompounds) !== JSON.stringify(currentCompounds) ||
+                JSON.stringify(newExamples) !== JSON.stringify(currentExamples) ||
+                // 也检查其他重要字段的变化
+                fullWord.status !== currentWord.status ||
+                fullWord.translation !== currentWord.translation;
               
               if (hasChanged) {
-                console.log(`✅ Updated word data for ${newWordId}: compounds=${mergedWord.compounds.length}, examples=${mergedWord.examples.length}`);
+                console.log(`✅ Updated word data for ${newWordId}: compounds=${newCompounds.length}, examples=${newExamples.length}`);
                 return mergedWord;
               }
+              
+              // 如果数据没有变化，返回当前数据，避免重新渲染
+              return currentWord;
             } else {
               // 如果当前单词已经改变，仍然更新 allWords 缓存，以便用户滑回来时能立即看到数据
               console.log(`💾 Caching word data for ${newWordId} (current word is ${currentWord?._id})`);
@@ -899,15 +928,15 @@ export default function WordDetailScreen({ route, navigation }) {
         setTimeout(() => {
           // 使用函数式更新检查当前单词
           setWord((currentWord) => {
-            // 只有在当前单词匹配时才刷新状态
-            if (currentWord?._id === newWordId) {
+            // 只有在当前单词匹配且不在刷新中时才刷新状态
+            if (currentWord?._id === newWordId && !isRefreshingRef.current) {
               refreshAllStatuses(newWordId).catch((error) => {
                 console.error("Error refreshing statuses:", error);
               });
             }
             return currentWord;
           });
-        }, 800);
+        }, 1000); // 增加延迟，确保 loadWordDetail 完成后再刷新状态
       }, 300);
     } catch (error) {
       console.error("Error in handlePageSelected:", error);
