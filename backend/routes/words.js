@@ -26,7 +26,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get word statistics
+// Get word statistics (must be before /:wordId to avoid route conflict)
 router.get("/stats", async (req, res) => {
   try {
     const totalWords = await Word.countDocuments({ userId: req.userId });
@@ -58,6 +58,25 @@ router.get("/stats", async (req, res) => {
     res
       .status(500)
       .json({ error: "Failed to fetch statistics", message: error.message });
+  }
+});
+
+// Get a single word by ID (must be after /stats to avoid route conflict)
+router.get("/:wordId", async (req, res) => {
+  try {
+    const { wordId } = req.params;
+    const word = await Word.findOne({ _id: wordId, userId: req.userId });
+
+    if (!word) {
+      return res.status(404).json({ error: "Word not found" });
+    }
+
+    res.json({ word });
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to fetch word",
+      message: error.message,
+    });
   }
 });
 
@@ -254,11 +273,64 @@ router.post("/:wordId/generate-details", async (req, res) => {
         ? "examples"
         : "details";
     console.log(`🎯 ${action} ${target} for word: ${word.word}`);
-    const details = await generateWordDetails(
-      word.word,
-      word.pinyin,
-      word.translation
-    );
+    
+    // 确保 pinyin 和 translation 有值
+    const wordText = word.word || "";
+    const wordPinyin = word.pinyin || "";
+    const wordTranslation = word.translation || word.definition || "";
+    
+    if (!wordText) {
+      return res.status(400).json({ error: "Word text is required" });
+    }
+    
+    console.log(`📝 Generating details for: "${wordText}" (${wordPinyin}, ${wordTranslation})`);
+    
+    let details;
+    try {
+      details = await generateWordDetails(
+        wordText,
+        wordPinyin,
+        wordTranslation
+      );
+    } catch (error) {
+      console.error("❌ AI generation failed:", error.message);
+      return res.status(500).json({
+        error: "Failed to generate word details",
+        message: error.message || "AI service failed. Please check AI API configuration.",
+      });
+    }
+    
+    // 检查生成结果
+    if (!details || (!details.compounds && !details.examples)) {
+      console.error("❌ AI generation returned empty result");
+      return res.status(500).json({
+        error: "Failed to generate word details",
+        message: "AI service returned empty result. Please check AI API configuration.",
+      });
+    }
+    
+    // 确保至少有一些数据
+    if (updateType === "compounds" && (!details.compounds || details.compounds.length === 0)) {
+      return res.status(500).json({
+        error: "Failed to generate compounds",
+        message: "AI service did not generate any compounds.",
+      });
+    }
+    if (updateType === "examples" && (!details.examples || details.examples.length === 0)) {
+      return res.status(500).json({
+        error: "Failed to generate examples",
+        message: "AI service did not generate any examples.",
+      });
+    }
+    if (updateType === "both" && (
+      (!details.compounds || details.compounds.length === 0) ||
+      (!details.examples || details.examples.length === 0)
+    )) {
+      return res.status(500).json({
+        error: "Failed to generate word details",
+        message: `AI service did not generate complete details. Compounds: ${details.compounds?.length || 0}, Examples: ${details.examples?.length || 0}`,
+      });
+    }
 
     // 根据 updateType 更新对应的数据
     // 使用 findOneAndUpdate 避免版本冲突（乐观锁错误）

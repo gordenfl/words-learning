@@ -240,9 +240,6 @@ export default function WordContent({
             (!word.compounds || word.compounds.length === 0) ? (
               <View style={styles.generatingContainer}>
                 <ActivityIndicator color={theme.colors.primary} size="small" />
-                <Text variant="bodySmall" style={styles.generatingText}>
-                  Generating compounds...
-                </Text>
               </View>
             ) : word.compounds && word.compounds.length > 0 ? (
               <>
@@ -323,9 +320,6 @@ export default function WordContent({
             (!word.examples || word.examples.length === 0) ? (
               <View style={styles.generatingContainer}>
                 <ActivityIndicator color={theme.colors.primary} size="small" />
-                <Text variant="bodySmall" style={styles.generatingText}>
-                  Generating examples...
-                </Text>
               </View>
             ) : word.examples && word.examples.length > 0 ? (
               <>

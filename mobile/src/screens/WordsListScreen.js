@@ -175,6 +175,8 @@ export default function WordsListScreen({ navigation, route }) {
       );
 
       // 保存所有单词（用于传递给 WordDetailScreen）
+      // 注意：这里保存的是根据当前 filter 过滤后的完整列表
+      console.log(`📚 Loaded ${sortedWords.length} words for filter: ${filter}`);
       setAllWords(sortedWords);
 
       // 分页：获取指定页的数据
@@ -342,11 +344,14 @@ export default function WordsListScreen({ navigation, route }) {
           elevation={2}
           onPress={createPressHandler(() => {
             if (!isRemoving) {
-              // 传递所有单词（allWords），而不仅仅是当前页的单词（words）
-              // 这样用户可以在 WordDetailScreen 中滑动查看所有单词
+              // 传递当前过滤后的所有单词（allWords），而不仅仅是当前页的单词（words）
+              // 这样用户可以在 WordDetailScreen 中滑动查看当前过滤条件下的所有单词
+              // allWords 已经包含了当前 filter 下的所有单词（在 loadWords 中设置）
+              const wordsToPass = allWords.length > 0 ? allWords : words;
+              console.log(`📝 Navigating to WordDetail with ${wordsToPass.length} words (filter: ${filter})`);
               navigation.navigate("WordDetail", { 
                 wordId: item._id,
-                allWords: allWords.length > 0 ? allWords : words, // 优先使用 allWords，如果没有则使用 words
+                allWords: wordsToPass, // 传递当前过滤后的完整列表
               });
             }
           })}

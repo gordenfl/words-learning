@@ -409,7 +409,17 @@ Great work! Keep practicing!
  */
 async function generateWordDetails(word, pinyin, translation) {
   try {
-    const prompt = `请为中文字"${word}"（拼音：${pinyin}，英文：${translation}）生成学习材料。
+    // 确保参数不为空
+    const wordText = word || "";
+    const wordPinyin = pinyin || "";
+    const wordTranslation = translation || "";
+    
+    if (!wordText) {
+      console.error("❌ generateWordDetails: word is required");
+      throw new Error("Word text is required");
+    }
+    
+    const prompt = `请为中文字"${wordText}"${wordPinyin ? `（拼音：${wordPinyin}）` : ""}${wordTranslation ? `（英文：${wordTranslation}）` : ""}生成学习材料。
 
 【要求】
 1. **组词（3-5个）**：用这个字组成常用词汇
@@ -501,10 +511,21 @@ async function generateWordDetails(word, pinyin, translation) {
         }
       );
     } else {
-      throw new Error("No AI API configured");
+      console.error("❌ No AI API configured. Please set DEEPSEEK_API_KEY or OPENAI_API_KEY");
+      throw new Error("No AI API configured. Please set DEEPSEEK_API_KEY or OPENAI_API_KEY in environment variables.");
+    }
+
+    if (!response || !response.data || !response.data.choices || !response.data.choices[0]) {
+      console.error("❌ Invalid response from AI API:", response);
+      throw new Error("Invalid response from AI API");
     }
 
     const content = response.data.choices[0].message.content.trim();
+    
+    if (!content) {
+      console.error("❌ Empty content from AI API");
+      throw new Error("AI API returned empty content");
+    }
 
     // 尝试提取JSON（去除可能的markdown代码块标记）
     let jsonContent = content;
@@ -514,24 +535,42 @@ async function generateWordDetails(word, pinyin, translation) {
       jsonContent = content.split("```")[1].split("```")[0].trim();
     }
 
-    const result = JSON.parse(jsonContent);
+    let result;
+    try {
+      result = JSON.parse(jsonContent);
+    } catch (parseError) {
+      console.error("❌ Failed to parse JSON from AI response:", parseError);
+      console.error("Raw content:", content);
+      throw new Error(`Failed to parse AI response as JSON: ${parseError.message}`);
+    }
+    
+    // 验证结果格式
+    if (!result || typeof result !== 'object') {
+      console.error("❌ Invalid result format from AI:", result);
+      throw new Error("AI returned invalid result format");
+    }
+    
+    // 确保 compounds 和 examples 是数组
+    if (!Array.isArray(result.compounds)) {
+      result.compounds = [];
+    }
+    if (!Array.isArray(result.examples)) {
+      result.examples = [];
+    }
+    
     console.log(
-      `✅ Generated ${result.compounds?.length || 0} compounds and ${
-        result.examples?.length || 0
-      } examples for "${word}"`
+      `✅ Generated ${result.compounds.length} compounds and ${result.examples.length} examples for "${wordText}"`
     );
 
     return result;
   } catch (error) {
     console.error(
       "❌ Failed to generate word details:",
-      error.response?.data || error.message
+      error.response?.data || error.message,
+      error.stack
     );
-    // 返回空结果而不是抛出错误
-    return {
-      compounds: [],
-      examples: [],
-    };
+    // 抛出错误，让调用者处理
+    throw error;
   }
 }
 
