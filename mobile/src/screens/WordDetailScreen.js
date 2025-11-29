@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Modal,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
 import {
   Text,
@@ -25,12 +26,17 @@ import { wordsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useScrollDragHandler } from "../utils/touchHandler";
 import { useThemeContext } from "../context/ThemeContext";
+import VerticalSwipePager from "../components/VerticalSwipePager";
+import WordContent from "../components/WordContent";
 
 export default function WordDetailScreen({ route, navigation }) {
   const theme = useTheme();
   const { currentTheme } = useThemeContext();
   const dynamicTheme = currentTheme;
-  const { wordId } = route.params;
+  const { wordId: initialWordId, allWords: wordsFromRoute } = route.params || {};
+  const [wordId, setWordId] = useState(initialWordId);
+  const [allWords, setAllWords] = useState(wordsFromRoute || []);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [word, setWord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showToast, setShowToast] = useState(false);
@@ -44,14 +50,19 @@ export default function WordDetailScreen({ route, navigation }) {
     useState(false);
   const [isSentencePracticeCompleted, setIsSentencePracticeCompleted] =
     useState(false);
+  const [wordForStrokeOrder, setWordForStrokeOrder] = useState(null); // 用于笔顺 Modal 的单词
   const { scrollHandlers, createPressHandler } = useScrollDragHandler();
+  const loadingWordIdRef = useRef(null); // 用于防止重复加载同一个单词
+  const isRefreshingRef = useRef(false); // 用于防止重复刷新状态
+  const handlingPageChangeRef = useRef(false); // 用于防止重复处理页面切换
+  const lastHandledIndexRef = useRef(null); // 用于跟踪最后处理的索引
+  const lastHandledWordIdRef = useRef(null); // 用于跟踪最后处理的 wordId
+  const pendingLoadRequestsRef = useRef(new Map()); // 用于去重并发的加载请求
 
   // Create dynamic styles
   const styles = useMemo(() => createStyles(dynamicTheme), [dynamicTheme]);
 
-  useEffect(() => {
-    loadWordDetail();
-  }, []);
+  // 这个 useEffect 已经移到上面了
 
   // 确保导航栏显示返回按钮
   useLayoutEffect(() => {
@@ -69,43 +80,143 @@ export default function WordDetailScreen({ route, navigation }) {
   }, [navigation, dynamicTheme, theme, styles]);
 
   // 刷新所有状态的函数
-  const refreshAllStatuses = async () => {
-    if (!wordId) {
+  const refreshAllStatuses = async (targetWordId = null) => {
+    const idToRefresh = targetWordId || wordId;
+    if (!idToRefresh) {
       console.log("⚠️ refreshAllStatuses: wordId is missing");
       return;
     }
 
-    console.log("🔄 Refreshing all statuses for word:", wordId);
+    // 防止重复刷新
+    if (isRefreshingRef.current) {
+      console.log("⏸️ Already refreshing, skipping...");
+      return;
+    }
 
-    // 重新加载单词详情以确保状态最新
-    await loadWordDetail();
+    // 如果正在处理页面切换，延迟刷新，避免闪烁
+    if (handlingPageChangeRef.current) {
+      return;
+    }
 
-    // 等待 word 状态更新后再检查所有状态
-    // 使用更长的延迟确保 React 状态已更新
-    setTimeout(async () => {
-      console.log("✅ Checking all practice statuses...");
+    isRefreshingRef.current = true;
+    console.log("🔄 Refreshing all statuses for word:", idToRefresh);
 
-      // 直接使用 wordId 检查，不依赖 word 状态
-      // 这样可以避免状态更新延迟的问题
-      const writingCompleted = await checkWritingCompleted(wordId);
-      const compoundCompleted = await checkCompoundPracticeCompleted(wordId);
-      const sentenceCompleted = await checkSentencePracticeCompleted(wordId);
+    try {
+      // 批量检查所有状态，减少状态更新次数
+      const [writingCompleted, compoundCompleted, sentenceCompleted] = await Promise.all([
+        checkWritingCompleted(idToRefresh),
+        checkCompoundPracticeCompleted(idToRefresh),
+        checkSentencePracticeCompleted(idToRefresh),
+      ]);
 
-      // 更新状态
+      // 批量更新状态，减少重新渲染次数
       setIsWritingCompleted(writingCompleted);
       setIsCompoundPracticeCompleted(compoundCompleted);
       setIsSentencePracticeCompleted(sentenceCompleted);
 
       // 检查并更新单词状态（如果所有练习都完成）
-      await checkAndUpdateWordStatus();
+      // 延迟执行，避免立即更新导致闪烁
+      setTimeout(() => {
+        checkAndUpdateWordStatus().catch((error) => {
+          console.error("Error checking word status:", error);
+        });
+      }, 500);
 
       console.log("✅ All statuses refreshed:", {
         writing: writingCompleted,
         compound: compoundCompleted,
         sentence: sentenceCompleted,
       });
-    }, 300);
+    } finally {
+      isRefreshingRef.current = false;
+    }
   };
+
+  // 初始化 allWords（只在首次加载时执行）
+  useEffect(() => {
+    // 如果从路由参数中获取了单词列表，使用它（这是过滤后的列表）
+    if (wordsFromRoute && wordsFromRoute.length > 0) {
+      console.log(`📚 Using filtered words from route: ${wordsFromRoute.length} words`);
+      setAllWords(wordsFromRoute);
+      // 计算当前单词的索引
+      const index = wordsFromRoute.findIndex((w) => w._id === wordId);
+      if (index >= 0) {
+        setCurrentWordIndex(index);
+        console.log(`📍 Current word index: ${index} in filtered list`);
+      }
+      // 立即加载当前单词详情（从 allWords 中）
+      if (wordId) {
+        const foundWord = wordsFromRoute.find((w) => w._id === wordId);
+        if (foundWord) {
+          setWord(foundWord);
+          setLoading(false);
+        } else {
+          // 如果在列表中找不到，从 API 加载
+          console.warn(`⚠️ Word ${wordId} not found in filtered list, loading from API`);
+          loadWordDetail();
+        }
+      }
+    } else if (allWords.length === 0) {
+      // 如果没有从路由参数获取，且 allWords 为空，则从 API 加载所有单词
+      // 注意：这种情况下会加载所有单词，而不是过滤后的单词
+      console.log(`📚 No words from route, loading all words from API`);
+      const loadAllWords = async () => {
+        try {
+          const response = await wordsAPI.getAll();
+          const words = response.data.words || [];
+          setAllWords(words);
+          // 计算当前单词的索引
+          const index = words.findIndex((w) => w._id === wordId);
+          if (index >= 0) {
+            setCurrentWordIndex(index);
+          }
+          // 加载当前单词的详情
+          if (wordId) {
+            loadWordDetail();
+          }
+        } catch (error) {
+          console.error("Error loading all words:", error);
+          setLoading(false);
+        }
+      };
+      loadAllWords();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wordsFromRoute]); // 只依赖 wordsFromRoute，不依赖 wordId，避免循环
+
+  // 当 wordId 变化时，加载对应的单词详情（但不重新加载 allWords）
+  // 注意：这个 useEffect 只在首次加载或从外部导航进入时使用
+  // 页面切换时由 handlePageSelected 处理，避免重复加载
+  useEffect(() => {
+    // 如果正在处理页面切换，跳过这个 useEffect（避免重复加载）
+    if (handlingPageChangeRef.current) {
+      return;
+    }
+    
+    // 如果正在加载同一个单词，跳过（避免重复请求）
+    if (loadingWordIdRef.current === wordId) {
+      return;
+    }
+    
+    // 如果正在刷新状态，跳过（避免与 refreshAllStatuses 冲突）
+    if (isRefreshingRef.current) {
+      return;
+    }
+    
+    if (wordId && allWords.length > 0) {
+      // 如果 allWords 已经有数据，直接加载单词详情
+      const foundWord = allWords.find((w) => w._id === wordId);
+      if (foundWord && foundWord._id === word?._id) {
+        // 如果已经是当前显示的单词，不重新加载
+        return;
+      }
+      // 只在首次加载时显示 loading
+      if (!word) {
+        loadWordDetail();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wordId]); // 只依赖 wordId
 
   // 监听屏幕焦点，当从其他页面返回时刷新数据
   useEffect(() => {
@@ -119,15 +230,21 @@ export default function WordDetailScreen({ route, navigation }) {
   }, [navigation, wordId]);
 
   // 检查所有练习是否完成（当 word 更新时）
+  // 只在 word 状态变化时检查，避免在切换时立即检查导致闪烁
   useEffect(() => {
+    // 如果正在处理页面切换，延迟检查，避免闪烁
+    if (handlingPageChangeRef.current) {
+      return;
+    }
+    
     if (word && word._id) {
-      // 延迟检查以确保状态已更新
+      // 延迟检查以确保状态已更新，延迟时间更长以避免闪烁
       const timer = setTimeout(async () => {
         await checkWritingCompletedStatus();
         await checkCompoundPracticeCompletedStatus();
         await checkSentencePracticeCompletedStatus();
         await checkAndUpdateWordStatus();
-      }, 150);
+      }, 500);
 
       return () => clearTimeout(timer);
     }
@@ -196,35 +313,166 @@ export default function WordDetailScreen({ route, navigation }) {
     }
   };
 
-  const loadWordDetail = async () => {
-    try {
-      // 获取单词列表，找到对应的单词
-      const response = await wordsAPI.getAll();
-      const foundWord = response.data.words.find((w) => w._id === wordId);
-      setWord(foundWord);
+  const loadWordDetail = async (targetWordId = null, showLoading = true) => {
+    const idToLoad = targetWordId || wordId;
+    if (!idToLoad) {
+      if (showLoading) {
+        setLoading(false);
+      }
+      return null;
+    }
 
-      // 检查是否需要自动生成组词和例句（只在完全没有数据时才生成）
+    // 检查是否有待处理的请求（优先检查，避免重复请求）
+    const pendingRequest = pendingLoadRequestsRef.current.get(idToLoad);
+    if (pendingRequest) {
+      console.log("⏸️ Reusing pending request for word:", idToLoad);
+      return pendingRequest;
+    }
+
+    // 防止重复加载同一个单词
+    if (loadingWordIdRef.current === idToLoad) {
+      console.log("⏸️ Already loading word:", idToLoad);
+      return null;
+    }
+
+    loadingWordIdRef.current = idToLoad;
+
+    // 创建请求 Promise 并缓存
+    const loadPromise = (async () => {
+      try {
+        if (showLoading) {
+          setLoading(true);
+        }
+        
+        // 直接使用单个单词 API，避免获取所有单词（减少数据量和 API 调用）
+        let foundWord = null;
+        try {
+          const singleWordResponse = await wordsAPI.getWord(idToLoad);
+          foundWord = singleWordResponse.data.word;
+        } catch (err) {
+          console.log("Could not fetch single word, trying getAll...");
+          // 如果单个单词 API 失败，回退到 getAll
+          try {
+            const response = await wordsAPI.getAll();
+            const words = response.data.words || [];
+            foundWord = words.find((w) => w._id === idToLoad);
+            
+            // 更新 allWords（如果还没有设置或需要更新）
+            if (allWords.length === 0 || words.length > allWords.length) {
+              setAllWords(words);
+            }
+          } catch (getAllErr) {
+            console.error("Error loading words:", getAllErr);
+            throw getAllErr;
+          }
+        }
+      
       if (foundWord) {
+        // 只有在 showLoading 为 true 时才立即更新 word（首次加载）
+        // 如果 showLoading 为 false（后台加载），则只在 wordId 匹配时才更新
+        if (showLoading) {
+          setWord(foundWord);
+        } else {
+          // 后台加载时，只有在仍然是当前单词时才更新
+          // 使用函数式更新，确保检查最新的 wordId，并智能合并数据
+          setWord((currentWord) => {
+            // 只有在当前显示的单词 ID 匹配时才更新
+            if (currentWord?._id === idToLoad) {
+              // 智能合并：优先使用新数据（特别是如果新数据有内容）
+              // 这样可以确保生成完成后的数据能正确显示
+              const hasNewCompounds = foundWord.compounds && foundWord.compounds.length > 0;
+              const hasNewExamples = foundWord.examples && foundWord.examples.length > 0;
+              const hasCurrentCompounds = currentWord.compounds && currentWord.compounds.length > 0;
+              const hasCurrentExamples = currentWord.examples && currentWord.examples.length > 0;
+              
+              // 如果新数据有内容，优先使用新数据（这是生成完成后的情况）
+              // 如果新数据为空但当前有数据，则保留当前的（避免在生成过程中丢失）
+              // 如果两者都为空，使用新数据（空数组）
+              const mergedWord = {
+                ...foundWord,
+                compounds: hasNewCompounds ? foundWord.compounds : (hasCurrentCompounds ? currentWord.compounds : (foundWord.compounds || [])),
+                examples: hasNewExamples ? foundWord.examples : (hasCurrentExamples ? currentWord.examples : (foundWord.examples || [])),
+              };
+              
+              // 只有在数据有变化时才更新，避免不必要的重新渲染
+              // 比较时忽略空数组和 undefined 的差异
+              const currentCompounds = currentWord.compounds || [];
+              const currentExamples = currentWord.examples || [];
+              const newCompounds = mergedWord.compounds || [];
+              const newExamples = mergedWord.examples || [];
+              
+              const hasChanged = 
+                JSON.stringify(newCompounds) !== JSON.stringify(currentCompounds) ||
+                JSON.stringify(newExamples) !== JSON.stringify(currentExamples) ||
+                // 也检查其他重要字段的变化
+                foundWord.status !== currentWord.status ||
+                foundWord.translation !== currentWord.translation;
+              
+              if (hasChanged) {
+                console.log(`🔄 Merging word data for ${idToLoad}: compounds=${newCompounds.length}, examples=${newExamples.length}`);
+                return mergedWord;
+              }
+              
+              // 如果数据没有变化，返回当前数据，避免重新渲染
+              return currentWord;
+            }
+            return currentWord;
+          });
+        }
+
+        // 检查是否需要自动生成组词和例句（只在完全没有数据时才生成）
         const hasCompounds =
           foundWord.compounds && foundWord.compounds.length > 0;
         const hasExamples = foundWord.examples && foundWord.examples.length > 0;
 
         if (!hasCompounds || !hasExamples) {
           // 自动生成（只在缺失数据时）
+          // 延迟生成，避免与 loadWordDetail 和 refreshAllStatuses 冲突
+          console.log(`📝 Word ${idToLoad} missing details. Compounds: ${hasCompounds}, Examples: ${hasExamples}`);
+          // 延迟生成，确保 loadWordDetail 完成后再开始生成
           setTimeout(() => {
-            generateDetails(false); // false = 不强制更新
-          }, 500); // 延迟500ms开始生成，让界面先显示出来
+            generateDetails(false, "both", idToLoad).catch((error) => {
+              console.error("Error in auto-generation:", error);
+            });
+          }, 800); // 延迟生成，避免与状态刷新冲突
+        }
+      } else {
+        console.warn("Word not found:", idToLoad);
+        if (showLoading) {
+          setWord(null);
         }
       }
 
-      return foundWord;
-    } catch (error) {
-      console.log("Error loading word:", error);
-      Alert.alert("Error", "Could not load word details");
-      return null;
-    } finally {
-      setLoading(false);
-    }
+        return foundWord;
+      } catch (error) {
+        console.log("Error loading word:", error);
+        if (showLoading) {
+          Alert.alert("Error", "Could not load word details");
+        }
+        return null;
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+        // 清除缓存和 loadingWordIdRef
+        pendingLoadRequestsRef.current.delete(idToLoad);
+        if (loadingWordIdRef.current === idToLoad) {
+          loadingWordIdRef.current = null;
+        }
+      }
+    })();
+
+    // 缓存请求 Promise
+    pendingLoadRequestsRef.current.set(idToLoad, loadPromise);
+    
+    // 请求完成后自动清除缓存（延迟一点，避免立即重复请求）
+    loadPromise.finally(() => {
+      setTimeout(() => {
+        pendingLoadRequestsRef.current.delete(idToLoad);
+      }, 1000);
+    });
+
+    return loadPromise;
   };
 
   const speakWord = (text) => {
@@ -382,8 +630,14 @@ export default function WordDetailScreen({ route, navigation }) {
 
   // updateWordStatus 函数已移除 - 状态只能通过用户行为（如书写练习）自动更新
 
-  const generateDetails = async (force = false, updateType = "both") => {
-    // 设置对应的加载状态
+  const generateDetails = async (force = false, updateType = "both", targetWordId = null) => {
+    const idToGenerate = targetWordId || wordId;
+    if (!idToGenerate) {
+      console.warn("⚠️ generateDetails: wordId is missing");
+      return;
+    }
+
+    // 设置对应的加载状态，用于显示进度图标
     if (updateType === "compounds") {
       setGeneratingCompounds(true);
     } else if (updateType === "examples") {
@@ -393,12 +647,67 @@ export default function WordDetailScreen({ route, navigation }) {
     }
 
     try {
+      console.log(`🔄 Generating details for word: ${idToGenerate}, type: ${updateType}`);
       const response = await wordsAPI.generateDetails(
-        wordId,
+        idToGenerate,
         force,
         updateType
       );
-      setWord(response.data.word);
+      
+      // 检查生成的单词是否是当前显示的单词
+      // 优先使用 targetWordId（如果提供），否则使用当前的 wordId
+      const targetId = targetWordId || wordId;
+      const generatedWord = response.data.word;
+      
+      if (!generatedWord) {
+        console.warn("⚠️ Generated word is null");
+        return;
+      }
+      
+      console.log(`✅ Generated details for word ${generatedWord._id}`);
+      console.log(`   Target ID: ${targetId}, Current wordId: ${wordId}`);
+      console.log(`   Compounds: ${generatedWord.compounds?.length || 0}, Examples: ${generatedWord.examples?.length || 0}`);
+      
+      // 使用函数式更新，确保检查最新的 word 状态
+      setWord((currentWord) => {
+        // 如果当前显示的单词就是生成的单词，直接更新
+        if (currentWord?._id === generatedWord._id) {
+          console.log(`✅ Updating word state: current word (${currentWord._id}) matches generated word`);
+          console.log(`   New compounds: ${generatedWord.compounds?.length || 0}, examples: ${generatedWord.examples?.length || 0}`);
+          return generatedWord;
+        }
+        
+        // 如果当前显示的单词是目标单词，但生成的单词ID不匹配，检查是否需要更新
+        if (currentWord?._id === targetId && generatedWord._id === targetId) {
+          console.log(`✅ Updating word state: current word matches target and generated`);
+          return generatedWord;
+        }
+        
+        // 如果当前没有显示单词，但生成的单词是目标单词，也更新
+        if (!currentWord && generatedWord._id === targetId) {
+          console.log(`✅ Updating word state: no current word, but generated matches target`);
+          return generatedWord;
+        }
+        
+        console.log(`⏸️ Not updating: current=${currentWord?._id}, generated=${generatedWord._id}, target=${targetId}`);
+        return currentWord;
+      });
+      
+      // 更新 allWords 中的对应项
+      setAllWords((prevWords) => {
+        return prevWords.map((w) => 
+          w._id === generatedWord._id ? generatedWord : w
+        );
+      });
+      
+      // 如果生成的单词是目标单词，但当前 wordId 不匹配，可能需要重新加载
+      if (generatedWord._id === targetId && wordId !== targetId) {
+        console.log(`🔄 Generated word matches target but current wordId differs, reloading...`);
+        setTimeout(() => {
+          loadWordDetail(targetId, false);
+        }, 500);
+      }
+      
       // 成功后显示提示
       if (force) {
         const message =
@@ -410,14 +719,19 @@ export default function WordDetailScreen({ route, navigation }) {
         showToastMessage(message);
       } else {
         // 自动生成时不显示提示，直接更新界面
+        console.log(`✅ Auto-generation completed, word state updated silently`);
       }
     } catch (error) {
-      console.log("Error generating details:", error);
-      const errorMessage = force
-        ? "❌ Failed to update"
-        : "❌ Failed to generate";
-      showToastMessage(errorMessage);
+      console.error("❌ Failed to generate details:", error);
+      const errorMessage = error.response?.data?.message || error.message || "Failed to generate word details";
+      // 只在强制生成时显示错误提示，自动生成时静默失败
+      if (force) {
+        Alert.alert("生成失败", errorMessage);
+      } else {
+        console.warn("⚠️ Auto-generation failed (silent):", errorMessage);
+      }
     } finally {
+      // 清除加载状态，隐藏进度图标
       if (updateType === "compounds") {
         setGeneratingCompounds(false);
       } else if (updateType === "examples") {
@@ -457,7 +771,185 @@ export default function WordDetailScreen({ route, navigation }) {
     ]);
   };
 
-  if (loading) {
+  // 渲染单个单词内容的组件
+  const renderWordContent = useCallback(({ item: wordData, index }) => {
+    if (!wordData) {
+      return (
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      );
+    }
+
+    return (
+      <WordContent
+        word={wordData}
+        navigation={navigation}
+        onDeleteWord={deleteWord}
+        onGenerateDetails={generateDetails}
+        onCompoundPracticeClick={handleCompoundPracticeClick}
+        onSentencePracticeClick={handleSentencePracticeClick}
+        generatingDetails={generatingDetails}
+        generatingCompounds={generatingCompounds}
+        generatingExamples={generatingExamples}
+        showStrokeOrder={showStrokeOrder}
+        onShowStrokeOrder={(wordData) => {
+          setWordForStrokeOrder(wordData);
+          setShowStrokeOrder(true);
+        }}
+        styles={styles}
+      />
+    );
+  }, [
+    theme,
+    navigation,
+    deleteWord,
+    generateDetails,
+    handleCompoundPracticeClick,
+    handleSentencePracticeClick,
+    generatingDetails,
+    generatingCompounds,
+    generatingExamples,
+    showStrokeOrder,
+    styles,
+  ]);
+
+  // 处理页面切换
+  const handlePageSelected = useCallback(async (index) => {
+    if (allWords.length === 0 || index < 0 || index >= allWords.length) {
+      return;
+    }
+
+    const newWord = allWords[index];
+    if (!newWord) {
+      return;
+    }
+    const newWordId = newWord._id;
+    
+    // 防止重复处理同一个索引和 wordId
+    if (lastHandledIndexRef.current === index && lastHandledWordIdRef.current === newWordId) {
+      return; // 静默返回，不打印日志
+    }
+
+    // 防止并发处理
+    if (handlingPageChangeRef.current) {
+      return; // 静默返回，不打印日志
+    }
+
+    // 如果已经是当前单词，不执行任何操作
+    if (newWordId === wordId) {
+      lastHandledIndexRef.current = index;
+      lastHandledWordIdRef.current = newWordId;
+      return;
+    }
+    
+    handlingPageChangeRef.current = true;
+    lastHandledIndexRef.current = index;
+    lastHandledWordIdRef.current = newWordId;
+    
+    console.log("📄 切换到单词:", newWordId, "索引:", index);
+    
+    try {
+      // 先立即使用 allWords 中的基础数据更新显示，避免闪烁
+      setWord(newWord);
+      setWordId(newWordId);
+      setCurrentWordIndex(index);
+      
+      // 延迟执行后台加载和状态刷新，避免立即更新导致闪烁
+      // 使用更长的延迟，确保页面切换动画完成后再加载
+      setTimeout(() => {
+        // 即使单词已经改变，也继续加载这个单词的数据（用户可能会滑回来）
+        // 使用函数式更新确保只在当前单词匹配时才更新UI
+        console.log(`🔄 Loading word detail for ${newWordId} (may have changed during delay)`);
+        
+        // 在后台加载完整详情（不设置 loading 状态，避免闪烁）
+        loadWordDetail(newWordId, false).then((fullWord) => {
+          if (!fullWord) {
+            return;
+          }
+          
+          // 使用函数式更新，确保只有在仍然是当前单词时才更新UI
+          setWord((currentWord) => {
+            // 如果当前显示的单词就是加载的单词，更新数据
+            if (currentWord?._id === newWordId && fullWord._id === newWordId) {
+              // 智能合并：优先使用新数据（特别是如果新数据有内容）
+              const hasNewCompounds = fullWord.compounds && fullWord.compounds.length > 0;
+              const hasNewExamples = fullWord.examples && fullWord.examples.length > 0;
+              const hasCurrentCompounds = currentWord.compounds && currentWord.compounds.length > 0;
+              const hasCurrentExamples = currentWord.examples && currentWord.examples.length > 0;
+              
+              // 如果新数据有内容，优先使用新数据（这是生成完成后的情况）
+              // 如果新数据为空但当前有数据，则保留当前的（避免在生成过程中丢失）
+              const mergedWord = {
+                ...fullWord,
+                compounds: hasNewCompounds ? fullWord.compounds : (hasCurrentCompounds ? currentWord.compounds : (fullWord.compounds || [])),
+                examples: hasNewExamples ? fullWord.examples : (hasCurrentExamples ? currentWord.examples : (fullWord.examples || [])),
+              };
+              
+              // 只有在数据有变化时才更新
+              // 比较时忽略空数组和 undefined 的差异
+              const currentCompounds = currentWord.compounds || [];
+              const currentExamples = currentWord.examples || [];
+              const newCompounds = mergedWord.compounds || [];
+              const newExamples = mergedWord.examples || [];
+              
+              const hasChanged = 
+                JSON.stringify(newCompounds) !== JSON.stringify(currentCompounds) ||
+                JSON.stringify(newExamples) !== JSON.stringify(currentExamples) ||
+                // 也检查其他重要字段的变化
+                fullWord.status !== currentWord.status ||
+                fullWord.translation !== currentWord.translation;
+              
+              if (hasChanged) {
+                console.log(`✅ Updated word data for ${newWordId}: compounds=${newCompounds.length}, examples=${newExamples.length}`);
+                return mergedWord;
+              }
+              
+              // 如果数据没有变化，返回当前数据，避免重新渲染
+              return currentWord;
+            } else {
+              // 如果当前单词已经改变，仍然更新 allWords 缓存，以便用户滑回来时能立即看到数据
+              console.log(`💾 Caching word data for ${newWordId} (current word is ${currentWord?._id})`);
+              setAllWords((prevWords) => {
+                return prevWords.map((w) => 
+                  w._id === newWordId ? fullWord : w
+                );
+              });
+            }
+            
+            return currentWord;
+          });
+        }).catch((error) => {
+          console.error("Error loading word detail:", error);
+        });
+        
+        // 延迟刷新状态，避免立即更新导致闪烁
+        // 延迟更长时间，确保页面切换完成
+        setTimeout(() => {
+          // 使用函数式更新检查当前单词
+          setWord((currentWord) => {
+            // 只有在当前单词匹配且不在刷新中时才刷新状态
+            if (currentWord?._id === newWordId && !isRefreshingRef.current) {
+              refreshAllStatuses(newWordId).catch((error) => {
+                console.error("Error refreshing statuses:", error);
+              });
+            }
+            return currentWord;
+          });
+        }, 1000); // 增加延迟，确保 loadWordDetail 完成后再刷新状态
+      }, 300);
+    } catch (error) {
+      console.error("Error in handlePageSelected:", error);
+    } finally {
+      // 延迟清除标志，防止快速连续切换
+      setTimeout(() => {
+        handlingPageChangeRef.current = false;
+      }, 800);
+    }
+  }, [allWords, wordId]);
+
+  // 如果没有单词数据，显示加载或错误
+  if (loading || allWords.length === 0) {
     return (
       <View
         style={[
@@ -473,6 +965,7 @@ export default function WordDetailScreen({ route, navigation }) {
     );
   }
 
+  // 如果当前单词不存在，显示错误
   if (!word) {
     return (
       <View
@@ -488,18 +981,16 @@ export default function WordDetailScreen({ route, navigation }) {
     );
   }
 
-  const statusColor =
-    word.status === "known"
-      ? dynamicTheme.colors.success
-      : word.status === "learning"
-      ? dynamicTheme.colors.warning
-      : dynamicTheme.colors.error;
-
   return (
-    <ScrollView
-      {...scrollHandlers}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <VerticalSwipePager
+        data={allWords}
+        renderItem={renderWordContent}
+        initialPage={currentWordIndex}
+        onPageSelected={handlePageSelected}
+        preloadCount={1}
+      />
+      
       <Snackbar
         visible={showToast}
         onDismiss={() => setShowToast(false)}
@@ -508,301 +999,6 @@ export default function WordDetailScreen({ route, navigation }) {
       >
         {toastMessage}
       </Snackbar>
-
-      <View style={styles.content}>
-        {/* 状态标签 */}
-        <View style={styles.statusContainer}>
-          <Chip
-            icon={
-              word.status === "known" ? "check-circle" : "book-open-variant"
-            }
-            style={[
-              styles.statusChip,
-              {
-                backgroundColor:
-                  word.status === "known"
-                    ? dynamicTheme.colors.success + "20"
-                    : word.status === "learning"
-                    ? dynamicTheme.colors.warning + "20"
-                    : dynamicTheme.colors.error + "20",
-              },
-            ]}
-            textStyle={[styles.statusChipText, { color: statusColor }]}
-          >
-            {word.status === "known"
-              ? "Mastered"
-              : word.status === "learning"
-              ? "Learning"
-              : "To Learn"}
-          </Chip>
-        </View>
-
-        {/* 主要内容 */}
-        <Card style={styles.mainCard} mode="elevated" elevation={2}>
-          <Card.Content style={styles.mainContent}>
-            {word.pinyin && (
-              <Text
-                variant="titleLarge"
-                style={[styles.pinyin, { color: theme.colors.primary }]}
-              >
-                {word.pinyin}
-              </Text>
-            )}
-            <View style={styles.wordWithSpeaker}>
-              <Text style={styles.wordText}>{word.word}</Text>
-              <IconButton
-                icon="volume-high"
-                size={28}
-                iconColor={theme.colors.primary}
-                onPress={createPressHandler(() => speakWord(word.word))}
-                style={styles.speakerButton}
-              />
-            </View>
-            <IconButton
-              icon="gesture-tap"
-              size={20}
-              iconColor={ChildrenTheme.colors.textLight}
-              onPress={createPressHandler(() => setShowStrokeOrder(true))}
-              style={styles.strokeHintButton}
-            />
-            {word.translation && (
-              <Text variant="titleMedium" style={styles.translation}>
-                {word.translation}
-              </Text>
-            )}
-            <Text variant="bodySmall" style={styles.tapHint}>
-              Tap 🔊 to hear • Tap 字 to see strokes
-            </Text>
-            {/* 删除按钮 - 放在右下角 */}
-            <View style={styles.deleteButtonContainer}>
-              <IconButton
-                icon="delete-outline"
-                size={24}
-                iconColor={dynamicTheme.colors.error}
-                onPress={createPressHandler(deleteWord)}
-                style={styles.deleteButton}
-              />
-            </View>
-          </Card.Content>
-        </Card>
-
-        {/* Writing 按钮 */}
-        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
-          <Card.Content>
-            <Button
-              mode="contained"
-              onPress={createPressHandler(() =>
-                navigation.navigate("WordWriting", { word })
-              )}
-              style={styles.writingButton}
-              buttonColor={ChildrenTheme.colors.primary}
-              icon={isWritingCompleted ? "check-circle" : "pencil"}
-            >
-              {isWritingCompleted && "✓ "}Writing • 书写练习
-            </Button>
-          </Card.Content>
-        </Card>
-
-        {/* 组词模块 */}
-        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
-          <Card.Content>
-            <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" style={styles.sectionTitle}>
-                📚 Word Compounds
-              </Text>
-              {word.compounds && word.compounds.length > 0 && (
-                <IconButton
-                  icon="refresh"
-                  size={20}
-                  iconColor={theme.colors.primary}
-                  onPress={createPressHandler(() =>
-                    generateDetails(true, "compounds")
-                  )}
-                  disabled={generatingCompounds}
-                />
-              )}
-            </View>
-            {(generatingDetails || generatingCompounds) &&
-            (!word.compounds || word.compounds.length === 0) ? (
-              <View style={styles.generatingContainer}>
-                <ActivityIndicator color={theme.colors.primary} size="small" />
-                <Text variant="bodySmall" style={styles.generatingText}>
-                  Generating compounds...
-                </Text>
-              </View>
-            ) : word.compounds && word.compounds.length > 0 ? (
-              <>
-                {word.compounds.map((compound, index) => (
-                  <Surface
-                    key={index}
-                    style={styles.compoundItem}
-                    elevation={0}
-                    onTouchEnd={createPressHandler(() =>
-                      speakWord(compound.word)
-                    )}
-                  >
-                    <View style={styles.compoundLeft}>
-                      <Text variant="titleMedium" style={styles.compoundWord}>
-                        {compound.word}
-                      </Text>
-                      {compound.pinyin && (
-                        <Text variant="bodySmall" style={styles.compoundPinyin}>
-                          {compound.pinyin}
-                        </Text>
-                      )}
-                    </View>
-                    {compound.meaning && (
-                      <Text variant="bodyMedium" style={styles.compoundMeaning}>
-                        {compound.meaning}
-                      </Text>
-                    )}
-                  </Surface>
-                ))}
-              </>
-            ) : (
-              <Text variant="bodyMedium" style={styles.emptyText}>
-                No compounds yet
-              </Text>
-            )}
-          </Card.Content>
-        </Card>
-
-        {/* 组词练习按钮 */}
-        {word.compounds && word.compounds.length > 0 && (
-          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
-            <Card.Content>
-              <Button
-                mode="contained"
-                onPress={createPressHandler(handleCompoundPracticeClick)}
-                style={styles.compoundPracticeButton}
-                buttonColor={ChildrenTheme.colors.secondary}
-                icon={isCompoundPracticeCompleted ? "check-circle" : "puzzle"}
-              >
-                {isCompoundPracticeCompleted && "✓ "}Compound Practice •
-                组词练习
-              </Button>
-            </Card.Content>
-          </Card>
-        )}
-
-        {/* 例句模块 */}
-        <Card style={styles.sectionCard} mode="elevated" elevation={1}>
-          <Card.Content>
-            <View style={styles.sectionHeader}>
-              <Text variant="titleMedium" style={styles.sectionTitle}>
-                💬 Example Sentences
-              </Text>
-              {word.examples && word.examples.length > 0 && (
-                <IconButton
-                  icon="refresh"
-                  size={20}
-                  iconColor={theme.colors.primary}
-                  onPress={createPressHandler(() =>
-                    generateDetails(true, "examples")
-                  )}
-                  disabled={generatingExamples}
-                />
-              )}
-            </View>
-            {(generatingDetails || generatingExamples) &&
-            (!word.examples || word.examples.length === 0) ? (
-              <View style={styles.generatingContainer}>
-                <ActivityIndicator color={theme.colors.primary} size="small" />
-                <Text variant="bodySmall" style={styles.generatingText}>
-                  Generating examples...
-                </Text>
-              </View>
-            ) : word.examples && word.examples.length > 0 ? (
-              <>
-                {word.examples.map((example, index) => {
-                  const sentenceText =
-                    typeof example === "string" ? example : example.chinese;
-
-                  return (
-                    <Surface
-                      key={index}
-                      style={styles.exampleItem}
-                      elevation={0}
-                      onTouchEnd={createPressHandler(() =>
-                        speakWord(sentenceText)
-                      )}
-                    >
-                      {typeof example === "string" ? (
-                        <Text variant="bodyLarge" style={styles.exampleText}>
-                          {example}
-                        </Text>
-                      ) : (
-                        <>
-                          <Text
-                            variant="bodyLarge"
-                            style={styles.exampleChinese}
-                          >
-                            {example.chinese}
-                          </Text>
-                          {example.pinyin && (
-                            <Text
-                              variant="bodySmall"
-                              style={styles.examplePinyin}
-                            >
-                              {example.pinyin}
-                            </Text>
-                          )}
-                          {example.english && (
-                            <Text
-                              variant="bodyMedium"
-                              style={styles.exampleEnglish}
-                            >
-                              {example.english}
-                            </Text>
-                          )}
-                        </>
-                      )}
-                    </Surface>
-                  );
-                })}
-              </>
-            ) : (
-              <Text variant="bodyMedium" style={styles.emptyText}>
-                No examples yet
-              </Text>
-            )}
-          </Card.Content>
-        </Card>
-
-        {/* 造句练习按钮 */}
-        {word.examples && word.examples.length > 0 && (
-          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
-            <Card.Content>
-              <Button
-                mode="contained"
-                onPress={createPressHandler(handleSentencePracticeClick)}
-                style={styles.sentencePracticeButton}
-                buttonColor={ChildrenTheme.colors.accent}
-                icon={
-                  isSentencePracticeCompleted ? "check-circle" : "message-text"
-                }
-              >
-                {isSentencePracticeCompleted && "✓ "}Sentence Practice •
-                造句练习
-              </Button>
-            </Card.Content>
-          </Card>
-        )}
-
-        {/* 定义 */}
-        {word.definition && (
-          <Card style={styles.sectionCard} mode="elevated" elevation={1}>
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.sectionTitle}>
-                Definition
-              </Text>
-              <Text variant="bodyLarge" style={styles.definition}>
-                {word.definition}
-              </Text>
-            </Card.Content>
-          </Card>
-        )}
-      </View>
 
       {/* 笔顺动画 Modal */}
       <Modal
@@ -1109,7 +1305,7 @@ export default function WordDetailScreen({ route, navigation }) {
                               return;
                             }
                             
-                            writer = HanziWriter.create('character-target', '${word.word}', {
+                            writer = HanziWriter.create('character-target', '${wordForStrokeOrder?.word || word?.word || ""}', {
                               width: 280,
                               height: 280,
                               padding: 15,
@@ -1231,7 +1427,7 @@ export default function WordDetailScreen({ route, navigation }) {
           </Card>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -1256,6 +1452,10 @@ const createStyles = (theme) => StyleSheet.create({
   },
   content: {
     padding: ChildrenTheme.spacing.md,
+  },
+  scrollContent: {
+    paddingBottom: 120, // 增加底部 padding，确保底部按钮可见（使用固定值以确保足够空间）
+    flexGrow: 1,
   },
   statusContainer: {
     flexDirection: "row",

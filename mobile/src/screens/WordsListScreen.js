@@ -25,6 +25,7 @@ export default function WordsListScreen({ navigation, route }) {
   const theme = useTheme();
   const initialFilter = route.params?.filter || "all";
   const [words, setWords] = useState([]);
+  const [allWords, setAllWords] = useState([]); // 保存所有单词（用于传递给 WordDetailScreen）
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [filter, setFilter] = useState(initialFilter);
@@ -76,6 +77,9 @@ export default function WordsListScreen({ navigation, route }) {
           }).start(() => {
             setWords((prevWords) =>
               prevWords.filter((word) => word._id !== wordId)
+            );
+            setAllWords((prevAllWords) =>
+              prevAllWords.filter((word) => word._id !== wordId)
             );
             setRemovingWordIds((prev) => {
               const newSet = new Set(prev);
@@ -129,6 +133,11 @@ export default function WordsListScreen({ navigation, route }) {
                 word._id === wordId ? { ...word, status: newStatus } : word
               )
             );
+            setAllWords((prevAllWords) =>
+              prevAllWords.map((word) =>
+                word._id === wordId ? { ...word, status: newStatus } : word
+              )
+            );
           }
         }
 
@@ -158,12 +167,17 @@ export default function WordsListScreen({ navigation, route }) {
 
       const status = filter === "all" ? undefined : filter;
       const response = await wordsAPI.getWords(status);
-      const allWords = response.data.words;
+      const fetchedWords = response.data.words;
 
       // 按创建时间倒序排列（最新的在前）
-      const sortedWords = allWords.sort(
+      const sortedWords = fetchedWords.sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
+
+      // 保存所有单词（用于传递给 WordDetailScreen）
+      // 注意：这里保存的是根据当前 filter 过滤后的完整列表
+      console.log(`📚 Loaded ${sortedWords.length} words for filter: ${filter}`);
+      setAllWords(sortedWords);
 
       // 分页：获取指定页的数据
       const start = (pageNum - 1) * PAGE_SIZE;
@@ -238,14 +252,19 @@ export default function WordsListScreen({ navigation, route }) {
           });
           delete fadeAnims.current[wordId];
         });
-      } else {
-        // 如果符合过滤条件，更新状态
-        setWords((prevWords) =>
-          prevWords.map((word) =>
-            word._id === wordId ? { ...word, status: newStatus } : word
-          )
-        );
-      }
+        } else {
+          // 如果符合过滤条件，更新状态
+          setWords((prevWords) =>
+            prevWords.map((word) =>
+              word._id === wordId ? { ...word, status: newStatus } : word
+            )
+          );
+          setAllWords((prevAllWords) =>
+            prevAllWords.map((word) =>
+              word._id === wordId ? { ...word, status: newStatus } : word
+            )
+          );
+        }
     } catch (error) {
       Alert.alert(
         "Oops!",
@@ -281,6 +300,9 @@ export default function WordsListScreen({ navigation, route }) {
               // 动画结束后从列表中移除
               setWords((prevWords) =>
                 prevWords.filter((word) => word._id !== wordId)
+              );
+              setAllWords((prevAllWords) =>
+                prevAllWords.filter((word) => word._id !== wordId)
               );
               setRemovingWordIds((prev) => {
                 const newSet = new Set(prev);
@@ -322,7 +344,15 @@ export default function WordsListScreen({ navigation, route }) {
           elevation={2}
           onPress={createPressHandler(() => {
             if (!isRemoving) {
-              navigation.navigate("WordDetail", { wordId: item._id });
+              // 传递当前过滤后的所有单词（allWords），而不仅仅是当前页的单词（words）
+              // 这样用户可以在 WordDetailScreen 中滑动查看当前过滤条件下的所有单词
+              // allWords 已经包含了当前 filter 下的所有单词（在 loadWords 中设置）
+              const wordsToPass = allWords.length > 0 ? allWords : words;
+              console.log(`📝 Navigating to WordDetail with ${wordsToPass.length} words (filter: ${filter})`);
+              navigation.navigate("WordDetail", { 
+                wordId: item._id,
+                allWords: wordsToPass, // 传递当前过滤后的完整列表
+              });
             }
           })}
           disabled={isRemoving}

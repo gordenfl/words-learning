@@ -81,6 +81,8 @@ export const wordsAPI = {
 
   getAll: () => api.get("/words"),
 
+  getWord: (wordId) => api.get(`/words/${wordId}`),
+
   getStats: () => api.get("/words/stats"),
 
   addWord: (word, definition, examples, sourceImage) =>
