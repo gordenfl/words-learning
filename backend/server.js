@@ -18,6 +18,7 @@ const userRoutes = require('./routes/users');
 const articleRoutes = require('./routes/articles');
 const ocrRoutes = require('./routes/ocr');
 const speechRoutes = require('./routes/speech');
+const pinyinRoutes = require('./routes/pinyin');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -42,6 +43,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/ocr', ocrRoutes);
 app.use('/api/speech', speechRoutes);
+app.use('/api/pinyin', pinyinRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

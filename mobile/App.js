@@ -23,6 +23,8 @@ import CompoundPracticeScreen from "./src/screens/CompoundPracticeScreen";
 import SentencePracticeScreen from "./src/screens/SentencePracticeScreen";
 import ImageViewScreen from "./src/screens/ImageViewScreen";
 import LoadingScreen from "./src/screens/LoadingScreen";
+import PinyinListScreen from "./src/screens/PinyinListScreen";
+import PinyinCardScreen from "./src/screens/PinyinCardScreen";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 
 const Stack = createStackNavigator();
@@ -167,6 +169,16 @@ function AppContent() {
           name="ImageView"
           component={ImageViewScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PinyinList"
+          component={PinyinListScreen}
+          options={{ title: "拼音学习 (Pinyin)" }}
+        />
+        <Stack.Screen
+          name="PinyinCard"
+          component={PinyinCardScreen}
+          options={{ title: "拼音卡片" }}
         />
       </Stack.Navigator>
     </NavigationContainer>

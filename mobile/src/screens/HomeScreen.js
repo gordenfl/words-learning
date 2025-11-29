@@ -468,6 +468,19 @@ export default function HomeScreen({ navigation, route }) {
       <View style={[styles.bottomNav, { paddingBottom: insets.bottom }]}>
         <TouchableOpacity
           style={styles.navItem}
+          onPress={() => navigation.navigate("PinyinList")}
+          activeOpacity={0.7}
+        >
+          <IconButton
+            icon="alphabetical"
+            size={28}
+            iconColor={dynamicTheme.colors.primary}
+          />
+          <Text style={styles.navLabel}>Pinyin</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
           onPress={() => navigation.navigate("WordsList", { filter: "all" })}
           activeOpacity={0.7}
         >

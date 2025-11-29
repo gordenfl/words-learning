@@ -151,4 +151,26 @@ export const speechAPI = {
     api.post("/speech/recognize-base64", { audioBase64, languageCode }),
 };
 
+// Pinyin API
+export const pinyinAPI = {
+  getLessons: (type, difficulty) =>
+    api.get("/pinyin/lessons", { params: { type, difficulty } }),
+
+  getLesson: (lessonId) => api.get(`/pinyin/lessons/${lessonId}`),
+
+  getProgress: () => api.get("/pinyin/progress"),
+
+  getProgressForLesson: (lessonId) =>
+    api.get(`/pinyin/progress/${lessonId}`),
+
+  updateProgress: (lessonId, practiceType, score, completed) =>
+    api.post(`/pinyin/progress/${lessonId}`, {
+      practiceType,
+      score,
+      completed,
+    }),
+
+  getWordsByPinyin: (pinyin) => api.get(`/pinyin/words/${pinyin}`),
+};
+
 export default api;
