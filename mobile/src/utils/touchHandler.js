@@ -1,10 +1,12 @@
 import { useRef } from 'react';
+import { useDrag } from '../context/DragContext';
 
 /**
  * Hook to track scroll/drag state and prevent click events after dragging
  * @returns {Object} { isDragging, scrollHandlers, createPressHandler }
  */
 export const useScrollDragHandler = () => {
+  const { isDragging: contextIsDragging } = useDrag();
   const isDraggingRef = useRef(false);
   const dragTimeoutRef = useRef(null);
   const touchStartRef = useRef(null);
@@ -102,6 +104,11 @@ export const useScrollDragHandler = () => {
    */
   const createPressHandler = (onPress) => {
     return (event) => {
+      // 检查 Context 中的拖动状态
+      if (contextIsDragging) {
+        return;
+      }
+      
       // 检查是否正在拖动
       if (isDraggingRef.current) {
         // Don't trigger if we're dragging

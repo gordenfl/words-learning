@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { View, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
 import PagerView from "react-native-pager-view";
+import { DragProvider, useDrag } from "../context/DragContext";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -16,7 +17,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get("window");
  * @param {Number} preloadCount - Number of pages to preload (default: 1)
  * @param {ReactNode} loadingComponent - Component to show while loading
  */
-export default function VerticalSwipePager({
+function VerticalSwipePagerInner({
   data = [],
   renderItem,
   initialPage = 0,
@@ -28,6 +29,7 @@ export default function VerticalSwipePager({
 }) {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [items, setItems] = useState(data);
+  const { startDrag, endDrag, handleTouchStart, handleTouchMove, handleTouchEnd } = useDrag();
   const [loading, setLoading] = useState(false);
   const [loadedPages, setLoadedPages] = useState(new Set([initialPage]));
   const pagerRef = useRef(null);
@@ -147,13 +149,26 @@ export default function VerticalSwipePager({
   );
 
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <PagerView
         ref={pagerRef}
         style={styles.pager}
         initialPage={initialPage}
         orientation="vertical"
         onPageSelected={handlePageSelected}
+        onPageScrollStateChanged={(e) => {
+          const state = e.nativeEvent.pageScrollState;
+          if (state === 'dragging') {
+            startDrag();
+          } else if (state === 'idle') {
+            endDrag();
+          }
+        }}
         overdrag={false}
         scrollEnabled={true}
       >
@@ -215,4 +230,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 });
+
+export default function VerticalSwipePager(props) {
+  return (
+    <DragProvider>
+      <VerticalSwipePagerInner {...props} />
+    </DragProvider>
+  );
+}
 
