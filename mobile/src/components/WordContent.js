@@ -176,7 +176,7 @@ export default function WordContent({
               icon="gesture-tap"
               size={20}
               iconColor={ChildrenTheme.colors.textLight}
-              onPress={createPressHandler(() => onShowStrokeOrder?.(wordData))}
+              onPress={createPressHandler(() => onShowStrokeOrder?.(word))}
               style={styles.strokeHintButton}
             />
             {word.translation && (
