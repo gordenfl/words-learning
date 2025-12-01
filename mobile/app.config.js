@@ -27,8 +27,6 @@ const baseConfig = {
         "We need camera access to scan and recognize Chinese characters from books and images.",
       NSPhotoLibraryUsageDescription:
         "We need photo library access to select images for Chinese character recognition.",
-      NSPhotoLibraryAddUsageDescription:
-        "We need permission to save processed images to your photo library.",
       NSMicrophoneUsageDescription:
         "We need microphone access to record your voice for speech recognition in compound practice.",
       ITSAppUsesNonExemptEncryption: false,
@@ -106,8 +104,7 @@ const baseConfig = {
         advertiserIDCollectionEnabled: false,
         autoLogAppEventsEnabled: false,
         isAutoInitEnabled: true,
-        iosUserTrackingPermission:
-          "This identifier will be used to deliver personalized ads to you.",
+        // 移除 iosUserTrackingPermission，因为应用不收集广告ID，不需要 ATT 权限
       },
     ],
     "expo-apple-authentication", // 暂时注释，等包安装成功后再取消注释
