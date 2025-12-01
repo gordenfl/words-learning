@@ -151,6 +151,12 @@ export const speechAPI = {
     api.post("/speech/recognize-base64", { audioBase64, languageCode }),
 };
 
+// TTS API (Text-to-Speech)
+export const ttsAPI = {
+  synthesize: (text, languageCode = "zh-CN") =>
+    api.post("/tts/synthesize", { text, languageCode }),
+};
+
 // Pinyin API
 export const pinyinAPI = {
   getLessons: (type, difficulty) =>

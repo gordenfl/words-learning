@@ -120,3 +120,4 @@ router.post("/recognize-base64", async (req, res) => {
 
 module.exports = router;
 
+

@@ -83,3 +83,4 @@ docker-compose logs -f backend
 ```
 
 如果看到 "✅ Google Speech recognized: ..." 说明配置成功！
+

@@ -16,8 +16,9 @@ import {
   Chip,
   Surface,
 } from "react-native-paper";
-import * as Speech from "expo-speech";
-import { pinyinAPI } from "../services/api";
+import { Audio } from "expo-av";
+import * as FileSystem from "expo-file-system";
+import { pinyinAPI, ttsAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useThemeContext } from "../context/ThemeContext";
 import { useScrollDragHandler } from "../utils/touchHandler";
@@ -62,21 +63,56 @@ export default function PinyinCardScreen({ route, navigation }) {
     }
   };
 
-  const playAudio = () => {
+  const playAudio = async () => {
     if (!lesson) return;
     
-    setPlaying(true);
-    Speech.speak(lesson.pinyin, {
-      language: "zh-CN",
-      pitch: 1.0,
-      rate: 0.8,
-      onDone: () => setPlaying(false),
-      onStopped: () => setPlaying(false),
-      onError: () => {
+    try {
+      setPlaying(true);
+      
+      // 使用TTS API生成标准拼音发音
+      const response = await ttsAPI.synthesize(lesson.pinyin, "zh-CN");
+      
+      if (!response.data.success || !response.data.audioBase64) {
+        throw new Error("Failed to generate audio");
+      }
+      
+      // 将base64音频保存为临时文件
+      const audioUri = `${FileSystem.cacheDirectory}pinyin_${lesson.pinyin}_${Date.now()}.mp3`;
+      await FileSystem.writeAsStringAsync(audioUri, response.data.audioBase64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      // 使用expo-av播放音频
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true }
+      );
+      
+      // 监听播放完成
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setPlaying(false);
+          sound.unloadAsync().catch(console.error);
+          // 清理临时文件
+          FileSystem.deleteAsync(audioUri, { idempotent: true }).catch(console.error);
+        }
+        if (status.error) {
+          console.error("Playback error:", status.error);
+          setPlaying(false);
+          sound.unloadAsync().catch(console.error);
+          FileSystem.deleteAsync(audioUri, { idempotent: true }).catch(console.error);
+        }
+      });
+      
+      // 如果出错，也停止播放状态
+      setTimeout(() => {
         setPlaying(false);
-        Alert.alert("Error", "Failed to play audio");
-      },
-    });
+      }, 10000); // 10秒超时
+    } catch (error) {
+      console.error("Error playing audio:", error);
+      setPlaying(false);
+      Alert.alert("Error", "Failed to play audio. Please check your network connection and TTS API configuration.");
+    }
   };
 
   const createStyles = (theme) =>
