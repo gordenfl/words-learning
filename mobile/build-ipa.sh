@@ -17,6 +17,37 @@ CONFIGURATION="Release"
 ARCHIVE_PATH="./build/${SCHEME}.xcarchive"
 EXPORT_PATH="./build/export"
 
+# 自动递增 build 号
+echo "🔢 自动递增 Build 号..."
+cd "$MOBILE_DIR"
+
+# 从 app.config.js 读取当前 build 号
+CURRENT_BUILD=$(grep -oE 'buildNumber:\s*"[0-9]+"' "$MOBILE_DIR/app.config.js" | grep -oE '[0-9]+' | head -1)
+
+if [ -z "$CURRENT_BUILD" ]; then
+    echo "❌ 无法从 app.config.js 读取 build 号"
+    exit 1
+fi
+
+# 递增 build 号
+NEW_BUILD=$((CURRENT_BUILD + 1))
+
+echo "   Build 号: $CURRENT_BUILD → $NEW_BUILD"
+
+# 1. 更新 app.config.js
+sed -i '' "s/buildNumber: \"$CURRENT_BUILD\"/buildNumber: \"$NEW_BUILD\"/" "$MOBILE_DIR/app.config.js"
+
+# 2. 更新 Info.plist
+sed -i '' "/<key>CFBundleVersion<\/key>/,/<string>/s/<string>$CURRENT_BUILD<\/string>/<string>$NEW_BUILD<\/string>/" "$IOS_DIR/ChineseWordsLearning/Info.plist"
+
+# 3. 更新 project.pbxproj
+sed -i '' "s/CURRENT_PROJECT_VERSION = $CURRENT_BUILD;/CURRENT_PROJECT_VERSION = $NEW_BUILD;/g" "$IOS_DIR/ChineseWordsLearning.xcodeproj/project.pbxproj"
+
+echo "✅ Build 号已更新为 $NEW_BUILD"
+echo ""
+
+cd "$IOS_DIR"
+
 # 根据构建类型设置导出选项文件名（相对于 ios 目录）
 if [ "$BUILD_TYPE" == "ad-hoc" ]; then
     EXPORT_OPTIONS="$IOS_DIR/exportOptionsAdHoc.plist"
