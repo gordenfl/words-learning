@@ -1,7 +1,9 @@
 /**
  * 儿童友好主题配置
  * 专为儿童设计的颜色、字体、间距等设计系统
+ * Duolingo 风格：圆润、友好、易读
  */
+import { Platform } from 'react-native';
 
 export const ChildrenTheme = {
   // 颜色系统 - 明亮、友好、温暖
@@ -26,10 +28,10 @@ export const ChildrenTheme = {
     error: '#FF6B6B',       // 红色 - 错误（柔和）
     info: '#4A90E2',        // 蓝色 - 信息
     
-    // 背景色
-    background: '#FFF8F0',   // 米白色 - 柔和背景
+    // 背景色 - Duolingo 风格：纯白、清爽
+    background: '#FFFFFF',   // 纯白色背景（类似 Duolingo）
     backgroundLight: '#FFFFFF', // 纯白
-    backgroundDark: '#F5E6D3', // 浅棕色
+    backgroundDark: '#F5F5F5', // 浅灰色（替代浅棕色）
     
     // 卡片和表面
     card: '#FFFFFF',
@@ -41,171 +43,222 @@ export const ChildrenTheme = {
     textMuted: '#BDC3C7',   // 浅灰
     textInverse: '#FFFFFF', // 白色文字
     
-    // 边框和分割线
-    border: '#E8E8E8',
-    divider: '#F0F0F0',
+    // 边框和分割线 - Duolingo 风格：更柔和
+    border: '#E0E0E0',
+    divider: '#F5F5F5',
     
     // 特殊用途
     overlay: 'rgba(0, 0, 0, 0.3)', // 遮罩层
     shadow: 'rgba(0, 0, 0, 0.1)',  // 阴影
   },
 
-  // 字体系统 - 大、清晰、易读
+  // 字体系统 - Duolingo 风格：圆润、友好、易读
+  // 使用圆润字体（iOS: Avenir Next, Android: Roboto）
+  fontFamily: {
+    regular: Platform.select({
+      ios: 'Avenir Next',
+      android: 'Roboto',
+      default: 'System',
+    }),
+    medium: Platform.select({
+      ios: 'Avenir Next Medium',
+      android: 'Roboto Medium',
+      default: 'System',
+    }),
+    bold: Platform.select({
+      ios: 'Avenir Next Bold',
+      android: 'Roboto Bold',
+      default: 'System',
+    }),
+  },
+  
   typography: {
-    // 标题
+    // 标题 - 更大、更圆润
     h1: {
-      fontSize: 36,
-      fontWeight: 'bold',
-      lineHeight: 44,
+      fontSize: 40,
+      fontWeight: '700',
+      lineHeight: 48,
       color: '#2C3E50',
+      letterSpacing: -0.5,
     },
     h2: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      lineHeight: 36,
+      fontSize: 32,
+      fontWeight: '700',
+      lineHeight: 40,
       color: '#2C3E50',
+      letterSpacing: -0.3,
     },
     h3: {
-      fontSize: 24,
+      fontSize: 26,
       fontWeight: '600',
-      lineHeight: 32,
+      lineHeight: 34,
       color: '#2C3E50',
+      letterSpacing: -0.2,
     },
     h4: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: '600',
-      lineHeight: 28,
+      lineHeight: 30,
       color: '#2C3E50',
+      letterSpacing: -0.1,
     },
     
-    // 正文
+    // 正文 - 更大、更友好
     body: {
-      fontSize: 18,
-      fontWeight: '400',
-      lineHeight: 28,
-      color: '#2C3E50',
-    },
-    bodyLarge: {
-      fontSize: 20,
+      fontSize: 19,
       fontWeight: '400',
       lineHeight: 30,
       color: '#2C3E50',
+      letterSpacing: 0.1,
+    },
+    bodyLarge: {
+      fontSize: 21,
+      fontWeight: '400',
+      lineHeight: 32,
+      color: '#2C3E50',
+      letterSpacing: 0.1,
     },
     bodySmall: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '400',
-      lineHeight: 24,
+      lineHeight: 26,
       color: '#7F8C8D',
+      letterSpacing: 0.1,
     },
     
     // 特殊用途
     caption: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '400',
-      lineHeight: 20,
+      lineHeight: 22,
       color: '#7F8C8D',
+      letterSpacing: 0.2,
     },
     label: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '600',
-      lineHeight: 24,
+      lineHeight: 26,
       color: '#2C3E50',
+      letterSpacing: 0.1,
     },
     
-    // 汉字显示（超大）
+    // 汉字显示（超大）- 更圆润
     chinese: {
-      fontSize: 72,
-      fontWeight: 'bold',
-      lineHeight: 88,
+      fontSize: 80,
+      fontWeight: '700',
+      lineHeight: 96,
       color: '#2C3E50',
+      letterSpacing: 2,
     },
     chineseMedium: {
-      fontSize: 56,
-      fontWeight: 'bold',
-      lineHeight: 68,
+      fontSize: 64,
+      fontWeight: '700',
+      lineHeight: 76,
       color: '#2C3E50',
+      letterSpacing: 1.5,
     },
     chineseSmall: {
-      fontSize: 40,
-      fontWeight: 'bold',
-      lineHeight: 48,
+      fontSize: 48,
+      fontWeight: '700',
+      lineHeight: 58,
       color: '#2C3E50',
+      letterSpacing: 1,
     },
     
-    // 拼音
+    // 拼音 - 更友好
     pinyin: {
-      fontSize: 24,
+      fontSize: 26,
       fontWeight: '400',
-      lineHeight: 32,
+      lineHeight: 34,
       color: '#4A90E2',
       fontStyle: 'italic',
+      letterSpacing: 0.5,
     },
   },
 
-  // 间距系统
+  // 间距系统 - Duolingo 风格：更宽松的间距
   spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
-    xxxl: 64,
+    xs: 6,
+    sm: 12,
+    md: 20,
+    lg: 28,
+    xl: 36,
+    xxl: 56,
+    xxxl: 80,
   },
 
-  // 圆角系统
+  // 圆角系统 - Duolingo 风格：更大的圆角
   borderRadius: {
-    small: 8,
-    medium: 12,
-    large: 16,
-    xlarge: 24,
+    small: 12,
+    medium: 16,
+    large: 24,
+    xlarge: 32,
     round: 999, // 完全圆形
   },
 
-  // 阴影系统 - 柔和、友好
+  // 阴影系统 - Duolingo 风格：更柔和、更轻的阴影
   shadows: {
     small: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
     },
     medium: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    large: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 6,
+    },
+    // Duolingo 风格的按钮阴影
+    button: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.12,
       shadowRadius: 8,
       elevation: 4,
     },
-    large: {
+    // 卡片阴影
+    card: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
-      elevation: 8,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
     },
   },
 
-  // 按钮尺寸 - 大按钮适合儿童
+  // 按钮尺寸 - Duolingo 风格：更大、更友好的按钮
   button: {
     small: {
-      height: 44,
-      paddingHorizontal: 16,
-      fontSize: 16,
+      height: 48,
+      paddingHorizontal: 20,
+      fontSize: 17,
+      borderRadius: 16,
     },
     medium: {
-      height: 56,
-      paddingHorizontal: 24,
-      fontSize: 18,
+      height: 60,
+      paddingHorizontal: 28,
+      fontSize: 19,
+      borderRadius: 20,
     },
     large: {
-      height: 64,
-      paddingHorizontal: 32,
-      fontSize: 20,
+      height: 68,
+      paddingHorizontal: 36,
+      fontSize: 21,
+      borderRadius: 24,
     },
     icon: {
-      size: 56, // 图标按钮至少56x56
+      size: 64, // 图标按钮更大
     },
   },
 

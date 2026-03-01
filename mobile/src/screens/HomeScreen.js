@@ -24,6 +24,8 @@ import { wordsAPI, articlesAPI, usersAPI, authAPI } from "../services/api";
 import ChildrenTheme from "../theme/childrenTheme";
 import { useThemeContext } from "../context/ThemeContext";
 import ProgressCard from "../components/children/ProgressCard";
+import CenterCharacter from "../components/children/CenterCharacter";
+import FeatureIcon from "../components/children/FeatureIcon";
 
 export default function HomeScreen({ navigation, route }) {
   const theme = useTheme();
@@ -368,100 +370,101 @@ export default function HomeScreen({ navigation, route }) {
         style={styles.scrollContent}
         contentContainerStyle={styles.scrollContentContainer}
       >
-        {/* Learning Plan Info */}
-        {learningPlan && (
-          <View style={styles.planInfo}>
-            <View style={styles.planHeader}>
-              <Text style={styles.planEmoji}>📚</Text>
-              <Text style={styles.planTitle}>My Learning Plan</Text>
-            </View>
-            <View style={styles.planContent}>
-              <View style={styles.planRow}>
-                <Text style={styles.planLabel}>📖 Level:</Text>
-                <Text style={styles.planValue}>
-                  {learningPlan.difficulty === "beginner" && "🌟 Beginner"}
-                  {learningPlan.difficulty === "intermediate" &&
-                    "⭐ Intermediate"}
-                  {learningPlan.difficulty === "advanced" && "✨ Advanced"}
-                </Text>
-              </View>
-              <View style={styles.planRow}>
-                <Text style={styles.planLabel}>🎯 Daily Goal:</Text>
-                <Text style={styles.planValue}>
-                  {learningPlan.dailyWordGoal} characters
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
+        {/* Quick Stats - 简化版统计 - 放在最上面 */}
+        <View style={styles.quickStatsContainer}>
           <TouchableOpacity
+            style={styles.quickStatCard}
             onPress={() => navigation.navigate("WordsList", { filter: "all" })}
             activeOpacity={0.7}
           >
-            <Card style={styles.totalWordsCard} mode="elevated" elevation={2}>
-              <Card.Content style={styles.totalWordsContent}>
-                <Text style={styles.totalWordsEmoji}>📝</Text>
-                <Text style={styles.totalWordsLabel}>Total Words</Text>
-                <Text
-                  style={[
-                    styles.totalWordsValue,
-                    { color: dynamicTheme.colors.primary },
-                  ]}
-                >
-                  {(stats?.known || 0) + (stats?.unknown || 0)}
-                </Text>
-              </Card.Content>
-            </Card>
+            <Text style={styles.quickStatValue}>
+              {(stats?.known || 0) + (stats?.unknown || 0)}
+            </Text>
+            <Text style={styles.quickStatLabel}>Total Words</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("WordsList", { filter: "known" })
-            }
+            style={styles.quickStatCard}
+            onPress={() => navigation.navigate("WordsList", { filter: "known" })}
             activeOpacity={0.7}
           >
-            <ProgressCard
-              emoji="✅"
-              label="Mastered"
-              current={stats?.known || 0}
-              total={stats?.total || 1}
-              color={ChildrenTheme.colors.success}
-            />
+            <Text style={[styles.quickStatValue, { color: ChildrenTheme.colors.success }]}>
+              {stats?.known || 0}
+            </Text>
+            <Text style={styles.quickStatLabel}>Mastered</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("WordsList", { filter: "unknown" })
-            }
+            style={styles.quickStatCard}
+            onPress={() => navigation.navigate("WordsList", { filter: "unknown" })}
             activeOpacity={0.7}
           >
-            <ProgressCard
-              emoji="📖"
-              label="To Learn"
-              current={stats?.unknown || 0}
-              total={stats?.total || 1}
-              color={ChildrenTheme.colors.warning}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("WordsList", { filter: "unknown" })
-            }
-            activeOpacity={0.7}
-          >
-            <ProgressCard
-              emoji="⭐"
-              label="Today"
-              current={stats?.todayLearned || 0}
-              total={learningPlan?.dailyWordGoal || 10}
-              color={ChildrenTheme.colors.accent}
-            />
+            <Text style={[styles.quickStatValue, { color: ChildrenTheme.colors.warning }]}>
+              {stats?.unknown || 0}
+            </Text>
+            <Text style={styles.quickStatLabel}>To Learn</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Center Character with Feature Icons */}
+        <View style={styles.characterSection}>
+          <View style={styles.characterContainer}>
+            {/* 中心小男孩 */}
+            <CenterCharacter size={140} />
+
+            {/* 围绕的功能图标 - 均匀分布在圆圈上 */}
+            <FeatureIcon
+              icon="book-open-variant"
+              label="Words"
+              position={0}
+              color={dynamicTheme.colors.primary}
+              onPress={() => navigation.navigate("WordsList", { filter: "all" })}
+            />
+            <FeatureIcon
+              icon="book-open-page-variant"
+              label="Reading"
+              position={1}
+              color={dynamicTheme.colors.secondary}
+              onPress={() => navigation.navigate("ArticleList")}
+            />
+            <FeatureIcon
+              icon="camera"
+              label="Scan"
+              position={2}
+              color={dynamicTheme.colors.accent}
+              onPress={handleScanBook}
+            />
+            <FeatureIcon
+              icon="pencil"
+              label="Write"
+              position={3}
+              color={ChildrenTheme.colors.info}
+              onPress={() => {
+                // 导航到第一个单词的书写练习
+                if (stats?.total > 0) {
+                  navigation.navigate("WordsList", { filter: "unknown" });
+                } else {
+                  Alert.alert("No Words", "Please add some words first!");
+                }
+              }}
+            />
+            <FeatureIcon
+              icon="calendar-check"
+              label="Plan"
+              position={4}
+              color={ChildrenTheme.colors.success}
+              onPress={() => navigation.navigate("LearningPlan")}
+            />
+            <FeatureIcon
+              icon="account"
+              label="Profile"
+              position={5}
+              color={ChildrenTheme.colors.warning}
+              onPress={() => navigation.navigate("Profile")}
+            />
+          </View>
+        </View>
+
       </ScrollView>
 
       {/* Bottom Navigation Bar */}
@@ -534,6 +537,53 @@ const styles = StyleSheet.create({
   },
   scrollContentContainer: {
     paddingBottom: 20,
+    paddingTop: ChildrenTheme.spacing.md,
+  },
+  quickStatsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: ChildrenTheme.spacing.md,
+    marginBottom: ChildrenTheme.spacing.lg,
+    marginTop: ChildrenTheme.spacing.sm,
+    gap: ChildrenTheme.spacing.sm,
+  },
+  characterSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: ChildrenTheme.spacing.xl,
+    minHeight: 400,
+  },
+  characterContainer: {
+    width: 300,
+    height: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  quickStatsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: ChildrenTheme.spacing.md,
+    marginBottom: ChildrenTheme.spacing.lg,
+    gap: ChildrenTheme.spacing.sm,
+  },
+  quickStatCard: {
+    flex: 1,
+    backgroundColor: ChildrenTheme.colors.card,
+    borderRadius: ChildrenTheme.borderRadius.large,
+    padding: ChildrenTheme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...ChildrenTheme.shadows.card,
+  },
+  quickStatValue: {
+    ...ChildrenTheme.typography.h2,
+    color: ChildrenTheme.colors.primary,
+    fontWeight: '700',
+    marginBottom: ChildrenTheme.spacing.xs,
+  },
+  quickStatLabel: {
+    ...ChildrenTheme.typography.bodySmall,
+    color: ChildrenTheme.colors.textLight,
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -586,51 +636,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
   },
-  planInfo: {
-    backgroundColor: ChildrenTheme.colors.card,
-    margin: ChildrenTheme.spacing.md,
-    padding: ChildrenTheme.spacing.lg,
-    borderRadius: ChildrenTheme.borderRadius.large,
-    ...ChildrenTheme.shadows.medium,
-  },
-  planHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: ChildrenTheme.spacing.md,
-  },
-  planEmoji: {
-    fontSize: 28,
-    marginRight: ChildrenTheme.spacing.sm,
-  },
-  planTitle: {
-    ...ChildrenTheme.typography.h3,
-    color: ChildrenTheme.colors.text,
-  },
-  planContent: {
-    marginTop: ChildrenTheme.spacing.sm,
-  },
-  planRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: ChildrenTheme.spacing.sm,
-    paddingVertical: ChildrenTheme.spacing.xs,
-  },
-  planLabel: {
-    ...ChildrenTheme.typography.body,
-    color: ChildrenTheme.colors.textLight,
-  },
-  planValue: {
-    ...ChildrenTheme.typography.body,
-    fontWeight: "600",
-    color: ChildrenTheme.colors.primary,
-  },
   statsContainer: {
     padding: ChildrenTheme.spacing.md,
   },
   totalWordsCard: {
     marginBottom: ChildrenTheme.spacing.md,
     borderRadius: ChildrenTheme.borderRadius.large,
+    ...ChildrenTheme.shadows.card,
   },
   totalWordsContent: {
     flexDirection: "row",

@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: ChildrenTheme.borderRadius.large,
     padding: ChildrenTheme.spacing.lg,
     marginBottom: ChildrenTheme.spacing.md,
-    ...ChildrenTheme.shadows.medium,
+    ...ChildrenTheme.shadows.card,
   },
   header: {
     flexDirection: 'row',

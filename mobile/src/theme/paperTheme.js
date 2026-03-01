@@ -65,55 +65,70 @@ export const createPaperTheme = (childrenTheme = ChildrenTheme) => {
     surfaceContainerHigh: childrenTheme.colors.cardElevated,
     surfaceContainerHighest: childrenTheme.colors.card,
   },
-  // 圆角
+  // 圆角 - Duolingo 风格：更大的圆角
   roundness: childrenTheme.borderRadius.medium,
-  // 字体配置
+  // 字体配置 - Duolingo 风格：圆润、友好
   fonts: configureFonts({
     config: {
       displayLarge: {
         ...childrenTheme.typography.h1,
+        fontFamily: childrenTheme.fontFamily?.bold || undefined,
       },
       displayMedium: {
         ...childrenTheme.typography.h2,
+        fontFamily: childrenTheme.fontFamily?.bold || undefined,
       },
       displaySmall: {
         ...childrenTheme.typography.h3,
+        fontFamily: childrenTheme.fontFamily?.medium || undefined,
       },
       headlineLarge: {
         ...childrenTheme.typography.h2,
+        fontFamily: childrenTheme.fontFamily?.bold || undefined,
       },
       headlineMedium: {
         ...childrenTheme.typography.h3,
+        fontFamily: childrenTheme.fontFamily?.medium || undefined,
       },
       headlineSmall: {
         ...childrenTheme.typography.h4,
+        fontFamily: childrenTheme.fontFamily?.medium || undefined,
       },
       titleLarge: {
         ...childrenTheme.typography.h4,
+        fontFamily: childrenTheme.fontFamily?.medium || undefined,
       },
       titleMedium: {
         ...childrenTheme.typography.bodyLarge,
+        fontFamily: childrenTheme.fontFamily?.regular || undefined,
       },
       titleSmall: {
         ...childrenTheme.typography.body,
+        fontFamily: childrenTheme.fontFamily?.regular || undefined,
       },
       bodyLarge: {
         ...childrenTheme.typography.bodyLarge,
+        fontFamily: childrenTheme.fontFamily?.regular || undefined,
       },
       bodyMedium: {
         ...childrenTheme.typography.body,
+        fontFamily: childrenTheme.fontFamily?.regular || undefined,
       },
       bodySmall: {
         ...childrenTheme.typography.bodySmall,
+        fontFamily: childrenTheme.fontFamily?.regular || undefined,
       },
       labelLarge: {
         ...childrenTheme.typography.label,
+        fontFamily: childrenTheme.fontFamily?.medium || undefined,
       },
       labelMedium: {
         ...childrenTheme.typography.bodySmall,
+        fontFamily: childrenTheme.fontFamily?.regular || undefined,
       },
       labelSmall: {
         ...childrenTheme.typography.caption,
+        fontFamily: childrenTheme.fontFamily?.regular || undefined,
       },
     },
   }),

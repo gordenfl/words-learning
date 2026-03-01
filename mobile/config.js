@@ -16,7 +16,7 @@ const ENV_CONFIG = {
   // 开发环境配置
   development: {
     API: {
-      HOST: "gordenfl.com", // 统一使用远程服务器
+      HOST: "192.168.1.92", // 使用内网服务器
       PORT: "3003",
       PROTOCOL: "http",
     },
