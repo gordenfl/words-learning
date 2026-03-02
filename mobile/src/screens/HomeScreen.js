@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   StatusBar,
   Image,
+  ImageBackground,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -29,6 +30,42 @@ import FeatureIcon from "../components/children/FeatureIcon";
 
 export default function HomeScreen({ navigation, route }) {
   const theme = useTheme();
+  
+  // 所有可用的圆形按钮图片
+  const buttonImages = [
+    require('../../assets/circle_green.png'),
+    require('../../assets/circule_black.png'),
+    require('../../assets/circule_gray.png'),
+    require('../../assets/circule_purple.png'),
+    require('../../assets/curcle_blue.png'),
+    require('../../assets/curcle_green.png'),
+    require('../../assets/curcle_red.png'),
+    require('../../assets/curcle_whilte.png'),
+    require('../../assets/curcle_yellow.png'),
+  ];
+  
+  // 随机打乱数组并取前6个（用于中心圆形按钮）
+  const shuffledButtons = useMemo(() => {
+    const shuffled = [...buttonImages].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 6);
+  }, []); // 只在组件首次渲染时随机一次
+  
+  // 底部菜单按钮图片（使用 button_*.png）
+  const bottomMenuImages = [
+    require('../../assets/button_black.png'),
+    require('../../assets/button_gray.png'),
+    require('../../assets/button_green.png'),
+    require('../../assets/button_light_blue.png'),
+    require('../../assets/button_orange.png'),
+    require('../../assets/button_purple.png'),
+    require('../../assets/button_yellow.png'),
+  ];
+  
+  // 随机打乱底部菜单按钮图片并取前4个
+  const shuffledBottomButtons = useMemo(() => {
+    const shuffled = [...bottomMenuImages].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 4);
+  }, []);
   const insets = useSafeAreaInsets();
   const { currentTheme } = useThemeContext();
   // 使用动态主题
@@ -418,6 +455,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Words"
               position={0}
               color={dynamicTheme.colors.primary}
+              imageSource={shuffledButtons[0]}
               onPress={() => navigation.navigate("WordsList", { filter: "all" })}
             />
             <FeatureIcon
@@ -425,6 +463,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Reading"
               position={1}
               color={dynamicTheme.colors.secondary}
+              imageSource={shuffledButtons[1]}
               onPress={() => navigation.navigate("ArticleList")}
             />
             <FeatureIcon
@@ -432,6 +471,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Scan"
               position={2}
               color={dynamicTheme.colors.accent}
+              imageSource={shuffledButtons[2]}
               onPress={handleScanBook}
             />
             <FeatureIcon
@@ -439,6 +479,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Write"
               position={3}
               color={ChildrenTheme.colors.info}
+              imageSource={shuffledButtons[3]}
               onPress={() => {
                 // 导航到第一个单词的书写练习
                 if (stats?.total > 0) {
@@ -453,6 +494,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Plan"
               position={4}
               color={ChildrenTheme.colors.success}
+              imageSource={shuffledButtons[4]}
               onPress={() => navigation.navigate("LearningPlan")}
             />
             <FeatureIcon
@@ -460,6 +502,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Profile"
               position={5}
               color={ChildrenTheme.colors.warning}
+              imageSource={shuffledButtons[5]}
               onPress={() => navigation.navigate("Profile")}
             />
           </View>
@@ -474,12 +517,13 @@ export default function HomeScreen({ navigation, route }) {
           onPress={() => navigation.navigate("WordsList", { filter: "all" })}
           activeOpacity={0.7}
         >
-          <IconButton
-            icon="book-open-variant"
-            size={28}
-            iconColor={ChildrenTheme.colors.primary}
-          />
-          <Text style={styles.navLabel}>Words</Text>
+          <ImageBackground
+            source={shuffledBottomButtons[0]}
+            style={styles.navButton}
+            resizeMode="cover"
+          >
+            <Text style={styles.navButtonLabel}>Words</Text>
+          </ImageBackground>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -489,12 +533,13 @@ export default function HomeScreen({ navigation, route }) {
           }}
           activeOpacity={0.7}
         >
-          <IconButton
-            icon="book-open-page-variant"
-            size={28}
-            iconColor={ChildrenTheme.colors.secondary}
-          />
-          <Text style={styles.navLabel}>Reading</Text>
+          <ImageBackground
+            source={shuffledBottomButtons[1]}
+            style={styles.navButton}
+            resizeMode="cover"
+          >
+            <Text style={styles.navButtonLabel}>Reading</Text>
+          </ImageBackground>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -502,12 +547,13 @@ export default function HomeScreen({ navigation, route }) {
           onPress={() => navigation.navigate("LearningPlan")}
           activeOpacity={0.7}
         >
-          <IconButton
-            icon="calendar-check"
-            size={28}
-            iconColor={ChildrenTheme.colors.accent}
-          />
-          <Text style={styles.navLabel}>Plan</Text>
+          <ImageBackground
+            source={shuffledBottomButtons[2]}
+            style={styles.navButton}
+            resizeMode="cover"
+          >
+            <Text style={styles.navButtonLabel}>Plan</Text>
+          </ImageBackground>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -515,12 +561,13 @@ export default function HomeScreen({ navigation, route }) {
           onPress={() => navigation.navigate("Profile")}
           activeOpacity={0.7}
         >
-          <IconButton
-            icon="account"
-            size={28}
-            iconColor={ChildrenTheme.colors.tertiary}
-          />
-          <Text style={styles.navLabel}>Profile</Text>
+          <ImageBackground
+            source={shuffledBottomButtons[3]}
+            style={styles.navButton}
+            resizeMode="cover"
+          >
+            <Text style={styles.navButtonLabel}>Profile</Text>
+          </ImageBackground>
         </TouchableOpacity>
       </View>
     </View>
@@ -679,6 +726,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: ChildrenTheme.spacing.xs,
     minHeight: 64,
+  },
+  navButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    ...ChildrenTheme.shadows.button,
+  },
+  navButtonLabel: {
+    ...ChildrenTheme.typography.caption,
+    color: ChildrenTheme.colors.textInverse,
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
   },
   navLabel: {
     ...ChildrenTheme.typography.caption,

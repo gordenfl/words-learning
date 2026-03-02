@@ -2,8 +2,7 @@
  * 功能图标组件 - 围绕中心角色的功能按钮
  */
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { IconButton } from 'react-native-paper';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
 import ChildrenTheme from '../../theme/childrenTheme';
 
 export default function FeatureIcon({
@@ -11,9 +10,10 @@ export default function FeatureIcon({
   label,
   color,
   onPress,
-  size = 64,
+  size = 128,
   position, // 数字：0-5 表示在圆圈上的位置（6个图标均匀分布）
   totalIcons = 6, // 总图标数量
+  imageSource, // 背景图片源
 }) {
   const positionStyle = getPositionStyle(position, size, totalIcons);
   
@@ -29,25 +29,35 @@ export default function FeatureIcon({
         onPress={onPress}
         activeOpacity={0.7}
       >
-        <View
+        <ImageBackground
+          source={imageSource}
           style={[
             styles.iconContainer,
             {
               width: size,
               height: size,
               borderRadius: size / 2,
-              backgroundColor: color || ChildrenTheme.colors.primary,
+              overflow: 'hidden',
             },
           ]}
+          resizeMode="cover"
         >
-          <IconButton
-            icon={icon}
-            size={size * 0.5}
-            iconColor={ChildrenTheme.colors.textInverse}
-            style={styles.icon}
-          />
-        </View>
-        {label && (
+          {label && (
+            <Text 
+              style={[
+                styles.label, 
+                { 
+                  fontSize: size * 0.15, // 根据按钮大小动态计算，放大一倍
+                  top: size * 0.5 - (size * 0.22) / 2, // 上下居中
+                }
+              ]} 
+              numberOfLines={1}
+            >
+              {label}
+            </Text>
+          )}
+        </ImageBackground>
+        {!imageSource && label && (
           <Text style={styles.label} numberOfLines={1}>
             {label}
           </Text>
@@ -91,11 +101,9 @@ function getPositionStyle(position, size, totalIcons = 6) {
   // 容器是 300x300，中心在 150, 150
   const centerX = 150;
   const centerY = 150;
-  // 考虑标签的高度，调整位置
-  const labelHeight = 20;
-  const totalHeight = size + labelHeight + 8; // 8 是间距
+  // 标签现在在按钮内部，不需要额外空间
   const left = centerX + x - size / 2;
-  const top = centerY + y - totalHeight / 2;
+  const top = centerY + y - size / 2;
 
   return {
     position: 'absolute',
@@ -119,15 +127,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...ChildrenTheme.shadows.button,
   },
-  icon: {
-    margin: 0,
-  },
   label: {
     ...ChildrenTheme.typography.caption,
-    marginTop: ChildrenTheme.spacing.xs,
     textAlign: 'center',
-    fontWeight: '600',
-    color: ChildrenTheme.colors.text,
-    fontSize: 13,
+    fontWeight: 'bold',
+    color: ChildrenTheme.colors.textInverse,
+    position: 'absolute',
+    left: 0,
+    right: 0,
   },
 });
