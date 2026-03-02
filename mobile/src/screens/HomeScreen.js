@@ -393,13 +393,17 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         </View>
         <View style={styles.headerRight}>
-          <IconButton
-            icon="camera"
-            size={32}
-            iconColor={dynamicTheme.colors.textInverse}
+          <TouchableOpacity
             onPress={handleScanBook}
             style={styles.cameraButton}
-          />
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require('../../assets/camera.png')}
+              style={styles.cameraImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -455,7 +459,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Words"
               position={0}
               color={dynamicTheme.colors.primary}
-              imageSource={shuffledButtons[0]}
+              imageSource={require('../../assets/circle_green.png')}
               onPress={() => navigation.navigate("WordsList", { filter: "all" })}
             />
             <FeatureIcon
@@ -463,7 +467,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Reading"
               position={1}
               color={dynamicTheme.colors.secondary}
-              imageSource={shuffledButtons[1]}
+              imageSource={require('../../assets/circle_green.png')}
               onPress={() => navigation.navigate("ArticleList")}
             />
             <FeatureIcon
@@ -471,7 +475,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Scan"
               position={2}
               color={dynamicTheme.colors.accent}
-              imageSource={shuffledButtons[2]}
+              imageSource={require('../../assets/circle_green.png')}
               onPress={handleScanBook}
             />
             <FeatureIcon
@@ -479,7 +483,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Write"
               position={3}
               color={ChildrenTheme.colors.info}
-              imageSource={shuffledButtons[3]}
+              imageSource={require('../../assets/circle_green.png')}
               onPress={() => {
                 // 导航到第一个单词的书写练习
                 if (stats?.total > 0) {
@@ -494,7 +498,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Plan"
               position={4}
               color={ChildrenTheme.colors.success}
-              imageSource={shuffledButtons[4]}
+              imageSource={require('../../assets/circle_green.png')}
               onPress={() => navigation.navigate("LearningPlan")}
             />
             <FeatureIcon
@@ -502,7 +506,7 @@ export default function HomeScreen({ navigation, route }) {
               label="Profile"
               position={5}
               color={ChildrenTheme.colors.warning}
-              imageSource={shuffledButtons[5]}
+              imageSource={require('../../assets/circle_green.png')}
               onPress={() => navigation.navigate("Profile")}
             />
           </View>
@@ -518,7 +522,7 @@ export default function HomeScreen({ navigation, route }) {
           activeOpacity={0.7}
         >
           <ImageBackground
-            source={shuffledBottomButtons[0]}
+            source={require('../../assets/button_yellow.png')}
             style={styles.navButton}
             resizeMode="cover"
           >
@@ -534,7 +538,7 @@ export default function HomeScreen({ navigation, route }) {
           activeOpacity={0.7}
         >
           <ImageBackground
-            source={shuffledBottomButtons[1]}
+            source={require('../../assets/button_yellow.png')}
             style={styles.navButton}
             resizeMode="cover"
           >
@@ -548,7 +552,7 @@ export default function HomeScreen({ navigation, route }) {
           activeOpacity={0.7}
         >
           <ImageBackground
-            source={shuffledBottomButtons[2]}
+            source={require('../../assets/button_yellow.png')}
             style={styles.navButton}
             resizeMode="cover"
           >
@@ -562,7 +566,7 @@ export default function HomeScreen({ navigation, route }) {
           activeOpacity={0.7}
         >
           <ImageBackground
-            source={shuffledBottomButtons[3]}
+            source={require('../../assets/button_yellow.png')}
             style={styles.navButton}
             resizeMode="cover"
           >
@@ -678,8 +682,12 @@ const styles = StyleSheet.create({
   },
   cameraButton: {
     margin: 0,
-    backgroundColor: ChildrenTheme.colors.accent,
-    borderRadius: 28,
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraImage: {
     width: 56,
     height: 56,
   },
@@ -718,19 +726,20 @@ const styles = StyleSheet.create({
     borderTopColor: ChildrenTheme.colors.border,
     paddingTop: ChildrenTheme.spacing.xs,
     paddingHorizontal: ChildrenTheme.spacing.xs,
+    paddingBottom: ChildrenTheme.spacing.xs,
     ...ChildrenTheme.shadows.medium,
   },
   navItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: ChildrenTheme.spacing.xs,
-    minHeight: 64,
+    paddingVertical: ChildrenTheme.spacing.xs / 2,
+    minHeight: 50,
   },
   navButton: {
     width: 120,
-    height: 120,
-    borderRadius: 60,
+    height: 60,
+    borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -739,7 +748,7 @@ const styles = StyleSheet.create({
   navButtonLabel: {
     ...ChildrenTheme.typography.caption,
     color: ChildrenTheme.colors.textInverse,
-    fontSize: 24,
+    fontSize: 14,
     fontWeight: "bold",
     textAlign: "center",
   },
