@@ -106,11 +106,11 @@ export default function LoginScreen({ navigation }) {
       let errorMessage = "Something went wrong";
 
       if (error.message === "Network Error" || error.code === "ECONNABORTED") {
-        errorMessage = `Cannot connect to server. Please check:\n\n• Internet connection\n• Server: gordenfl.com:3003\n• Error: ${error.message}`;
+        errorMessage = `Cannot connect to server. Please check:\n\n• Internet connection\n• Server: gordenfl.com:8088\n• Error: ${error.message}`;
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       } else {
-        errorMessage = `${error.message}\n\nServer: gordenfl.com:3003`;
+        errorMessage = `${error.message}\n\nServer: gordenfl.com:8088`;
       }
 
       Alert.alert("Login Failed", errorMessage);

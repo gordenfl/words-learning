@@ -16,8 +16,8 @@ const ENV_CONFIG = {
   // 开发环境配置
   development: {
     API: {
-      HOST: "192.168.1.92", // 使用内网服务器
-      PORT: "3003",
+      HOST: "gordenfl.com",
+      PORT: "8088",
       PROTOCOL: "http",
     },
     GOOGLE_OAUTH: {
@@ -40,7 +40,7 @@ const ENV_CONFIG = {
   production: {
     API: {
       HOST: "gordenfl.com",
-      PORT: "3003",
+      PORT: "8088",
       PROTOCOL: "http",
     },
     GOOGLE_OAUTH: {
