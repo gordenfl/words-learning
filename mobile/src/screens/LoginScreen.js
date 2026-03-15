@@ -75,27 +75,31 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       const response = await authAPI.login(email, password);
-      console.log("📝 Login response received");
-      console.log("   Token exists:", !!response.data.token);
-      console.log("   Token length:", response.data.token?.length);
+      const body = response.data;
+      // 兼容两种格式: { token, user } 或 { data: { token, user } }
+      const token = body?.token ?? body?.data?.token;
+      const user = body?.user ?? body?.data?.user;
 
-      await AsyncStorage.setItem("authToken", response.data.token);
-      await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
-
-      // 加载用户主题（如果服务器返回了主题）
-      if (response.data.user?.theme) {
-        await loadThemeFromServer(response.data.user.theme);
+      if (!token) {
+        if (__DEV__ && body) {
+          console.log("❌ Login response (no token):", JSON.stringify(body));
+        }
+        Alert.alert(
+          "Login Failed",
+          "Server did not return a token. The API may use a different response format."
+        );
+        return;
       }
 
-      // 验证 token 是否保存成功
-      const savedToken = await AsyncStorage.getItem("authToken");
-      console.log("✅ Token saved successfully:", !!savedToken);
-      console.log(
-        "   Saved token matches:",
-        savedToken === response.data.token
-      );
+      await AsyncStorage.setItem("authToken", token);
+      if (user != null) {
+        await AsyncStorage.setItem("user", JSON.stringify(user));
+      }
 
-      // Navigate to Home
+      if (user?.theme) {
+        await loadThemeFromServer(user.theme);
+      }
+
       navigation.navigate("Home");
     } catch (error) {
       console.log("❌ Login error:", error.message);

@@ -1,22 +1,14 @@
+/**
+ * VerticalSwipePager - Web build: uses PagerViewWebStub (no react-native-pager-view).
+ * Native builds use VerticalSwipePager.native.js.
+ */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { View, StyleSheet, Dimensions, ActivityIndicator } from "react-native";
-import PagerView from "react-native-pager-view";
+import PagerView from "./PagerViewWebStub";
 import { DragProvider, useDrag } from "../context/DragContext";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-/**
- * VerticalSwipePager - TikTok-like vertical swipe pager
- * 
- * @param {Array} data - Array of items to display
- * @param {Function} renderItem - Function to render each item: ({ item, index }) => ReactNode
- * @param {Number} initialPage - Initial page index (default: 0)
- * @param {Function} onPageSelected - Callback when page changes: (index) => void
- * @param {Function} onLoadNext - Optional: async function to load next items: (currentIndex) => Promise<Array>
- * @param {Function} onLoadPrevious - Optional: async function to load previous items: (currentIndex) => Promise<Array>
- * @param {Number} preloadCount - Number of pages to preload (default: 1)
- * @param {ReactNode} loadingComponent - Component to show while loading
- */
 function VerticalSwipePagerInner({
   data = [],
   renderItem,
@@ -35,14 +27,12 @@ function VerticalSwipePagerInner({
   const pagerRef = useRef(null);
   const loadingRef = useRef(false);
 
-  // Update items when data prop changes
   useEffect(() => {
     setItems(data);
     setCurrentPage(initialPage);
     setLoadedPages(new Set([initialPage]));
   }, [data, initialPage]);
 
-  // Preload adjacent pages
   useEffect(() => {
     preloadAdjacentPages(currentPage);
   }, [currentPage, items.length]);
@@ -50,18 +40,10 @@ function VerticalSwipePagerInner({
   const preloadAdjacentPages = useCallback(
     async (pageIndex) => {
       const pagesToLoad = new Set();
-      
-      // Add pages to preload
       for (let i = 1; i <= preloadCount; i++) {
-        if (pageIndex + i < items.length) {
-          pagesToLoad.add(pageIndex + i);
-        }
-        if (pageIndex - i >= 0) {
-          pagesToLoad.add(pageIndex - i);
-        }
+        if (pageIndex + i < items.length) pagesToLoad.add(pageIndex + i);
+        if (pageIndex - i >= 0) pagesToLoad.add(pageIndex - i);
       }
-
-      // Load pages that haven't been loaded yet
       for (const page of pagesToLoad) {
         if (!loadedPages.has(page)) {
           setLoadedPages((prev) => new Set([...prev, page]));
@@ -75,16 +57,8 @@ function VerticalSwipePagerInner({
     async (e) => {
       const page = e.nativeEvent.position;
       setCurrentPage(page);
-
-      // Call onPageSelected callback
-      if (onPageSelected) {
-        onPageSelected(page);
-      }
-
-      // Preload adjacent pages
+      if (onPageSelected) onPageSelected(page);
       preloadAdjacentPages(page);
-
-      // Load next items if we're near the end
       if (
         onLoadNext &&
         !loadingRef.current &&
@@ -94,18 +68,14 @@ function VerticalSwipePagerInner({
         setLoading(true);
         try {
           const newItems = await onLoadNext(page);
-          if (newItems && newItems.length > 0) {
-            setItems((prev) => [...prev, ...newItems]);
-          }
-        } catch (error) {
-          console.error("Error loading next items:", error);
+          if (newItems?.length > 0) setItems((prev) => [...prev, ...newItems]);
+        } catch (err) {
+          console.error("Error loading next items:", err);
         } finally {
           setLoading(false);
           loadingRef.current = false;
         }
       }
-
-      // Load previous items if we're near the beginning
       if (
         onLoadPrevious &&
         !loadingRef.current &&
@@ -115,17 +85,16 @@ function VerticalSwipePagerInner({
         setLoading(true);
         try {
           const newItems = await onLoadPrevious(page);
-          if (newItems && newItems.length > 0) {
+          if (newItems?.length > 0) {
             setItems((prev) => [...newItems, ...prev]);
-            // Adjust current page after prepending items
             setTimeout(() => {
               if (pagerRef.current) {
                 pagerRef.current.setPage(page + newItems.length);
               }
             }, 100);
           }
-        } catch (error) {
-          console.error("Error loading previous items:", error);
+        } catch (err) {
+          console.error("Error loading previous items:", err);
         } finally {
           setLoading(false);
           loadingRef.current = false;
@@ -149,7 +118,7 @@ function VerticalSwipePagerInner({
   );
 
   return (
-    <View 
+    <View
       style={styles.container}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -163,21 +132,16 @@ function VerticalSwipePagerInner({
         onPageSelected={handlePageSelected}
         onPageScrollStateChanged={(e) => {
           const state = e.nativeEvent.pageScrollState;
-          if (state === 'dragging') {
-            startDrag();
-          } else if (state === 'idle') {
-            endDrag();
-          }
+          if (state === "dragging") startDrag();
+          else if (state === "idle") endDrag();
         }}
         overdrag={false}
         scrollEnabled={true}
       >
         {items.map((item, index) => {
-          // Only render if page is loaded or adjacent to current page
           const shouldRender =
             loadedPages.has(index) ||
             Math.abs(index - currentPage) <= preloadCount + 1;
-
           if (!shouldRender) {
             return (
               <View key={`placeholder-${index}`} style={styles.page}>
@@ -185,7 +149,6 @@ function VerticalSwipePagerInner({
               </View>
             );
           }
-
           return (
             <View key={`page-${index}`} style={styles.page}>
               {renderItem({ item, index })}
@@ -203,16 +166,9 @@ function VerticalSwipePagerInner({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  pager: {
-    flex: 1,
-  },
-  page: {
-    height: SCREEN_HEIGHT,
-    width: "100%",
-  },
+  container: { flex: 1 },
+  pager: { flex: 1 },
+  page: { height: SCREEN_HEIGHT, width: "100%" },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -238,4 +194,3 @@ export default function VerticalSwipePager(props) {
     </DragProvider>
   );
 }
-

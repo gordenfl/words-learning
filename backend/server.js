@@ -20,7 +20,7 @@ const ocrRoutes = require('./routes/ocr');
 const speechRoutes = require('./routes/speech');
 
 const app = express();
-const PORT = process.env.PORT || 3003;
+const PORT = process.env.PORT || 8088;
 
 // Middleware
 app.use(cors());

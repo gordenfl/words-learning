@@ -6,9 +6,9 @@ services:
     container_name: words-learning-backend
     restart: always
     ports:
-      - "3003:3003"
+      - "8088:8088"
     environment:
-      PORT: ${PORT:-3003}
+      PORT: ${PORT:-8088}
       MONGODB_URI: ${MONGODB_URI}
       JWT_SECRET: ${JWT_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
