@@ -65,20 +65,41 @@ python manage.py runserver 8088
 
 逻辑与 Node 版保持一致，仅实现语言与框架不同。
 
-## Docker 部署（服务器）
+## 部署到 gordenfl.com 外网服务器（Docker）
 
-在项目根目录（与 `docker-compose.yml` 同级）：
+在**本机**项目根目录 `words-learning` 下执行一键部署（会把 `backend_new` 和 `docker-compose.yml` 同步到服务器并启动容器）：
 
 ```bash
-# 构建并启动 Django 服务（与 Node backend 共用同一网络，可连 mongodb）
-docker-compose up -d backend_new
+chmod +x backend_new/scripts/deploy-to-gordenfl.sh
+./backend_new/scripts/deploy-to-gordenfl.sh
+```
 
-# 查看日志
+**前提：**
+
+1. 本机可 SSH 到 gordenfl.com（默认用 `ec2-user`、密钥 `~/.ssh/gordongmai.com.pem`）。  
+   自定义时：`DEPLOY_USER=ec2-user DEPLOY_HOST=gordenfl.com DEPLOY_SSH_KEY=/path/to/key.pem DEPLOY_PATH=/home/ec2-user/CI/words-learning ./backend_new/scripts/deploy-to-gordenfl.sh`
+2. 服务器上已有目录 `DEPLOY_PATH`（默认 `/home/ec2-user/CI/words-learning`），且存在 Docker 网络 `docker_photoshare-network`（与 mongodb 容器同网）。
+3. 服务器 `DEPLOY_PATH/.env` 中配置好 `MONGODB_URI`，**主机名必须用 `mongodb`**（容器名），例如：  
+   `MONGODB_URI=mongodb://gordon_admin:gordenfl@mongodb:27017/words-learning?authSource=admin`  
+   若服务器还没有 `.env`，可先在本地配置好项目根目录的 `.env`，脚本会同步到服务器。
+
+**部署后：**
+
+- 容器名：`words-learning-backend-new`
+- 对外端口：**8089**
+- API 地址：`http://gordenfl.com:8089`，健康检查：`curl http://gordenfl.com:8089/api/health`
+- 查看日志：`ssh ec2-user@gordenfl.com "cd /home/ec2-user/CI/words-learning && docker-compose logs -f backend_new"`
+
+---
+
+## Docker 本地/其他服务器
+
+在项目根目录（与 `docker-compose.yml` 同级）手动构建并启动：
+
+```bash
+docker-compose up -d --build backend_new
 docker-compose logs -f backend_new
 ```
 
-- 容器名：`words-learning-backend-new`
-- 端口：**8089**（映射到容器内 8088，与 Node 版 8088 错开）
-- 需在 `.env` 中配置 `MONGODB_URI`（例如 `mongodb://user:pass@mongodb:27017/words-learning?authSource=admin`），确保与 `mongodb` 在同一 Docker 网络（如 `photoshare-network`）。
-
-若希望 Django 独占 8088，可把 `docker-compose.yml` 里 `backend_new` 的端口改为 `"8088:8088"`，并停掉 Node 的 `backend` 服务。
+- 需在 `.env` 中配置 `MONGODB_URI`（连 Docker 时主机名用 `mongodb`，与 mongodb 容器同网）。
+- 若希望 Django 独占 8088，把 `docker-compose.yml` 里 `backend_new` 的端口改为 `"8088:8088"` 即可。
