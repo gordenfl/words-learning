@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://photoshare-mongodb:27017/words-learning';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://mongodb:27017/words-learning';
 
 async function updatePassword() {
   try {

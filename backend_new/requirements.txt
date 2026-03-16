@@ -1,0 +1,18 @@
+# Django MongoDB Backend (same DB as Node backend)
+Django>=6.0,<7
+django-mongodb-backend>=6.0
+django-cors-headers>=4.0
+
+# Auth
+PyJWT[crypto]>=2.8
+bcrypt>=4.0
+
+# HTTP & env
+requests>=2.28
+python-dotenv>=1.0
+
+# Pinyin for OCR response
+pypinyin>=0.50
+
+# Production WSGI (used in Docker)
+gunicorn>=21

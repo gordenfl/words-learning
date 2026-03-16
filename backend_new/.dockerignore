@@ -1,0 +1,14 @@
+venv
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.md
+scripts/ssh-tunnel-mongo.sh
+.pytest_cache
+.coverage
+htmlcov
