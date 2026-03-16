@@ -21,7 +21,7 @@ const baseConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.gordenfl.wordslearning",
-    buildNumber: "21",
+    buildNumber: "24",
     infoPlist: {
       NSCameraUsageDescription:
         "We need camera access to scan and recognize Chinese characters from books and images.",

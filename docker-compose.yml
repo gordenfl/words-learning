@@ -8,7 +8,7 @@ services:
     ports:
       - "8088:8088"
     environment:
-      PORT: ${PORT:-8088}
+      PORT: 8088
       MONGODB_URI: ${MONGODB_URI}
       JWT_SECRET: ${JWT_SECRET}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -22,8 +22,6 @@ services:
       BAIDU_SPEECH_SECRET_KEY: ${BAIDU_SPEECH_SECRET_KEY:-}
       USE_GOOGLE_VISION: ${USE_GOOGLE_VISION:-true}
       USE_BAIDU_SPEECH: ${USE_BAIDU_SPEECH:-false}
-    volumes:
-      - ./backend:/app
     networks:
       - photoshare-network
 
