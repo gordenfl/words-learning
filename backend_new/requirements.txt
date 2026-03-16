@@ -1,6 +1,7 @@
 # Django MongoDB Backend (same DB as Node backend)
-Django>=6.0,<7
-django-mongodb-backend>=6.0
+# Use Django 5.x for broader compatibility (Django 6 may be unavailable in some build envs)
+Django>=5.0,<6
+django-mongodb-backend>=5.0,<6
 django-cors-headers>=4.0
 
 # Auth

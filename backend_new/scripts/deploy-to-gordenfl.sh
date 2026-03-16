@@ -39,7 +39,7 @@ echo "3. 在服务器上构建并启动 Docker 容器..."
 ssh -i "${SSH_KEY}" -o StrictHostKeyChecking=accept-new "$SERVER_USER@$SERVER_HOST" << ENDSSH
   set -e
   cd $DEPLOY_PATH
-  docker-compose up -d --build backend_new
+  docker build --no-cache -t words-learning-backend-new ./backend_new
   echo ""
   docker-compose ps backend_new
   echo ""
