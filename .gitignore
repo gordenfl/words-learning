@@ -12,6 +12,8 @@ dist/
 *.log
 *.swp
 *.swo
+*.pycache/
+*.pyc
 *~
 .vscode/
 .idea/
