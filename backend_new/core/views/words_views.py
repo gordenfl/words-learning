@@ -7,8 +7,6 @@ from django.views.decorators.http import require_http_methods
 from bson import ObjectId
 
 from core.models import Word
-
-from core.models import Word
 from core.models.word import CompoundEmbed, ExampleEmbed
 from core.services.ai_service import generate_word_details
 

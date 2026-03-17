@@ -17,9 +17,20 @@ PUBLIC_PATHS = {
 HEALTH_PATH = "/api/health"
 
 
+def _is_public(request):
+    if request.path in PUBLIC_PATHS or request.path == HEALTH_PATH:
+        return True
+    # Admin 与静态资源不校验 JWT（admin 用 session 登录）
+    if request.path.startswith("/admin") or request.path.startswith("/static/"):
+        return True
+    if request.path == "/" or request.path == "/favicon.ico":
+        return True
+    return False
+
+
 def AuthMiddleware(get_response):
     def middleware(request):
-        if request.path in PUBLIC_PATHS or request.path == HEALTH_PATH:
+        if _is_public(request):
             return get_response(request)
         auth_header = request.headers.get("Authorization")
         token = (auth_header or "").replace("Bearer ", "").strip()

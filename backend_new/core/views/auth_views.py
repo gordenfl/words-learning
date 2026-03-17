@@ -1,5 +1,6 @@
 """Auth API - same behavior as Node backend."""
 import json
+import time
 import jwt
 from django.conf import settings
 from django.http import JsonResponse
@@ -15,13 +16,14 @@ from core.services.apple_auth_service import verify_identity_token
 def _jwt_sign(user_id):
     secret = getattr(settings, "JWT_SECRET", "default_secret_key")
     expiry_days = getattr(settings, "JWT_EXPIRY_DAYS", 7)
-    payload = {"userId": str(user_id)}
-    return jwt.encode(
-        payload,
-        secret,
-        algorithm="HS256",
-        headers=None,
-    )
+    now = int(time.time())
+    payload = {
+        "userId": str(user_id),
+        "iat": now,
+        "exp": now + expiry_days * 86400,
+    }
+    token = jwt.encode(payload, secret, algorithm="HS256")
+    return token.decode("utf-8") if isinstance(token, bytes) else token
 
 
 def _user_response(user):

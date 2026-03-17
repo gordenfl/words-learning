@@ -1,0 +1,8 @@
+{
+  "appId": "com.gordenfl.wordslearning",
+  "appName": "Chinese Words Learning",
+  "webDir": "dist",
+  "server": {
+    "cleartext": true
+  }
+}
