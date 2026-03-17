@@ -146,6 +146,7 @@ cd ..
 BUNDLE_DIR="ios/ChineseWordsLearning"
 BUNDLE_OUTPUT="$BUNDLE_DIR/main.jsbundle"
 mkdir -p "$BUNDLE_DIR"
+mkdir -p "$BUNDLE_DIR/assets"
 
 # 使用 Metro bundler 打包 JavaScript
 # 对于 Expo 项目，入口文件是 package.json 中定义的 main
@@ -157,45 +158,23 @@ if [ ! -f "metro.config.js" ]; then
   echo "⚠️  警告: metro.config.js 不存在，将使用默认配置"
 fi
 
-# 使用 Metro 直接打包（Expo 项目推荐方式）
-# Metro 会自动使用 metro.config.js 中的配置
-# 注意：Metro 的 --out 参数会自动添加 .js 扩展名
-# 设置生产环境变量，确保应用使用生产配置
+# 使用 React Native CLI 打包（带 --assets-dest），这样 assets 目录下的图片等资源会一并输出，否则 IPA 里没有图片
+# 必须加 --minify false：部分 Expo/Metro 组合下 minify 会把 import 移出顶层导致报错
 export EXPO_PUBLIC_IS_PRODUCTION=true
 export NODE_ENV=production
-METRO_OUTPUT="$BUNDLE_DIR/main.jsbundle.js"
-npx metro build "$ENTRY_FILE" \
+npx @react-native-community/cli bundle \
   --platform ios \
-  --out "$METRO_OUTPUT" \
-  --minify \
-  --dev false
+  --dev false \
+  --minify false \
+  --entry-file "$ENTRY_FILE" \
+  --bundle-output "$BUNDLE_OUTPUT" \
+  --assets-dest "$BUNDLE_DIR" \
+  --reset-cache
 
-# 如果 Metro build 失败，尝试使用 @react-native-community/cli
-if [ ! -f "$METRO_OUTPUT" ]; then
-  echo "⚠️  Metro build 失败，尝试使用 @react-native-community/cli..."
-  # 确保环境变量已设置
-  export EXPO_PUBLIC_IS_PRODUCTION=true
-  export NODE_ENV=production
-  npx @react-native-community/cli bundle \
-    --platform ios \
-    --dev false \
-    --entry-file "$ENTRY_FILE" \
-    --bundle-output "$BUNDLE_OUTPUT" \
-    --assets-dest "$BUNDLE_DIR" \
-    --reset-cache
-fi
-
-# 如果 Metro 生成了 .js 文件，重命名为 .jsbundle
-if [ -f "$METRO_OUTPUT" ]; then
-  mv "$METRO_OUTPUT" "$BUNDLE_OUTPUT"
-  echo "✅ 已重命名 $METRO_OUTPUT -> $BUNDLE_OUTPUT"
-fi
-
-# 验证文件是否存在
+# 验证 bundle 是否存在
 if [ ! -f "$BUNDLE_OUTPUT" ]; then
   echo "❌ JavaScript Bundle 打包失败"
   echo "   检查的文件: $BUNDLE_OUTPUT"
-  echo "   检查的文件: $METRO_OUTPUT"
   ls -la "$BUNDLE_DIR"/*.js* 2>/dev/null || echo "   目录中没有找到 bundle 文件"
   exit 1
 fi
@@ -214,6 +193,10 @@ if [ ! -f "ChineseWordsLearning/main.jsbundle" ]; then
         echo "✅ 已复制 main.jsbundle 到正确位置"
     fi
 fi
+
+# 使用预生成的 bundle，跳过 Xcode 的 “Bundle React Native code and images” 阶段（避免在 Xcode 环境中再次跑 Metro 失败）
+echo 'export SKIP_BUNDLING=1' > .xcode.env.local
+trap 'rm -f .xcode.env.local' EXIT
 
 # 1. Archive
 echo "📦 步骤 1/4: 创建 Archive..."
