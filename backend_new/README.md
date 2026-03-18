@@ -36,6 +36,7 @@ pip install ChatTTS torch torchaudio numpy transformers==4.53.2
 - 首次运行会从 HuggingFace 下载模型（约 500MB）
 - 若 ChatTTS 不可用（未安装或报错），会自动回退到浏览器语音
 - 已知兼容性：需 `transformers==4.53.2`（其他版本可能触发 narrow() 报错，见 [ChatTTS#955](https://github.com/2noise/ChatTTS/issues/955)）
+- **PyTorch 版本**：若出现 `Cannot copy out of meta tensor` 错误，说明 PyTorch 2.2+ 与 ChatTTS 不兼容。建议使用 **Python 3.11 或 3.12** 和 **PyTorch 2.1.x**：`pip install torch==2.1.2 torchaudio==2.1.2`
 
 ### 连服务器上的 MongoDB（gordenfl.com mongodb）
 

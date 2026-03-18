@@ -38,7 +38,14 @@ def _load_chattts():
         _CHAT_LOADED = True
         return chat
     except Exception as e:
-        log.warning("ChatTTS not available: %s. TTS will fall back to browser. Install: pip install ChatTTS torch torchaudio numpy", e)
+        err = str(e)
+        hint = ""
+        if "meta tensor" in err or "to_empty" in err:
+            hint = " Use Python 3.11–3.12 and PyTorch 2.1.x: pyenv install 3.12 && pip install torch==2.1.2 torchaudio==2.1.2"
+        log.warning(
+            "ChatTTS not available: %s.%s TTS will fall back to browser. Install: pip install ChatTTS torch torchaudio numpy",
+            e, hint
+        )
         _CHAT_LOADED = True
         _CHAT_INSTANCE = None
         return None

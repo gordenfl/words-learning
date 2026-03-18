@@ -272,8 +272,8 @@ async function speakArticle() {
   const chineseContent = chineseLines.join(" ");
   isReading.value = true;
   try {
-    const { speak } = await import("../services/speechService");
-    await speak(chineseContent, { lang: "zh", rate: 0.3 });
+    const { speakArticleBySentences } = await import("../services/speechService");
+    await speakArticleBySentences(chineseContent, { lang: "zh", rate: 0.3 });
   } finally {
     isReading.value = false;
   }

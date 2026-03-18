@@ -15,6 +15,7 @@ dist/
 *.pycache/
 *.pyc
 *~
+venv
 .vscode/
 .idea/
 build/

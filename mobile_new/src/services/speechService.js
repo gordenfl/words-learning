@@ -4,6 +4,9 @@
 import api from "./api";
 import { useAuthStore } from "../stores/auth";
 
+let currentAudioElement = null;
+let abortRequested = false;
+
 /**
  * Speak text using ChatTTS (if available) or browser SpeechSynthesis
  * @param {string} text - Text to speak
@@ -12,6 +15,17 @@ import { useAuthStore } from "../stores/auth";
  *   speed: for ChatTTS (1-10, lower=slower). Default 5 for normal, 3 for compounds.
  * @returns {Promise<void>}
  */
+
+/**
+ * Split Chinese text into sentences (by 。！？； and newlines)
+ */
+function splitIntoSentences(text) {
+  if (!text || typeof text !== "string") return [];
+  return text
+    .split(/[。！？；\n]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
 
 /**
  * Fetch TTS audio from API. Returns { audioBase64, sampleRate } or null.
@@ -51,17 +65,24 @@ export async function speak(text, options = {}) {
 
 function playBase64Audio(base64, sampleRate) {
   return new Promise((resolve, reject) => {
+    if (abortRequested) {
+      resolve();
+      return;
+    }
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const blob = new Blob([bytes], { type: "audio/wav" });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    currentAudioElement = audio;
     audio.onended = () => {
+      currentAudioElement = null;
       URL.revokeObjectURL(url);
       resolve();
     };
     audio.onerror = (e) => {
+      currentAudioElement = null;
       URL.revokeObjectURL(url);
       reject(e);
     };
@@ -137,11 +158,60 @@ export async function speakChineseThenEnglish(chinese, english, delayMs = 400, s
 }
 
 /**
- * Stop any ongoing speech
+ * Stop any ongoing speech (including article sentence-by-sentence playback)
  */
 export function stopSpeaking() {
+  abortRequested = true;
   if (typeof window !== "undefined") {
     window.speechSynthesis?.cancel();
-    // Also stop any Audio elements if we track them
+    if (currentAudioElement) {
+      currentAudioElement.pause();
+      currentAudioElement.currentTime = 0;
+      currentAudioElement = null;
+    }
+  }
+}
+
+/**
+ * Speak article by sentences: split text, fetch TTS in parallel, play each sentence as soon as ready.
+ * Does not wait for the whole article - plays sentence 1 as soon as its audio arrives, then 2, etc.
+ * @param {string} text - Full article text (Chinese content)
+ * @param {object} options - Same as speak()
+ * @returns {Promise<void>}
+ */
+export async function speakArticleBySentences(text, options = {}) {
+  if (!text || typeof text !== "string" || !text.trim()) return;
+  abortRequested = false;
+  const opts = { lang: options.lang || "zh", rate: options.rate ?? 0.3, speed: options.speed ?? (options.rate != null && options.rate < 0.5 ? 3 : 5) };
+  const sentences = splitIntoSentences(text);
+  if (sentences.length === 0) return;
+
+  // Probe: try one request first. If API returns 503, use browser for entire article (avoids 30+ 503s).
+  const probe = await fetchTtsAudio(sentences[0], opts);
+  if (!probe) {
+    for (const s of sentences) {
+      if (abortRequested) break;
+      await fallbackSpeak(s, opts);
+    }
+    return;
+  }
+
+  // API works: play first sentence, then fetch rest in parallel
+  await playBase64Audio(probe.audioBase64, probe.sampleRate);
+  if (sentences.length === 1) return;
+
+  const fetchPromises = sentences.slice(1).map((s) =>
+    fetchTtsAudio(s, opts).then((audio) => (audio ? { audio } : { fallback: s }))
+  );
+
+  for (let i = 0; i < fetchPromises.length; i++) {
+    if (abortRequested) break;
+    const result = await fetchPromises[i];
+    if (abortRequested) break;
+    if (result.audio) {
+      await playBase64Audio(result.audio.audioBase64, result.audio.sampleRate);
+    } else {
+      await fallbackSpeak(result.fallback, opts);
+    }
   }
 }
