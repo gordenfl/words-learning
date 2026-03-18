@@ -25,7 +25,7 @@
           <div v-if="processingOCR" class="progress-card">
             <div class="spinner large"></div>
             <p class="progress-title">Analyzing Image...</p>
-            <p class="progress-text">Extracting Chinese characters from the image</p>
+            <p class="progress-text">Extracting characters from the image</p>
           </div>
 
           <!-- Extracted words (new) -->
@@ -73,7 +73,7 @@
               :disabled="addingWords"
               @click="addWords"
             >
-              {{ addingWords ? "Adding..." : `Add ${selectedWords.length} Word${selectedWords.length > 1 ? "s" : ""} To My List` }}
+              {{ addingWords ? "Adding..." : `Add ${selectedWords.length} word${selectedWords.length > 1 ? "s" : ""} to my list` }}
             </button>
           </div>
         </div>

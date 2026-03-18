@@ -131,16 +131,16 @@ const WEEKLY_GOALS = [30, 50, 70, 100, 150];
 const MONTHLY_GOALS = [100, 200, 300, 500, 800];
 
 const DIFFICULTY_LEVELS = [
-  { value: "beginner", label: "Beginner (初级)", description: "Simple words and basic sentence patterns", icon: "📖" },
-  { value: "intermediate", label: "Intermediate (中级)", description: "Everyday vocabulary and common expressions", icon: "📚" },
-  { value: "advanced", label: "Advanced (高级)", description: "Complex words and sophisticated usage", icon: "🎓" },
+  { value: "beginner", label: "Beginner", description: "Simple words and basic sentence patterns", icon: "📖" },
+  { value: "intermediate", label: "Intermediate", description: "Everyday vocabulary and common expressions", icon: "📚" },
+  { value: "advanced", label: "Advanced", description: "Complex words and sophisticated usage", icon: "🎓" },
 ];
 
 const STUDY_TIMES = [
-  { value: "morning", label: "Morning (早上)", icon: "🌅" },
-  { value: "afternoon", label: "Afternoon (下午)", icon: "☀️" },
-  { value: "evening", label: "Evening (晚上)", icon: "🌙" },
-  { value: "night", label: "Night (深夜)", icon: "🌃" },
+  { value: "morning", label: "Morning", icon: "🌅" },
+  { value: "afternoon", label: "Afternoon", icon: "☀️" },
+  { value: "evening", label: "Evening", icon: "🌙" },
+  { value: "night", label: "Late Night", icon: "🌃" },
 ];
 
 const theme = reactive({
@@ -221,7 +221,10 @@ onMounted(load);
 
 <style scoped>
 .plan-page {
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 0;
 }
 .loading-container {
@@ -257,8 +260,11 @@ onMounted(load);
 
 .scroll-content {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: 24px;
+  -webkit-overflow-scrolling: touch;
 }
 .content {
   padding: 20px;

@@ -263,3 +263,33 @@ def generate_word_details(word_text, pinyin="", translation=""):
     if not isinstance(data.get("examples"), list):
         data["examples"] = []
     return data
+
+
+def generate_congrats_phrase():
+    """Generate a short, warm congratulatory phrase for completing writing practice."""
+    prompt = """Generate ONE short, warm, encouraging English sentence to congratulate someone who just finished a Chinese character writing practice (10 rounds of stroke tracing). 
+The tone should be celebratory, supportive, and genuine. Keep it under 15 words. 
+Return ONLY the sentence, no quotes or extra text."""
+    if USE_DEEPSEEK and DEEPSEEK_API_KEY:
+        url = "https://api.deepseek.com/v1/chat/completions"
+        key = DEEPSEEK_API_KEY
+        model = "deepseek-chat"
+    elif OPENAI_API_KEY and OPENAI_API_KEY != "your_openai_api_key_here":
+        url = "https://api.openai.com/v1/chat/completions"
+        key = OPENAI_API_KEY
+        model = "gpt-4o-mini"
+    else:
+        raise ValueError("No AI API configured.")
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "You write brief, warm congratulatory messages for language learners."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.9,
+        "max_tokens": 60,
+    }
+    r = requests.post(url, json=payload, headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"}, timeout=15)
+    r.raise_for_status()
+    content = r.json()["choices"][0]["message"]["content"].strip()
+    return content.strip('"\'')

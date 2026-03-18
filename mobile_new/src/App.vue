@@ -28,7 +28,9 @@ function goBack() {
 
 <style>
 #app {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   overflow: hidden;
 }
@@ -71,5 +73,11 @@ function goBack() {
 .back-icon {
   font-weight: 700;
 }
-.main { min-height: 100vh; height: 100%; overflow: hidden; }
+.main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 </style>

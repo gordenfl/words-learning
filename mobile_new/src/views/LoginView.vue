@@ -61,15 +61,15 @@
           <div class="card-content">
             <p class="social-title">Sign in with</p>
             <div class="social-buttons">
-              <button type="button" class="social-btn apple" @click="onSocialClick('apple')" title="Apple 登录">
+              <button type="button" class="social-btn apple" @click="onSocialClick('apple')" title="Sign in with Apple">
                 <span class="social-icon">🍎</span>
                 <span>Apple</span>
               </button>
-              <button type="button" class="social-btn google" @click="onSocialClick('google')" title="Google 登录">
+              <button type="button" class="social-btn google" @click="onSocialClick('google')" title="Sign in with Google">
                 <span class="social-icon">G</span>
                 <span>Google</span>
               </button>
-              <button type="button" class="social-btn facebook" @click="onSocialClick('facebook')" title="Facebook 登录">
+              <button type="button" class="social-btn facebook" @click="onSocialClick('facebook')" title="Sign in with Facebook">
                 <span class="social-icon">f</span>
                 <span>Facebook</span>
               </button>

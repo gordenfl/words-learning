@@ -8,7 +8,7 @@ from bson import ObjectId
 
 from core.models import Word
 from core.models.word import CompoundEmbed, ExampleEmbed
-from core.services.ai_service import generate_word_details
+from core.services.ai_service import generate_word_details, generate_congrats_phrase
 
 
 def _normalize_status(s):
@@ -74,15 +74,29 @@ def word_list(request):
         return JsonResponse({"error": "Failed to fetch words", "message": str(e)}, status=500)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def word_generate_congrats(request):
+    """Generate a congratulatory phrase via AI for writing completion."""
+    try:
+        phrase = generate_congrats_phrase()
+        return JsonResponse({"phrase": phrase})
+    except Exception as e:
+        return JsonResponse(
+            {"error": "Failed to generate congrats", "message": str(e)},
+            status=500,
+        )
+
+
 @require_http_methods(["GET"])
 def word_stats(request):
     try:
         user_id = request.userId
         today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         total = Word.objects.filter(userId=user_id).count()
-        learned = Word.objects.filter(userId=user_id, status="learned").count()
-        new_count = Word.objects.filter(userId=user_id, status="new").count()
-        today_learned = Word.objects.filter(userId=user_id, status="learned", learnedAt__gte=today).count()
+        learned = Word.objects.filter(userId=user_id, status__in=("learned", "known")).count()
+        new_count = Word.objects.filter(userId=user_id, status__in=("new", "unknown")).count()
+        today_learned = Word.objects.filter(userId=user_id, status__in=("learned", "known"), learnedAt__gte=today).count()
         return JsonResponse({"total": total, "new": new_count, "learned": learned, "todayLearned": today_learned})
     except Exception as e:
         return JsonResponse({"error": "Failed to fetch statistics", "message": str(e)}, status=500)

@@ -40,54 +40,47 @@
         <p class="empty-subtext">Start by scanning books or adding words manually</p>
       </div>
 
-      <router-link
+      <div
         v-for="w in words"
         :key="w.id"
-        :to="{ name: 'WordDetail', params: { id: w.id } }"
         class="word-card"
+        role="button"
+        tabindex="0"
+        @click="goToWord(w.id)"
+        @keydown.enter="goToWord(w.id)"
       >
-        <div class="card-header">
-          <span
-            class="status-chip"
-            :class="{
-              learned: w.status === 'learned',
-              new: w.status === 'new',
-            }"
-          >
-            {{ w.status === "learned" ? "Learned" : "New" }}
-          </span>
-        </div>
         <div class="word-info">
-          <div v-if="w.pinyin" class="pinyin-row">
-            <span class="pinyin">{{ w.pinyin }}</span>
-            <button
-              type="button"
-              class="speaker-btn"
-              aria-label="Speak"
-              @click.prevent="speakWord(w.word)"
-            >
-              🔊
-            </button>
+          <div v-if="w.pinyin" class="first-row">
+            <div class="pinyin-row">
+              <span class="pinyin">{{ w.pinyin }}</span>
+              <button
+                type="button"
+                class="speaker-btn"
+                aria-label="Speak"
+                @click.stop.prevent="speakWord(w.word)"
+              >
+                🔊
+              </button>
+            </div>
           </div>
           <div class="word-row">
+            <span
+              class="status-chip"
+              :class="{
+                learned: w.status === 'learned',
+                new: w.status === 'new',
+              }"
+            >
+              {{ w.status === "learned" ? "Learned" : "New" }}
+            </span>
             <span class="word-text">{{ w.word }}</span>
             <div class="actions">
-              <template v-if="w.status === 'new'">
-                <button
-                  type="button"
-                  class="action-btn"
-                  aria-label="Mark learned"
-                  @click.prevent="updateStatus(w.id, 'learned')"
-                >
-                  ✓
-                </button>
-              </template>
-              <template v-else-if="w.status === 'learned'">
+              <template v-if="w.status === 'learned'">
                 <button
                   type="button"
                   class="action-btn refresh"
                   aria-label="Mark new"
-                  @click.prevent="updateStatus(w.id, 'new')"
+                  @click.stop.prevent="updateStatus(w.id, 'new')"
                 >
                   ↻
                 </button>
@@ -96,7 +89,7 @@
                 type="button"
                 class="action-btn delete"
                 aria-label="Delete"
-                @click.prevent="deleteWord(w.id)"
+                @click.stop.prevent="deleteWord(w.id)"
               >
                 🗑
               </button>
@@ -105,7 +98,7 @@
           <p v-if="w.translation" class="translation">{{ w.translation }}</p>
           <p v-if="w.definition" class="definition">{{ w.definition }}</p>
         </div>
-      </router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -134,6 +127,10 @@ function setFilter(f) {
   statusFilter.value = f;
   router.replace({ path: "/words", query: { filter: f || "all" } });
   load();
+}
+
+function goToWord(id) {
+  router.push({ name: "WordDetail", params: { id } });
 }
 
 function syncFilterFromRoute() {
@@ -268,6 +265,7 @@ watch(() => route.query.filter, () => {
   margin: 0 auto;
 }
 .word-card {
+  position: relative;
   display: block;
   background: #fff;
   border-radius: 24px;
@@ -276,17 +274,25 @@ watch(() => route.query.filter, () => {
   text-decoration: none;
   color: inherit;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-.card-header {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+  cursor: pointer;
 }
 .status-chip {
-  font-size: 11px;
+  flex-shrink: 0;
+  font-size: 9px;
   font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 14px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  animation: float 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.first-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
 }
 .status-chip.learned {
   background: rgba(102, 187, 106, 0.2);
@@ -303,7 +309,8 @@ watch(() => route.query.filter, () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
+  flex: 1;
+  min-width: 0;
 }
 .pinyin {
   font-size: 20px;
@@ -354,7 +361,7 @@ watch(() => route.query.filter, () => {
 }
 .action-btn.delete {
   color: #EF5350;
-  background: rgba(239, 83, 80, 0.15);
+  background: none;
 }
 .translation {
   font-size: 18px;

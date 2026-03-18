@@ -574,7 +574,73 @@ async function generateWordDetails(word, pinyin, translation) {
   }
 }
 
+/**
+ * Generate a short congratulatory phrase for completing writing practice
+ */
+async function generateCongratsPhrase() {
+  const prompt =
+    "Generate ONE short, warm, encouraging English sentence to congratulate someone who just finished a Chinese character writing practice (10 rounds of stroke tracing). The tone should be celebratory, supportive, and genuine. Keep it under 15 words. Return ONLY the sentence, no quotes or extra text.";
+  let response;
+  if (USE_DEEPSEEK && DEEPSEEK_API_KEY) {
+    response = await axios.post(
+      "https://api.deepseek.com/v1/chat/completions",
+      {
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You write brief, warm congratulatory messages for language learners.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.9,
+        max_tokens: 60,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 15000,
+      }
+    );
+  } else if (
+    OPENAI_API_KEY &&
+    OPENAI_API_KEY !== "your_openai_api_key_here"
+  ) {
+    response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You write brief, warm congratulatory messages for language learners.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.9,
+        max_tokens: 60,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 15000,
+      }
+    );
+  } else {
+    throw new Error("No AI API configured.");
+  }
+  const content = response?.data?.choices?.[0]?.message?.content?.trim() || "";
+  return content.replace(/^["']|["']$/g, "");
+}
+
 module.exports = {
   generateChineseStory,
   generateWordDetails,
+  generateCongratsPhrase,
 };

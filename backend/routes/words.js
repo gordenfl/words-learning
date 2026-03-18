@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Word = require("../models/Word");
 const authMiddleware = require("../middleware/auth");
-const { generateWordDetails } = require("../services/aiService");
+const { generateWordDetails, generateCongratsPhrase } = require("../services/aiService");
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -14,7 +14,9 @@ router.get("/", async (req, res) => {
     const query = { userId: req.userId };
 
     if (status) {
-      query.status = status;
+      if (status === "new") query.status = "unknown";
+      else if (status === "learned") query.status = "known";
+      else query.status = status;
     }
 
     const words = await Word.find(query).sort({ addedAt: -1 });
@@ -23,6 +25,19 @@ router.get("/", async (req, res) => {
     res
       .status(500)
       .json({ error: "Failed to fetch words", message: error.message });
+  }
+});
+
+// Generate congrats phrase (must be before /:wordId)
+router.post("/generate-congrats", async (req, res) => {
+  try {
+    const phrase = await generateCongratsPhrase();
+    res.json({ phrase });
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to generate congrats",
+      message: error.message,
+    });
   }
 });
 
@@ -52,6 +67,8 @@ router.get("/stats", async (req, res) => {
       total: totalWords,
       known: knownWords,
       unknown: unknownWords,
+      learned: knownWords,
+      new: unknownWords,
       todayLearned,
     });
   } catch (error) {

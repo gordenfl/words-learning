@@ -55,7 +55,7 @@
 
           <!-- Theme Card -->
           <section class="card settings-card">
-            <h3 class="section-title">Theme · 主题</h3>
+            <h3 class="section-title">Theme</h3>
             <p class="section-hint">Choose your favorite color theme</p>
             <div class="theme-buttons">
               <button

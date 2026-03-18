@@ -8,21 +8,17 @@
     <template v-else-if="word">
       <div class="scroll-wrap">
         <div class="content">
-          <!-- Status Chip -->
-          <div class="status-row">
-            <span
-              class="status-chip"
-            :class="{
-              learned: word.status === 'learned',
-              new: word.status === 'new',
-            }"
-          >
-            {{ word.status === "learned" ? "Learned" : "New" }}
-            </span>
-          </div>
-
           <!-- Main Card -->
           <div class="main-card">
+            <span
+              class="status-chip"
+              :class="{
+                learned: word.status === 'learned',
+                new: word.status === 'new',
+              }"
+            >
+              {{ word.status === "learned" ? "Learned" : "New" }}
+            </span>
             <div class="main-card-actions">
               <button
                 type="button"
@@ -48,25 +44,30 @@
             </button>
           </div>
 
-          <!-- Status actions -->
-          <div class="actions-row">
-            <template v-if="word.status === 'new'">
-              <button type="button" class="action-btn learned" @click="updateStatus('learned')">
-                ✓ Mark as Learned
-              </button>
-            </template>
-            <template v-else>
-              <button type="button" class="action-btn refresh" @click="updateStatus('new')">
-                ↻ Mark as New
-              </button>
-            </template>
+          <!-- Progress hint -->
+          <div v-if="word.status === 'new'" class="progress-hint">
+            Complete Writing practice and view Example Sentences to mark as Learned.
+          </div>
+          <div v-else class="actions-row">
+            <button type="button" class="action-btn refresh" @click="updateStatus('new')">
+              ↻ Mark as New
+            </button>
           </div>
 
-          <!-- Writing placeholder (link to future screen) -->
+          <!-- Writing -->
           <div class="section-card">
-            <button type="button" class="section-btn primary" disabled>
-              ✏️ Writing • 书写练习
-            </button>
+            <router-link :to="{ name: 'Writing', params: { id: word.id } }" class="writing-progress-link">
+              <div class="writing-progress-bar">
+                <div
+                  class="writing-progress-fill"
+                  :class="{ complete: writingProgress.done >= writingProgress.total }"
+                  :style="{ width: `${(writingProgress.done / writingProgress.total) * 100}%` }"
+                ></div>
+              </div>
+              <span class="writing-progress-text">
+                {{ isWritingDone ? "✓ " : "" }}✏️ Writing Practice {{ writingProgress.done }}/{{ writingProgress.total }}
+              </span>
+            </router-link>
           </div>
 
           <!-- Word Compounds -->
@@ -91,23 +92,16 @@
                 v-for="(c, i) in word.compounds"
                 :key="i"
                 class="compound-item"
-                @click="speakWord(c.word)"
+                @click="speakCompound(c.word, c.meaning)"
               >
                 <div class="compound-left">
                   <span class="compound-word">{{ c.word }}</span>
-                  <span v-if="c.pinyin" class="compound-pinyin">{{ c.pinyin }}</span>
+                  <span v-if="c.pinyin" class="compound-pinyin">[{{ c.pinyin }}]</span>
                 </div>
                 <span v-if="c.meaning" class="compound-meaning">{{ c.meaning }}</span>
               </div>
             </div>
-            <p v-else class="empty-text">No compounds yet</p>
-          </div>
-
-          <!-- Compound Practice placeholder -->
-          <div v-if="word.compounds?.length" class="section-card">
-            <button type="button" class="section-btn secondary" disabled>
-              🧩 Compound Practice • 组词练习
-            </button>
+            <p v-else class="empty-text">No compounds yet. Generate below.</p>
           </div>
 
           <!-- Example Sentences -->
@@ -132,26 +126,23 @@
                 v-for="(e, i) in word.examples"
                 :key="i"
                 class="example-item"
-                @click="speakWord(typeof e === 'string' ? e : e.chinese)"
+                @click="speakExample(typeof e === 'string' ? e : e.chinese, typeof e === 'string' ? '' : e.english)"
               >
                 <template v-if="typeof e === 'string'">
                   <span class="example-text">{{ e }}</span>
                 </template>
                 <template v-else>
-                  <span class="example-chinese">{{ e.chinese }}</span>
-                  <span v-if="e.pinyin" class="example-pinyin">{{ e.pinyin }}</span>
-                  <span v-if="e.english" class="example-english">{{ e.english }}</span>
+                  <div class="example-line1">
+                    <ruby v-for="(pair, j) in charPinyinPairs(e)" :key="j">
+                      <span>{{ pair.char }}</span>
+                      <rt v-if="pair.pinyin">{{ pair.pinyin }}</rt>
+                    </ruby>
+                  </div>
+                  <div v-if="e.english" class="example-line2">{{ e.english }}</div>
                 </template>
               </div>
             </div>
-            <p v-else class="empty-text">No examples yet</p>
-          </div>
-
-          <!-- Sentence Practice placeholder -->
-          <div v-if="word.examples?.length" class="section-card">
-            <button type="button" class="section-btn accent" disabled>
-              💬 Sentence Practice • 造句练习
-            </button>
+            <p v-else class="empty-text">No examples yet. Generate below.</p>
           </div>
 
           <!-- Definition -->
@@ -179,7 +170,7 @@
         <div v-if="showStrokeOrder" class="modal-overlay" @click.self="showStrokeOrder = false">
           <div class="modal-content">
             <div class="modal-header">
-              <h3>Stroke Order • 笔顺</h3>
+              <h3>Stroke Order</h3>
               <button type="button" class="modal-close" @click="showStrokeOrder = false">×</button>
             </div>
             <div class="stroke-container">
@@ -202,9 +193,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { wordsAPI } from "../services/api";
+import {
+  isWritingCompleted,
+  isAllPracticesCompleted,
+  getWritingProgress,
+} from "../utils/practiceStorage";
 
 const route = useRoute();
 const router = useRouter();
@@ -229,6 +225,13 @@ const hanziWriter = ref(null);
 
 const wordId = () => route.params.id;
 
+const isWritingDone = computed(() => word.value && isWritingCompleted(wordId()));
+const writingProgress = computed(() => {
+  if (!word.value) return { done: 0, total: 10 };
+  if (isWritingCompleted(wordId())) return { done: 10, total: 10 };
+  const arr = getWritingProgress(wordId());
+  return { done: Math.min(arr.length, 10), total: 10 };
+});
 async function load() {
   loading.value = true;
   try {
@@ -237,6 +240,9 @@ async function load() {
     if (word.value && (!word.value.compounds?.length || !word.value.examples?.length)) {
       generateDetails(false, "both");
     }
+    if (word.value?.status === "new" && isAllPracticesCompleted(wordId(), word.value)) {
+      await updateStatus("learned");
+    }
   } catch (_) {
     word.value = null;
   } finally {
@@ -244,12 +250,64 @@ async function load() {
   }
 }
 
-function speakWord(text) {
+function speakWord(text, slow = false) {
   if (typeof window !== "undefined" && window.speechSynthesis) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "zh-CN";
-    u.rate = 0.8;
+    u.rate = slow ? 0.4 : 0.8;
     window.speechSynthesis.speak(u);
+  }
+}
+
+function charPinyinPairs(ex) {
+  const chinese = ex.chinese || "";
+  const pinyin = (ex.pinyin || "").trim().split(/\s+/).filter(Boolean);
+  const chars = [...chinese];
+  let si = 0;
+  return chars.map((c) => {
+    const isCjk = /[\u4e00-\u9fa5]/.test(c);
+    return {
+      char: c,
+      pinyin: isCjk && pinyin[si] ? pinyin[si++] : "",
+    };
+  });
+}
+
+function speakCompound(chinese, english) {
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    const u1 = new SpeechSynthesisUtterance(chinese);
+    u1.lang = "zh-CN";
+    u1.rate = 0.4;
+    u1.onend = () => {
+      setTimeout(() => {
+        if (english) {
+          const u2 = new SpeechSynthesisUtterance(english);
+          u2.lang = "en-US";
+          u2.rate = 0.8;
+          window.speechSynthesis.speak(u2);
+        }
+      }, 400);
+    };
+    window.speechSynthesis.speak(u1);
+  }
+}
+
+function speakExample(chinese, english) {
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    const u1 = new SpeechSynthesisUtterance(chinese);
+    u1.lang = "zh-CN";
+    u1.rate = 0.4;
+    u1.onend = () => {
+      setTimeout(() => {
+        if (english) {
+          const u2 = new SpeechSynthesisUtterance(english);
+          u2.lang = "en-US";
+          u2.rate = 0.8;
+          window.speechSynthesis.speak(u2);
+        }
+      }, 1000);
+    };
+    window.speechSynthesis.speak(u1);
   }
 }
 
@@ -273,7 +331,6 @@ async function updateStatus(status) {
   try {
     await wordsAPI.updateStatus(wordId(), status);
     word.value = { ...word.value, status };
-    router.replace({ name: "WordsList", query: { filter: "all" } });
   } catch (_) {
     alert("Failed to update status");
   }
@@ -412,24 +469,29 @@ onMounted(load);
   padding: 16px 20px;
 }
 
-.status-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
-}
 .status-chip {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 14px;
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 5;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  animation: status-float 2.5s ease-in-out infinite;
+}
+@keyframes status-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 .status-chip.learned {
-  background: rgba(102, 187, 106, 0.2);
-  color: #66BB6A;
+  background: #66BB6A;
+  color: #fff;
 }
 .status-chip.new {
-  background: rgba(239, 83, 80, 0.2);
-  color: #EF5350;
+  background: #EF5350;
+  color: #fff;
 }
 
 .main-card {
@@ -492,6 +554,46 @@ onMounted(load);
   cursor: pointer;
 }
 
+.progress-hint {
+  font-size: 14px;
+  color: #7F8C8D;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: rgba(66, 165, 245, 0.08);
+  border-radius: 12px;
+}
+.section-btn-link {
+  display: block;
+  text-decoration: none;
+}
+.writing-progress-link {
+  display: block;
+  text-decoration: none;
+  padding: 4px 0;
+}
+.writing-progress-bar {
+  height: 36px;
+  background: #E0E0E0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.writing-progress-fill {
+  height: 100%;
+  background: #42A5F5;
+  border-radius: 12px 0 0 12px;
+  transition: width 0.3s ease;
+}
+.writing-progress-fill.complete {
+  border-radius: 12px;
+}
+.writing-progress-text {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2C3E50;
+  text-align: center;
+}
 .actions-row {
   display: flex;
   gap: 8px;
@@ -559,19 +661,24 @@ onMounted(load);
 }
 .compound-item,
 .example-item {
-  padding: 12px;
+  padding: 12px 16px;
   background: #F5F5F5;
   border-radius: 12px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .compound-left {
-  margin-bottom: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 .compound-word {
-  font-size: 17px;
+  font-size: 24px;
   font-weight: 600;
   color: #2C3E50;
-  display: block;
 }
 .compound-pinyin {
   font-size: 14px;
@@ -579,24 +686,32 @@ onMounted(load);
   color: #42A5F5;
 }
 .compound-meaning {
-  font-size: 14px;
+  font-size: 15px;
   color: #7F8C8D;
-  float: right;
+  flex-shrink: 0;
 }
-.example-chinese {
-  font-size: 16px;
+.example-item {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.example-line1 {
+  font-size: 18px;
   font-weight: 500;
   color: #2C3E50;
-  display: block;
+  line-height: 1.8;
+  margin-bottom: 4px;
 }
-.example-pinyin {
-  font-size: 13px;
-  font-style: italic;
+.example-line1 ruby {
+  ruby-position: over;
+  ruby-align: center;
+}
+.example-line1 rt {
+  font-size: 10px;
   color: #42A5F5;
-  display: block;
+  font-style: italic;
 }
-.example-english {
-  font-size: 14px;
+.example-line2 {
+  font-size: 13px;
   color: #7F8C8D;
 }
 .example-text {

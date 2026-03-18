@@ -54,6 +54,7 @@ export const wordsAPI = {
   updateStatus: (wordId, status) => api.patch(`/words/${wordId}/status`, { status }),
   delete: (wordId) => api.delete(`/words/${wordId}`),
   generateDetails: (wordId, options) => api.post(`/words/${wordId}/generate-details`, options || {}),
+  generateCongrats: () => api.post("/words/generate-congrats"),
 };
 
 export const usersAPI = {

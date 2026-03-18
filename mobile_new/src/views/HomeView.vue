@@ -12,8 +12,8 @@
         <div class="header-left">
           <img :src="iconUrl" alt="" class="welcome-icon" />
           <div class="welcome-text-wrap">
-            <h1 class="welcome-text">Hello, {{ displayName }}!</h1>
-            <p class="welcome-subtext">Let's learn Chinese today!</p>
+            <h1 class="welcome-text">{{ timeGreeting }}, {{ displayName }}!</h1>
+            <p class="welcome-subtext">{{ welcomeGreeting }}</p>
           </div>
         </div>
         <div class="header-right">
@@ -43,7 +43,7 @@
       <div v-if="showScanModal" class="scan-modal-overlay" @click.self="showScanModal = false">
         <div class="scan-modal">
           <p class="scan-modal-title">Scan Book 📸</p>
-          <p class="scan-modal-desc">Choose how to import Chinese words</p>
+          <p class="scan-modal-desc">Choose how to import words from your image</p>
           <button type="button" class="scan-modal-btn" @click="triggerTakePhoto">Take Photo</button>
           <button type="button" class="scan-modal-btn" @click="triggerChooseGallery">Choose from Gallery</button>
           <button type="button" class="scan-modal-btn cancel" @click="showScanModal = false">Cancel</button>
@@ -54,16 +54,16 @@
         <!-- Quick Stats 三张卡片 -->
         <div class="quick-stats">
           <router-link :to="{ name: 'WordsList', query: { filter: 'all' } }" class="quick-stat-card">
-            <span class="quick-stat-value">{{ (stats?.new || 0) + (stats?.learned || 0) }}</span>
-            <span class="quick-stat-label">Total Words</span>
+            <span class="quick-stat-value">{{ stats?.total ?? 0 }}</span>
+            <span class="quick-stat-label">Vocabulary</span>
           </router-link>
-          <router-link :to="{ name: 'WordsList', query: { filter: 'known' } }" class="quick-stat-card">
-            <span class="quick-stat-value stat-success">{{ stats?.known || 0 }}</span>
-            <span class="quick-stat-label">Learned</span>
+          <router-link :to="{ name: 'WordsList', query: { filter: 'learned' } }" class="quick-stat-card">
+            <span class="quick-stat-value stat-success">{{ stats?.learned ?? stats?.known ?? 0 }}</span>
+            <span class="quick-stat-label">Mastered</span>
           </router-link>
-          <router-link :to="{ name: 'WordsList', query: { filter: 'unknown' } }" class="quick-stat-card">
-            <span class="quick-stat-value stat-warning">{{ stats?.unknown || 0 }}</span>
-            <span class="quick-stat-label">New</span>
+          <router-link :to="{ name: 'WordsList', query: { filter: 'new' } }" class="quick-stat-card">
+            <span class="quick-stat-value stat-warning">{{ stats?.new ?? stats?.unknown ?? 0 }}</span>
+            <span class="quick-stat-label">Learning</span>
           </router-link>
         </div>
 
@@ -78,7 +78,7 @@
               :key="item.route"
               :href="item.href"
               :style="getFeaturePosition(idx)"
-              class="feature-icon"
+              class="feature-icon feature-icon-float"
               @click.prevent="go(item.route, item.query)"
             >
               <span class="feature-icon-bg" :style="{ backgroundImage: 'url(' + circleUrl + ')' }"></span>
@@ -118,6 +118,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
+import { getRandomGreeting } from "../utils/homeGreetings";
 import { useAuthStore } from "../stores/auth";
 import { useScanStore } from "../stores/scan";
 import { wordsAPI, usersAPI } from "../services/api";
@@ -139,6 +140,7 @@ const router = useRouter();
 const auth = useAuthStore();
 const scanStore = useScanStore();
 const stats = ref(null);
+const welcomeGreeting = ref("");
 const loading = ref(true);
 const showScanModal = ref(false);
 const inputCapture = ref(null);
@@ -149,11 +151,18 @@ const displayName = computed(() => {
   return u?.profile?.displayName || u?.username || u?.email || "friend";
 });
 
+const timeGreeting = computed(() => {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+});
+
 const featureItems = [
   { label: "Words", route: "WordsList", query: { filter: "all" }, href: "/words?filter=all" },
   { label: "Reading", route: "ArticleList", query: {}, href: "/articles" },
   { label: "Scan", route: null, query: {}, href: "#" },
-  { label: "Write", route: "WordsList", query: { filter: "new" }, href: "/words?filter=new" },
+  { label: "Writing", route: "WordsList", query: { filter: "new" }, href: "/words?filter=new" },
   { label: "Plan", route: "LearningPlan", query: {}, href: "/learning-plan" },
   { label: "Profile", route: "Profile", query: {}, href: "/profile" },
 ];
@@ -168,22 +177,26 @@ function go(routeName, query) {
 
 function getFeaturePosition(index) {
   const total = 6;
-  const radius = 140;
+  const radius = 130;
   const angleStep = 360 / total;
   const angle = -90 + index * angleStep;
   const rad = (angle * Math.PI) / 180;
   const x = Math.cos(rad) * radius;
   const y = Math.sin(rad) * radius;
-  const size = 104;
+  const size = 110;
   const center = 150;
   const left = center + x - size / 2;
   const top = center + y - size / 2;
+  const durations = [2.2, 2.6, 2.4, 2.8, 2.3, 2.5];
+  const delays = [0, 0.5, 1, 0.3, 0.8, 1.2];
   return {
     position: "absolute",
     left: left + "px",
     top: top + "px",
     width: size + "px",
     height: size + "px",
+    "--float-duration": durations[index] + "s",
+    "--float-delay": delays[index] + "s",
   };
 }
 
@@ -227,7 +240,10 @@ function onImageSelected(ev) {
   reader.readAsDataURL(file);
 }
 
-onMounted(loadData);
+onMounted(() => {
+  welcomeGreeting.value = getRandomGreeting();
+  loadData();
+});
 </script>
 
 <style scoped>
@@ -300,8 +316,8 @@ onMounted(loadData);
 }
 .header-right { flex-shrink: 0; }
 .camera-btn {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: none;
   background: none;
@@ -311,8 +327,8 @@ onMounted(loadData);
   justify-content: center;
 }
 .camera-img {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
 }
 
@@ -372,8 +388,8 @@ onMounted(loadData);
   justify-content: center;
 }
 .center-character {
-  width: 140px;
-  height: 140px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
   overflow: hidden;
   background: #fff;
@@ -413,6 +429,13 @@ onMounted(loadData);
   padding: 0 4px;
 }
 .feature-icon:hover .feature-icon-bg { opacity: 0.95; }
+.feature-icon-float {
+  animation: feature-float var(--float-duration, 2.5s) ease-in-out var(--float-delay, 0s) infinite;
+}
+@keyframes feature-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
 
 /* Bottom nav */
 .bottom-nav {
