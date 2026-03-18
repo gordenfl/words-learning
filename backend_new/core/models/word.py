@@ -31,8 +31,8 @@ class Word(models.Model):
     )
     status = models.CharField(
         max_length=20,
-        choices=[("unknown", "unknown"), ("known", "known")],
-        default="unknown",
+        choices=[("new", "new"), ("learned", "learned")],
+        default="new",
     )
     sourceImage = models.CharField(max_length=500, blank=True)
     addedAt = models.DateTimeField(auto_now_add=True, null=True, blank=True)

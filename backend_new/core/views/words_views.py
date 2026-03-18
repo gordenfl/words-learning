@@ -11,6 +11,15 @@ from core.models.word import CompoundEmbed, ExampleEmbed
 from core.services.ai_service import generate_word_details
 
 
+def _normalize_status(s):
+    """Map legacy unknown/known to new/learned for backward compatibility."""
+    if s == "unknown":
+        return "new"
+    if s == "known":
+        return "learned"
+    return s
+
+
 def _serialize_word(w):
     d = {
         "id": str(w.pk),
@@ -22,7 +31,7 @@ def _serialize_word(w):
         "compounds": [],
         "examples": [],
         "difficulty": getattr(w, "difficulty", "intermediate") or "intermediate",
-        "status": getattr(w, "status", "unknown") or "unknown",
+        "status": _normalize_status(getattr(w, "status", "new") or "new"),
         "sourceImage": getattr(w, "sourceImage", "") or "",
         "addedAt": w.addedAt,
         "learnedAt": getattr(w, "learnedAt", None),
@@ -50,9 +59,15 @@ def word_list(request):
     try:
         user_id = request.userId
         status = request.GET.get("status")
+        if status:
+            status = _normalize_status(status)
         qs = Word.objects.filter(userId=user_id)
         if status:
-            qs = qs.filter(status=status)
+            # Support both new/learned and legacy unknown/known in DB
+            if status == "new":
+                qs = qs.filter(status__in=("new", "unknown"))
+            elif status == "learned":
+                qs = qs.filter(status__in=("learned", "known"))
         words = list(qs.order_by("-addedAt"))
         return JsonResponse({"words": [_serialize_word(w) for w in words], "count": len(words)})
     except Exception as e:
@@ -65,10 +80,10 @@ def word_stats(request):
         user_id = request.userId
         today = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         total = Word.objects.filter(userId=user_id).count()
-        known = Word.objects.filter(userId=user_id, status="known").count()
-        unknown = Word.objects.filter(userId=user_id, status="unknown").count()
-        today_learned = Word.objects.filter(userId=user_id, status="known", learnedAt__gte=today).count()
-        return JsonResponse({"total": total, "known": known, "unknown": unknown, "todayLearned": today_learned})
+        learned = Word.objects.filter(userId=user_id, status="learned").count()
+        new_count = Word.objects.filter(userId=user_id, status="new").count()
+        today_learned = Word.objects.filter(userId=user_id, status="learned", learnedAt__gte=today).count()
+        return JsonResponse({"total": total, "new": new_count, "learned": learned, "todayLearned": today_learned})
     except Exception as e:
         return JsonResponse({"error": "Failed to fetch statistics", "message": str(e)}, status=500)
 
@@ -109,7 +124,7 @@ def word_create(request):
             translation=body.get("translation", ""),
             definition=body.get("definition", ""),
             sourceImage=body.get("sourceImage", ""),
-            status="unknown",
+            status="new",
         )
         examples = body.get("examples") or []
         if examples:
@@ -156,14 +171,19 @@ def word_update_status(request, word_id):
     try:
         body = json.loads(request.body)
         status = body.get("status")
-        if status not in ("unknown", "known"):
+        # Accept legacy unknown/known for backward compatibility
+        if status == "unknown":
+            status = "new"
+        elif status == "known":
+            status = "learned"
+        elif status not in ("new", "learned"):
             return JsonResponse({"error": "Invalid status"}, status=400)
         user_id = request.userId
         w = Word.objects.filter(pk=ObjectId(word_id), userId=user_id).first()
         if not w:
             return JsonResponse({"error": "Word not found"}, status=404)
         w.status = status
-        if status == "known" and not getattr(w, "learnedAt", None):
+        if status == "learned" and not getattr(w, "learnedAt", None):
             w.learnedAt = timezone.now()
         w.save()
         return JsonResponse({"message": "Word status updated", "word": _serialize_word(w)})

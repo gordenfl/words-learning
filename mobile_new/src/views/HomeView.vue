@@ -54,16 +54,16 @@
         <!-- Quick Stats 三张卡片 -->
         <div class="quick-stats">
           <router-link :to="{ name: 'WordsList', query: { filter: 'all' } }" class="quick-stat-card">
-            <span class="quick-stat-value">{{ (stats?.known || 0) + (stats?.unknown || 0) }}</span>
+            <span class="quick-stat-value">{{ (stats?.new || 0) + (stats?.learned || 0) }}</span>
             <span class="quick-stat-label">Total Words</span>
           </router-link>
           <router-link :to="{ name: 'WordsList', query: { filter: 'known' } }" class="quick-stat-card">
             <span class="quick-stat-value stat-success">{{ stats?.known || 0 }}</span>
-            <span class="quick-stat-label">Mastered</span>
+            <span class="quick-stat-label">Learned</span>
           </router-link>
           <router-link :to="{ name: 'WordsList', query: { filter: 'unknown' } }" class="quick-stat-card">
             <span class="quick-stat-value stat-warning">{{ stats?.unknown || 0 }}</span>
-            <span class="quick-stat-label">To Learn</span>
+            <span class="quick-stat-label">New</span>
           </router-link>
         </div>
 
@@ -88,25 +88,25 @@
         </div>
       </div>
 
-      <!-- Bottom Nav（与 mobile 一致：4 个 button_yellow 风格按钮） -->
+      <!-- Bottom Nav -->
       <nav class="bottom-nav">
         <router-link to="/words" class="nav-item">
-          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+          <span class="nav-button">
             <span class="nav-button-label">Words</span>
           </span>
         </router-link>
         <router-link to="/articles" class="nav-item">
-          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+          <span class="nav-button">
             <span class="nav-button-label">Reading</span>
           </span>
         </router-link>
         <router-link to="/learning-plan" class="nav-item">
-          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+          <span class="nav-button">
             <span class="nav-button-label">Plan</span>
           </span>
         </router-link>
         <router-link to="/profile" class="nav-item">
-          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+          <span class="nav-button">
             <span class="nav-button-label">Profile</span>
           </span>
         </router-link>
@@ -123,7 +123,6 @@ import { useScanStore } from "../stores/scan";
 import { wordsAPI, usersAPI } from "../services/api";
 import iconUrl from "../assets/icon.png";
 import cameraUrl from "../assets/camera.png";
-import buttonYellowUrl from "../assets/button_yellow.png";
 import circleUrl from "../assets/circle_green.png";
 
 const theme = reactive({
@@ -154,7 +153,7 @@ const featureItems = [
   { label: "Words", route: "WordsList", query: { filter: "all" }, href: "/words?filter=all" },
   { label: "Reading", route: "ArticleList", query: {}, href: "/articles" },
   { label: "Scan", route: null, query: {}, href: "#" },
-  { label: "Write", route: "WordsList", query: { filter: "unknown" }, href: "/words?filter=unknown" },
+  { label: "Write", route: "WordsList", query: { filter: "new" }, href: "/words?filter=new" },
   { label: "Plan", route: "LearningPlan", query: {}, href: "/learning-plan" },
   { label: "Profile", route: "Profile", query: {}, href: "/profile" },
 ];
@@ -191,7 +190,7 @@ function getFeaturePosition(index) {
 async function loadData() {
   try {
     const [statsRes, planRes] = await Promise.all([
-      wordsAPI.stats().catch(() => ({ data: { total: 0, known: 0, unknown: 0, todayLearned: 0 } })),
+      wordsAPI.stats().catch(() => ({ data: { total: 0, new: 0, learned: 0, todayLearned: 0 } })),
       usersAPI.getLearningPlan().catch(() => ({ data: { learningPlan: {} } })),
     ]);
     stats.value = statsRes.data;
@@ -445,15 +444,14 @@ onMounted(loadData);
 }
 .nav-button {
   width: 100%;
-  max-width: 120px;
-  height: 60px;
-  border-radius: 40px;
-  background-size: cover;
-  background-position: center;
+  max-width: 88px;
+  height: 56px;
+  border-radius: 8px;
+  background: #42A5F5;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 .nav-button-label {
   font-size: 14px;
