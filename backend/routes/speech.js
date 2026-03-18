@@ -118,5 +118,28 @@ router.post("/recognize-base64", async (req, res) => {
   }
 });
 
+// TTS voices list (for Profile UI - ChatTTS runs on backend_new only)
+const TTS_VOICES = [
+  { id: "xiaoming", name: "小明", gender: "male" },
+  { id: "xiaoli", name: "小李", gender: "male" },
+  { id: "laowang", name: "老王", gender: "male" },
+  { id: "xiaomei", name: "小美", gender: "female" },
+  { id: "xiaofang", name: "小芳", gender: "female" },
+  { id: "xiaohong", name: "小红", gender: "female" },
+  { id: "laoli", name: "老李", gender: "male" },
+  { id: "xiaoling", name: "小玲", gender: "female" },
+];
+
+router.get("/tts/voices", (req, res) => {
+  res.json({ voices: TTS_VOICES });
+});
+
+router.post("/tts/synthesize", (req, res) => {
+  res.status(503).json({
+    error: "TTS unavailable",
+    message: "ChatTTS is available on Django backend only. Use backend_new for TTS.",
+  });
+});
+
 module.exports = router;
 

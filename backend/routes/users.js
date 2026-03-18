@@ -138,7 +138,7 @@ router.patch('/theme', async (req, res) => {
 // Update user profile (must be before /:userId)
 router.patch('/profile', async (req, res) => {
   try {
-    const { displayName, bio, avatar } = req.body;
+    const { displayName, bio, avatar, ttsVoice } = req.body;
 
     const user = await User.findById(req.userId);
     if (!user) {
@@ -159,6 +159,9 @@ router.patch('/profile', async (req, res) => {
     }
     if (avatar !== undefined) {
       user.profile.avatar = avatar;
+    }
+    if (ttsVoice !== undefined) {
+      user.profile.ttsVoice = ttsVoice || 'xiaoming';
     }
 
     await user.save();

@@ -111,15 +111,10 @@ function startPractice() {
     onCorrectStroke: (d) => { strokeStatus.value = `Good! Stroke ${d.strokeNum + 1}`; },
     onComplete: () => {
       strokeStatus.value = "Excellent! ✓";
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        const phrase = getRandomCongratsPhrase();
-        const u = new SpeechSynthesisUtterance(phrase);
-        u.lang = "en-US";
-        u.onend = () => completeCurrent();
-        window.speechSynthesis.speak(u);
-      } else {
-        completeCurrent();
-      }
+      import("../services/speechService")
+        .then(({ speakEnglish }) => speakEnglish(getRandomCongratsPhrase()))
+        .then(() => completeCurrent())
+        .catch(() => completeCurrent());
     },
   });
 }

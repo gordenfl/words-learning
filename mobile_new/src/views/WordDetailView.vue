@@ -196,6 +196,7 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { wordsAPI } from "../services/api";
+import { speakChinese, speakChineseThenEnglish, speakEnglish } from "../services/speechService";
 import {
   isWritingCompleted,
   isAllPracticesCompleted,
@@ -251,12 +252,7 @@ async function load() {
 }
 
 function speakWord(text, slow = false) {
-  if (typeof window !== "undefined" && window.speechSynthesis) {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "zh-CN";
-    u.rate = slow ? 0.4 : 0.8;
-    window.speechSynthesis.speak(u);
-  }
+  speakChinese(text, slow ? 0.4 : 0.8);
 }
 
 function charPinyinPairs(ex) {
@@ -274,41 +270,11 @@ function charPinyinPairs(ex) {
 }
 
 function speakCompound(chinese, english) {
-  if (typeof window !== "undefined" && window.speechSynthesis) {
-    const u1 = new SpeechSynthesisUtterance(chinese);
-    u1.lang = "zh-CN";
-    u1.rate = 0.4;
-    u1.onend = () => {
-      setTimeout(() => {
-        if (english) {
-          const u2 = new SpeechSynthesisUtterance(english);
-          u2.lang = "en-US";
-          u2.rate = 0.8;
-          window.speechSynthesis.speak(u2);
-        }
-      }, 400);
-    };
-    window.speechSynthesis.speak(u1);
-  }
+  speakChineseThenEnglish(chinese, english, 400, true); // slowest for compounds
 }
 
 function speakExample(chinese, english) {
-  if (typeof window !== "undefined" && window.speechSynthesis) {
-    const u1 = new SpeechSynthesisUtterance(chinese);
-    u1.lang = "zh-CN";
-    u1.rate = 0.4;
-    u1.onend = () => {
-      setTimeout(() => {
-        if (english) {
-          const u2 = new SpeechSynthesisUtterance(english);
-          u2.lang = "en-US";
-          u2.rate = 0.8;
-          window.speechSynthesis.speak(u2);
-        }
-      }, 1000);
-    };
-    window.speechSynthesis.speak(u1);
-  }
+  speakChineseThenEnglish(chinese, english, 0, true); // 读完中文立即读英文
 }
 
 async function generateDetails(force, updateType) {
@@ -402,11 +368,7 @@ function practiceStroke() {
     onCorrectStroke: (d) => { strokeStatus.value = `Good! ✓ Stroke ${d.strokeNum + 1}`; },
     onComplete: () => {
       strokeStatus.value = "Perfect! 完成！🎉";
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        const u = new SpeechSynthesisUtterance("Excellent");
-        u.lang = "en-US";
-        window.speechSynthesis.speak(u);
-      }
+      speakEnglish("Excellent");
     },
   });
 }

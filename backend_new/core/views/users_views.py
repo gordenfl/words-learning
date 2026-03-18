@@ -22,6 +22,7 @@ def _user_to_dict(user, include_password=False):
             "displayName": getattr(user.profile, "displayName", "") or "",
             "avatar": getattr(user.profile, "avatar", "") or "",
             "bio": getattr(user.profile, "bio", "") or "",
+            "ttsVoice": getattr(user.profile, "ttsVoice", "") or "xiaoming",
         }
     if include_password and user.password:
         d["password"] = "[REDACTED]"
@@ -142,10 +143,22 @@ def profile_patch(request):
             user.profile.bio = body["bio"]
         if "avatar" in body:
             user.profile.avatar = body["avatar"]
+        if "ttsVoice" in body:
+            user.profile.ttsVoice = (body["ttsVoice"] or "xiaoming").strip() or "xiaoming"
         user.save()
         return JsonResponse({
             "message": "Profile updated successfully",
-            "user": {"_id": str(user.pk), "username": user.username, "email": user.email, "profile": {"displayName": getattr(user.profile, "displayName", ""), "avatar": getattr(user.profile, "avatar", ""), "bio": getattr(user.profile, "bio", "")}}
+            "user": {
+                "_id": str(user.pk),
+                "username": user.username,
+                "email": user.email,
+                "profile": {
+                    "displayName": getattr(user.profile, "displayName", ""),
+                    "avatar": getattr(user.profile, "avatar", ""),
+                    "bio": getattr(user.profile, "bio", ""),
+                    "ttsVoice": getattr(user.profile, "ttsVoice", "") or "xiaoming",
+                },
+            },
         })
     except Exception as e:
         return JsonResponse({"error": "Failed to update profile", "message": str(e)}, status=500)

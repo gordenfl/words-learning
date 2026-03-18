@@ -122,6 +122,7 @@ def me(request):
             "displayName": getattr(user.profile, "displayName", "") or "",
             "avatar": getattr(user.profile, "avatar", "") or "",
             "bio": getattr(user.profile, "bio", "") or "",
+            "ttsVoice": getattr(user.profile, "ttsVoice", "") or "xiaoming",
         }
     if user.learningPlan:
         u["learningPlan"] = {

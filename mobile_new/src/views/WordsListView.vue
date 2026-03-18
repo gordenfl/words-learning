@@ -75,16 +75,16 @@
             </span>
             <span class="word-text">{{ w.word }}</span>
             <div class="actions">
-              <template v-if="w.status === 'learned'">
-                <button
-                  type="button"
-                  class="action-btn refresh"
-                  aria-label="Mark new"
-                  @click.stop.prevent="updateStatus(w.id, 'new')"
-                >
-                  ↻
-                </button>
-              </template>
+              <span v-if="w.status === 'new'" class="action-placeholder" aria-hidden="true"></span>
+              <button
+                v-if="w.status === 'learned'"
+                type="button"
+                class="action-btn refresh"
+                aria-label="Mark new"
+                @click.stop.prevent="updateStatus(w.id, 'new')"
+              >
+                ↻
+              </button>
               <button
                 type="button"
                 class="action-btn delete"
@@ -153,12 +153,7 @@ async function load() {
 }
 
 function speakWord(word) {
-  if (typeof window !== "undefined" && window.speechSynthesis) {
-    const u = new SpeechSynthesisUtterance(word);
-    u.lang = "zh-CN";
-    u.rate = 0.8;
-    window.speechSynthesis.speak(u);
-  }
+  import("../services/speechService").then(({ speakChinese }) => speakChinese(word));
 }
 
 async function updateStatus(wordId, status) {
@@ -278,9 +273,12 @@ watch(() => route.query.filter, () => {
 }
 .status-chip {
   flex-shrink: 0;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   padding: 2px 6px;
+  min-width: 52px;
+  line-height: 1.2;
+  text-align: center;
   border-radius: 8px;
   animation: float 2.5s ease-in-out infinite;
   pointer-events: none;
@@ -341,6 +339,11 @@ watch(() => route.query.filter, () => {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.action-placeholder {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
 }
 .action-btn {
   width: 36px;

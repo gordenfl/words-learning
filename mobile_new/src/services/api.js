@@ -80,6 +80,8 @@ export const ocrAPI = {
 export const speechAPI = {
   recognize: (formData) => api.post("/speech/recognize", formData, { headers: { "Content-Type": "multipart/form-data" } }),
   recognizeBase64: (audioBase64, languageCode) => api.post("/speech/recognize-base64", { audioBase64, languageCode }),
+  ttsVoices: () => api.get("/speech/tts/voices"),
+  ttsSynthesize: (text, voiceId, lang) => api.post("/speech/tts/synthesize", { text, voiceId, lang }),
 };
 
 export default api;

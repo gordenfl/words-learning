@@ -53,6 +53,26 @@
             </button>
           </section>
 
+          <!-- Voice Card -->
+          <section class="card settings-card">
+            <h3 class="section-title">Voice · 语音</h3>
+            <p class="section-hint">Choose TTS voice for reading aloud (ChatTTS)</p>
+            <div class="voice-grid">
+              <button
+                v-for="v in ttsVoices"
+                :key="v.id"
+                type="button"
+                class="voice-btn"
+                :class="{ active: ttsVoice === v.id }"
+                :style="ttsVoice === v.id ? { background: theme.primary, color: '#fff' } : {}"
+                @click="setVoice(v.id)"
+              >
+                <span class="voice-name">{{ v.name }}</span>
+                <span class="voice-gender">{{ v.gender === 'male' ? '♂' : '♀' }}</span>
+              </button>
+            </div>
+          </section>
+
           <!-- Theme Card -->
           <section class="card settings-card">
             <h3 class="section-title">Theme</h3>
@@ -160,7 +180,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import { authAPI, usersAPI } from "../services/api";
+import { authAPI, usersAPI, speechAPI } from "../services/api";
 
 const themeVariants = [
   { name: "blue", displayName: "天蓝色 / Blue", colors: { primary: "#42A5F5", background: "#E3F2FD" } },
@@ -186,6 +206,17 @@ const uploadingAvatar = ref(false);
 const inputCapture = ref(null);
 const inputGallery = ref(null);
 const showAvatarModal = ref(false);
+const ttsVoice = ref("xiaoming");
+const ttsVoices = ref([
+  { id: "xiaoming", name: "小明", gender: "male" },
+  { id: "xiaoli", name: "小李", gender: "male" },
+  { id: "laowang", name: "老王", gender: "male" },
+  { id: "xiaomei", name: "小美", gender: "female" },
+  { id: "xiaofang", name: "小芳", gender: "female" },
+  { id: "xiaohong", name: "小红", gender: "female" },
+  { id: "laoli", name: "老李", gender: "male" },
+  { id: "xiaoling", name: "小玲", gender: "female" },
+]);
 
 const currentThemeName = ref((() => {
   try {
@@ -221,10 +252,30 @@ const oauthProviderName = computed(() => {
   return "";
 });
 
+async function loadVoices() {
+  try {
+    const { data } = await speechAPI.ttsVoices();
+    if (data?.voices?.length) ttsVoices.value = data.voices;
+  } catch (_) {}
+}
+
+function setVoice(id) {
+  ttsVoice.value = id;
+  handleUpdateTtsVoice(id);
+}
+
+async function handleUpdateTtsVoice(voiceId) {
+  try {
+    await usersAPI.updateProfile({ ttsVoice: voiceId });
+    await auth.fetchProfile();
+  } catch (_) {}
+}
+
 watch(user, (u) => {
   if (u?.profile) {
     displayName.value = u.profile.displayName || "";
     bio.value = u.profile.bio || "";
+    ttsVoice.value = u.profile.ttsVoice || "xiaoming";
   }
   const name = u?.theme || currentThemeName.value;
   if (name) {
@@ -236,10 +287,12 @@ watch(user, (u) => {
 async function loadProfile() {
   try {
     await auth.fetchProfile();
+    loadVoices();
     const u = auth.user;
     if (u?.profile) {
       displayName.value = u.profile.displayName || "";
       bio.value = u.profile.bio || "";
+      ttsVoice.value = u.profile.ttsVoice || "xiaoming";
     }
     const name = u?.theme || "blue";
     currentThemeName.value = name;
@@ -253,7 +306,7 @@ async function loadProfile() {
 async function handleUpdateProfile() {
   saving.value = true;
   try {
-    await usersAPI.updateProfile({ displayName: displayName.value, bio: bio.value });
+    await usersAPI.updateProfile({ displayName: displayName.value, bio: bio.value, ttsVoice: ttsVoice.value });
     await auth.fetchProfile();
     alert("Profile updated successfully");
   } catch (_) {
@@ -563,6 +616,30 @@ onMounted(loadProfile);
   border-color: transparent;
   color: #fff;
 }
+.voice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.voice-btn {
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 2px solid #E8E8E8;
+  background: #fff;
+  color: #2C3E50;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.voice-btn.active {
+  border-color: transparent;
+  color: #fff;
+}
+.voice-name { font-weight: 600; }
+.voice-gender { font-size: 0.85rem; opacity: 0.9; }
 
 .setting-row {
   display: flex;

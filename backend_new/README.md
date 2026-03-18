@@ -24,6 +24,19 @@ pip install -r requirements.txt
 - `GOOGLE_VISION_API_KEY` / `BAIDU_OCR_*`、`USE_GOOGLE_VISION`：OCR
 - `GOOGLE_SPEECH_API_KEY` / `BAIDU_SPEECH_*`、`USE_BAIDU_SPEECH`：语音识别
 
+### TTS 朗读（可选）
+
+朗读功能默认使用**浏览器内置语音**。若要使用 ChatTTS AI 语音：
+
+```bash
+pip install ChatTTS torch torchaudio numpy transformers==4.53.2
+```
+
+- **无需配置环境变量**
+- 首次运行会从 HuggingFace 下载模型（约 500MB）
+- 若 ChatTTS 不可用（未安装或报错），会自动回退到浏览器语音
+- 已知兼容性：需 `transformers==4.53.2`（其他版本可能触发 narrow() 报错，见 [ChatTTS#955](https://github.com/2noise/ChatTTS/issues/955)）
+
 ### 连服务器上的 MongoDB（gordenfl.com mongodb）
 
 服务器上 27017 已映射，但从本机直连 `gordenfl.com:27017` 通常会被防火墙拦截，建议用 **SSH 隧道**：
@@ -61,6 +74,7 @@ python manage.py runserver 8088
 - `GET/POST /api/articles/*`：文章列表、生成、标记已读
 - `POST /api/ocr/extract`、`/api/ocr/extract-base64`：OCR
 - `POST /api/speech/recognize`、`/api/speech/recognize-base64`：语音识别
+- `GET /api/speech/tts/voices`、`POST /api/speech/tts/synthesize`：TTS 朗读（ChatTTS）
 - `GET /api/health`：健康检查
 
 逻辑与 Node 版保持一致，仅实现语言与框架不同。

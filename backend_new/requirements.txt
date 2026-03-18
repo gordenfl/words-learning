@@ -17,3 +17,8 @@ pypinyin>=0.50
 
 # Production WSGI (used in Docker)
 gunicorn>=21
+
+# Optional: ChatTTS for TTS. Uncomment to enable AI voice (otherwise browser TTS fallback).
+# pip install ChatTTS torch torchaudio numpy transformers==4.53.2
+# ChatTTS>=0.2
+# transformers==4.53.2  # 4.53.2 可避免 narrow() 报错，见 ChatTTS#955

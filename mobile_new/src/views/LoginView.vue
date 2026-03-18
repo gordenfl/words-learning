@@ -107,8 +107,8 @@ const theme = reactive({
 
 const router = useRouter();
 const auth = useAuthStore();
-const email = ref("");
-const password = ref("");
+const email = ref("gordenfl@gmail.com");
+const password = ref("gordenfl");
 const error = ref("");
 const loading = ref(false);
 const showPassword = ref(false);

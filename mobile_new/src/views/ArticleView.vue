@@ -257,32 +257,25 @@ function highlightParts(text) {
 }
 
 function speakWord(text) {
-  if (typeof window !== "undefined" && window.speechSynthesis) {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "zh-CN";
-    u.rate = 0.4;
-    window.speechSynthesis.speak(u);
-  }
+  import("../services/speechService").then(({ speakChinese }) => speakChinese(text));
 }
 
-function speakArticle() {
+async function speakArticle() {
   if (!article.value?.content) return;
   if (isReading.value) {
-    window.speechSynthesis?.cancel();
+    import("../services/speechService").then(({ stopSpeaking }) => stopSpeaking());
     isReading.value = false;
     return;
   }
   const lines = article.value.content.split("\n");
   const chineseLines = lines.filter((l) => l.trim() && /[\u4e00-\u9fa5]/.test(l));
   const chineseContent = chineseLines.join(" ");
-  if (typeof window !== "undefined" && window.speechSynthesis) {
-    isReading.value = true;
-    const u = new SpeechSynthesisUtterance(chineseContent);
-    u.lang = "zh-CN";
-    u.rate = 0.3;
-    u.onend = () => (isReading.value = false);
-    u.onerror = () => (isReading.value = false);
-    window.speechSynthesis.speak(u);
+  isReading.value = true;
+  try {
+    const { speak } = await import("../services/speechService");
+    await speak(chineseContent, { lang: "zh", rate: 0.3 });
+  } finally {
+    isReading.value = false;
   }
 }
 

@@ -15,6 +15,7 @@ class ProfileEmbed(EmbeddedModel):
     displayName = models.CharField(max_length=255, blank=True)
     avatar = models.CharField(max_length=500, blank=True)
     bio = models.TextField(blank=True)
+    ttsVoice = models.CharField(max_length=50, blank=True, default="xiaoming")
 
 
 class LearningPlanEmbed(EmbeddedModel):
