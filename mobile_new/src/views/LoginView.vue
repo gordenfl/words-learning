@@ -4,7 +4,7 @@
       <div class="content">
         <!-- Welcome Header（与 mobile 一致） -->
         <div class="header-surface">
-          <img src="./icon.png" alt="App" class="logo" />
+          <img :src="iconUrl" alt="App" class="logo" />
           <h1 class="title">👋 Welcome Back!</h1>
           <p class="subtitle">Let's learn Chinese characters together!</p>
         </div>
@@ -91,6 +91,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
+import iconUrl from "../assets/icon.png";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 

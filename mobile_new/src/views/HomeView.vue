@@ -1,65 +1,519 @@
 <template>
-  <div class="home">
-    <header class="header">
-      <h1>Chinese Words Learning</h1>
-      <p class="user">{{ auth.user?.username || auth.user?.email }}</p>
-    </header>
-    <nav class="nav">
-      <router-link to="/words" class="nav-card">
-        <span class="icon">📚</span>
-        <span>My Words</span>
-      </router-link>
-      <router-link to="/articles" class="nav-card">
-        <span class="icon">📖</span>
-        <span>Reading</span>
-      </router-link>
-      <router-link to="/learning-plan" class="nav-card">
-        <span class="icon">🎯</span>
-        <span>Learning Plan</span>
-      </router-link>
-      <router-link to="/profile" class="nav-card">
-        <span class="icon">👤</span>
-        <span>Profile</span>
-      </router-link>
-    </nav>
-    <div v-if="stats" class="stats">
-      <p>Total: {{ stats.total }} · Known: {{ stats.known }} · Today: {{ stats.todayLearned }}</p>
+  <div class="home-page" :style="{ backgroundColor: theme.background }">
+    <!-- Loading -->
+    <div v-if="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p class="loading-text">Loading...</p>
     </div>
+
+    <template v-else>
+      <!-- Header（与 mobile 一致：primary 色条 + icon + 欢迎语 + 相机） -->
+      <header class="header" :style="{ backgroundColor: theme.primary }">
+        <div class="header-left">
+          <img :src="iconUrl" alt="" class="welcome-icon" />
+          <div class="welcome-text-wrap">
+            <h1 class="welcome-text">Hello, {{ displayName }}!</h1>
+            <p class="welcome-subtext">Let's learn Chinese today!</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <button type="button" class="camera-btn" @click="handleScanBook" aria-label="Scan">
+            <img :src="cameraUrl" alt="" class="camera-img" />
+          </button>
+        </div>
+      </header>
+
+      <!-- Hidden file inputs for camera / gallery -->
+      <input
+        ref="inputCapture"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        class="hidden-input"
+        @change="onImageSelected"
+      />
+      <input
+        ref="inputGallery"
+        type="file"
+        accept="image/*"
+        class="hidden-input"
+        @change="onImageSelected"
+      />
+      <!-- Scan modal: Take Photo / Choose from Gallery -->
+      <div v-if="showScanModal" class="scan-modal-overlay" @click.self="showScanModal = false">
+        <div class="scan-modal">
+          <p class="scan-modal-title">Scan Book 📸</p>
+          <p class="scan-modal-desc">Choose how to import Chinese words</p>
+          <button type="button" class="scan-modal-btn" @click="triggerTakePhoto">Take Photo</button>
+          <button type="button" class="scan-modal-btn" @click="triggerChooseGallery">Choose from Gallery</button>
+          <button type="button" class="scan-modal-btn cancel" @click="showScanModal = false">Cancel</button>
+        </div>
+      </div>
+
+      <div class="scroll-content">
+        <!-- Quick Stats 三张卡片 -->
+        <div class="quick-stats">
+          <router-link :to="{ name: 'WordsList', query: { filter: 'all' } }" class="quick-stat-card">
+            <span class="quick-stat-value">{{ (stats?.known || 0) + (stats?.unknown || 0) }}</span>
+            <span class="quick-stat-label">Total Words</span>
+          </router-link>
+          <router-link :to="{ name: 'WordsList', query: { filter: 'known' } }" class="quick-stat-card">
+            <span class="quick-stat-value stat-success">{{ stats?.known || 0 }}</span>
+            <span class="quick-stat-label">Mastered</span>
+          </router-link>
+          <router-link :to="{ name: 'WordsList', query: { filter: 'unknown' } }" class="quick-stat-card">
+            <span class="quick-stat-value stat-warning">{{ stats?.unknown || 0 }}</span>
+            <span class="quick-stat-label">To Learn</span>
+          </router-link>
+        </div>
+
+        <!-- Center: 中心角色 + 6 个功能图标 -->
+        <div class="character-section">
+          <div class="character-container">
+            <div class="center-character">
+              <img :src="iconUrl" alt="" class="center-icon" />
+            </div>
+            <a
+              v-for="(item, idx) in featureItems"
+              :key="item.route"
+              :href="item.href"
+              :style="getFeaturePosition(idx)"
+              class="feature-icon"
+              @click.prevent="go(item.route, item.query)"
+            >
+              <span class="feature-icon-bg" :style="{ backgroundImage: 'url(' + circleUrl + ')' }"></span>
+              <span class="feature-label">{{ item.label }}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Nav（与 mobile 一致：4 个 button_yellow 风格按钮） -->
+      <nav class="bottom-nav">
+        <router-link to="/words" class="nav-item">
+          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+            <span class="nav-button-label">Words</span>
+          </span>
+        </router-link>
+        <router-link to="/articles" class="nav-item">
+          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+            <span class="nav-button-label">Reading</span>
+          </span>
+        </router-link>
+        <router-link to="/learning-plan" class="nav-item">
+          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+            <span class="nav-button-label">Plan</span>
+          </span>
+        </router-link>
+        <router-link to="/profile" class="nav-item">
+          <span class="nav-button" :style="{ backgroundImage: 'url(' + buttonYellowUrl + ')' }">
+            <span class="nav-button-label">Profile</span>
+          </span>
+        </router-link>
+      </nav>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, reactive, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import { wordsAPI } from "../services/api";
+import { useScanStore } from "../stores/scan";
+import { wordsAPI, usersAPI } from "../services/api";
+import iconUrl from "../assets/icon.png";
+import cameraUrl from "../assets/camera.png";
+import buttonYellowUrl from "../assets/button_yellow.png";
+import circleUrl from "../assets/circle_green.png";
 
-const auth = useAuthStore();
-const stats = ref(null);
-
-onMounted(async () => {
-  try {
-    const { data } = await wordsAPI.stats();
-    stats.value = data;
-  } catch (_) {}
+const theme = reactive({
+  background: "#E3F2FD",
+  primary: "#42A5F5",
+  success: "#66BB6A",
+  warning: "#FFA726",
+  card: "#FFFFFF",
+  textLight: "#7F8C8D",
+  textInverse: "#FFFFFF",
 });
+
+const router = useRouter();
+const auth = useAuthStore();
+const scanStore = useScanStore();
+const stats = ref(null);
+const loading = ref(true);
+const showScanModal = ref(false);
+const inputCapture = ref(null);
+const inputGallery = ref(null);
+
+const displayName = computed(() => {
+  const u = auth.user;
+  return u?.profile?.displayName || u?.username || u?.email || "friend";
+});
+
+const featureItems = [
+  { label: "Words", route: "WordsList", query: { filter: "all" }, href: "/words?filter=all" },
+  { label: "Reading", route: "ArticleList", query: {}, href: "/articles" },
+  { label: "Scan", route: null, query: {}, href: "#" },
+  { label: "Write", route: "WordsList", query: { filter: "unknown" }, href: "/words?filter=unknown" },
+  { label: "Plan", route: "LearningPlan", query: {}, href: "/learning-plan" },
+  { label: "Profile", route: "Profile", query: {}, href: "/profile" },
+];
+
+function go(routeName, query) {
+  if (routeName === null) {
+    handleScanBook();
+    return;
+  }
+  router.push({ name: routeName, query });
+}
+
+function getFeaturePosition(index) {
+  const total = 6;
+  const radius = 140;
+  const angleStep = 360 / total;
+  const angle = -90 + index * angleStep;
+  const rad = (angle * Math.PI) / 180;
+  const x = Math.cos(rad) * radius;
+  const y = Math.sin(rad) * radius;
+  const size = 104;
+  const center = 150;
+  const left = center + x - size / 2;
+  const top = center + y - size / 2;
+  return {
+    position: "absolute",
+    left: left + "px",
+    top: top + "px",
+    width: size + "px",
+    height: size + "px",
+  };
+}
+
+async function loadData() {
+  try {
+    const [statsRes, planRes] = await Promise.all([
+      wordsAPI.stats().catch(() => ({ data: { total: 0, known: 0, unknown: 0, todayLearned: 0 } })),
+      usersAPI.getLearningPlan().catch(() => ({ data: { learningPlan: {} } })),
+    ]);
+    stats.value = statsRes.data;
+  } catch (_) {}
+  finally {
+    loading.value = false;
+  }
+}
+
+function handleScanBook() {
+  showScanModal.value = true;
+}
+
+function triggerTakePhoto() {
+  showScanModal.value = false;
+  inputCapture.value?.click();
+}
+
+function triggerChooseGallery() {
+  showScanModal.value = false;
+  inputGallery.value?.click();
+}
+
+function onImageSelected(ev) {
+  const file = ev.target.files?.[0];
+  ev.target.value = "";
+  if (!file || !file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    scanStore.setImage(dataUrl);
+    router.push({ name: "ImageView" });
+  };
+  reader.readAsDataURL(file);
+}
+
+onMounted(loadData);
 </script>
 
 <style scoped>
-.home { padding: 1rem; max-width: 480px; margin: 0 auto; }
-.header { margin-bottom: 1.5rem; }
-.header h1 { font-size: 1.5rem; margin: 0; }
-.user { color: #666; margin: 0.25rem 0 0; font-size: 0.9rem; }
-.nav { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.nav-card {
+.home-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+.loading-container {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.25rem;
-  background: #f5f5f5;
-  border-radius: 12px;
-  text-decoration: none;
-  color: #333;
+  justify-content: center;
+  background: #fff;
+  gap: 20px;
 }
-.nav-card .icon { font-size: 2rem; margin-bottom: 0.5rem; }
-.stats { margin-top: 1.5rem; padding: 0.75rem; background: #eee; border-radius: 8px; font-size: 0.9rem; color: #555; }
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #E8E8E8;
+  border-top-color: #42A5F5;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.loading-text {
+  font-size: 17px;
+  color: #7F8C8D;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 20px 20px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.welcome-icon {
+  width: 60px;
+  height: 60px;
+  margin-right: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.welcome-text-wrap { min-width: 0; }
+.welcome-text {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff;
+  margin: 0 0 4px;
+}
+.welcome-subtext {
+  font-size: 17px;
+  color: rgba(255,255,255,0.9);
+  margin: 0;
+}
+.header-right { flex-shrink: 0; }
+.camera-btn {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.camera-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+/* Scroll content */
+.scroll-content {
+  flex: 1;
+  /* leave room for fixed bottom nav + safe-area */
+  padding: 20px 20px calc(132px + env(safe-area-inset-bottom, 0px));
+  overflow: auto;
+}
+
+/* Quick stats */
+.quick-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.quick-stat-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 24px;
+  padding: 20px;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.quick-stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: #42A5F5;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.quick-stat-value.stat-success { color: #66BB6A; }
+.quick-stat-value.stat-warning { color: #FFA726; }
+.quick-stat-label {
+  font-size: 17px;
+  color: #7F8C8D;
+}
+
+/* Center character + feature icons */
+.character-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 0;
+  min-height: 400px;
+}
+.character-container {
+  width: 300px;
+  height: 300px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.center-character {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.center-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+  position: absolute;
+}
+.feature-icon-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+.feature-label {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 0 4px;
+}
+.feature-icon:hover .feature-icon-bg { opacity: 0.95; }
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-top: 1px solid #E8E8E8;
+  padding-left: 6px;
+  padding-right: 6px;
+  /* White bar flush to bottom; keep content above home-indicator */
+  height: calc(92px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.06);
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+  min-height: 50px;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+.nav-button {
+  width: 100%;
+  max-width: 120px;
+  height: 60px;
+  border-radius: 40px;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+}
+.nav-button-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.hidden-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.scan-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.scan-modal {
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+.scan-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2C3E50;
+  margin: 0 0 8px;
+}
+.scan-modal-desc {
+  font-size: 0.95rem;
+  color: #7F8C8D;
+  margin: 0 0 20px;
+}
+.scan-modal-btn {
+  display: block;
+  width: 100%;
+  padding: 14px 20px;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: #42A5F5;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.scan-modal-btn.cancel {
+  background: #E8E8E8;
+  color: #2C3E50;
+  margin-bottom: 0;
+}
 </style>

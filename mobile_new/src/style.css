@@ -50,8 +50,16 @@
   }
 }
 
+html,
+body,
+#app {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  /* Prevent iOS rubber-band scrolling on non-scroll pages */
+  overscroll-behavior-y: none;
 }
 
 h1,

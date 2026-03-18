@@ -1,6 +1,7 @@
 """User model - same schema as Node/Mongoose backend."""
 import bcrypt
 from django.db import models
+from django.contrib.auth.hashers import check_password as django_check_password
 from django_mongodb_backend.fields import (
     ArrayField,
     EmbeddedModelField,
@@ -77,7 +78,8 @@ class User(models.Model):
 
     def save(self, *args, **kwargs):
         # Hash password before save (same logic as Node: only when modified, skip if already hash)
-        if self.password and not self.password.startswith(("$2a$", "$2b$", "$2y$")):
+        # Also avoid re-hashing Django-style hashes (e.g. pbkdf2_sha256$...)
+        if self.password and not self.password.startswith(("$2a$", "$2b$", "$2y$", "pbkdf2_sha256$")):
             self.password = bcrypt.hashpw(
                 self.password.encode("utf-8"), bcrypt.gensalt(rounds=10)
             ).decode("utf-8")
@@ -86,4 +88,7 @@ class User(models.Model):
     def check_password(self, raw_password):
         if not self.password or not raw_password:
             return False
+        # Support both legacy bcrypt hashes and Django PBKDF2 hashes
+        if isinstance(self.password, str) and self.password.startswith("pbkdf2_sha256$"):
+            return django_check_password(raw_password, self.password)
         return bcrypt.checkpw(raw_password.encode("utf-8"), self.password.encode("utf-8"))

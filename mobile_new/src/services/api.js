@@ -61,6 +61,7 @@ export const usersAPI = {
   updateLearningPlan: (body) => api.patch("/users/learning-plan", body),
   updateProfile: (body) => api.patch("/users/profile", body),
   updateTheme: (theme) => api.patch("/users/theme", { theme }),
+  deleteAccount: () => api.delete("/users/account"),
 };
 
 export const articlesAPI = {
@@ -72,6 +73,7 @@ export const articlesAPI = {
 export const ocrAPI = {
   extract: (formData) => api.post("/ocr/extract", formData, { headers: { "Content-Type": "multipart/form-data" } }),
   extractBase64: (imageBase64) => api.post("/ocr/extract-base64", { imageBase64 }),
+  extractText: (imageBase64) => api.post("/ocr/extract-base64", { imageBase64 }),
 };
 
 export const speechAPI = {

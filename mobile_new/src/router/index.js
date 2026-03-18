@@ -11,6 +11,7 @@ const routes = [
   { path: "/articles/:id", name: "Article", component: () => import("../views/ArticleView.vue"), meta: { requiresAuth: true } },
   { path: "/profile", name: "Profile", component: () => import("../views/ProfileView.vue"), meta: { requiresAuth: true } },
   { path: "/learning-plan", name: "LearningPlan", component: () => import("../views/LearningPlanView.vue"), meta: { requiresAuth: true } },
+  { path: "/image-view", name: "ImageView", component: () => import("../views/ImageView.vue"), meta: { requiresAuth: true } },
 ];
 
 const router = createRouter({

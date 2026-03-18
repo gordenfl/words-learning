@@ -21,17 +21,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
 import { wordsAPI } from "../services/api";
 
+const route = useRoute();
 const words = ref([]);
 const loading = ref(true);
 const statusFilter = ref("");
 
+function syncFilterFromRoute() {
+  const q = route.query.filter;
+  if (q === "known" || q === "unknown") statusFilter.value = q;
+  else statusFilter.value = "";
+}
+
 async function load() {
   loading.value = true;
   try {
-    const { data } = await wordsAPI.list(statusFilter ? { status: statusFilter } : {});
+    const { data } = await wordsAPI.list(statusFilter.value ? { status: statusFilter.value } : {});
     words.value = data.words || [];
   } catch (_) {
     words.value = [];
@@ -40,7 +48,14 @@ async function load() {
   }
 }
 
-onMounted(load);
+onMounted(() => {
+  syncFilterFromRoute();
+  load();
+});
+watch(() => route.query.filter, () => {
+  syncFilterFromRoute();
+  load();
+});
 </script>
 
 <style scoped>

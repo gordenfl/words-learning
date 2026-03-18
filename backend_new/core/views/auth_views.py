@@ -2,6 +2,7 @@
 import json
 import time
 import jwt
+import logging
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -11,6 +12,8 @@ from bson import ObjectId
 from core.models import User
 from core.models.user import ProfileEmbed, LearningPlanEmbed
 from core.services.apple_auth_service import verify_identity_token
+
+logger = logging.getLogger(__name__)
 
 
 def _jwt_sign(user_id):
@@ -68,9 +71,27 @@ def register(request):
 def login(request):
     try:
         body = json.loads(request.body)
-        email = (body.get("email") or "").strip().lower()
+        # Accept either email or username in the same field.
+        # mobile_new currently sends "email", but users may type a username there.
+        identifier = (body.get("email") or body.get("username") or body.get("identifier") or "").strip()
         password = body.get("password") or ""
-        user = User.objects.filter(email=email).first()
+        # Debug logging (safe): never log plaintext passwords
+        if getattr(settings, "DEBUG", False) or getattr(settings, "LOG_AUTH_ATTEMPTS", False):
+            ip = request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("REMOTE_ADDR") or ""
+            ua = request.META.get("HTTP_USER_AGENT") or ""
+            # Use WARNING level so it shows up with Django's default console logging.
+            logger.warning(
+                "auth.login attempt identifier=%r ip=%s ua=%r password_provided=%s password_len=%s",
+                identifier,
+                ip,
+                ua[:200],
+                bool(password),
+                len(password) if password else 0,
+            )
+        if "@" in identifier:
+            user = User.objects.filter(email=identifier.lower()).first()
+        else:
+            user = User.objects.filter(username=identifier).first()
         if not user or not user.check_password(password):
             return JsonResponse({"error": "Incorrect username or password"}, status=401)
         token = _jwt_sign(user.pk)

@@ -81,7 +81,9 @@ if not os.path.exists("/.dockerenv"):
 DATABASES = {
     "default": {
         "ENGINE": "django_mongodb_backend",
-        "NAME": "words-learning-python",
+        # Use the same DB as the existing Node backend by default.
+        # Can be overridden via env var when needed.
+        "NAME": _env("MONGODB_DB_NAME", "words-learning"),
         "HOST": MONGODB_URI,
     }
 }
