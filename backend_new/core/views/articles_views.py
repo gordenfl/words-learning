@@ -55,29 +55,34 @@ def article_generate(request):
             difficulty = getattr(user.learningPlan, "difficulty", "intermediate") or "intermediate"
             daily_goal = getattr(user.learningPlan, "dailyWordGoal", 10) or 10
         word_count = body.get("wordCount", daily_goal)
-        # New words by difficulty (aggregate $match + $sample not in ORM; use filter + random sample)
-        new_qs = Word.objects.filter(userId=user_id, status="new", difficulty=difficulty)
-        new_list = list(new_qs)
-        if len(new_list) < 3:
-            new_qs = Word.objects.filter(userId=user_id, status="new")
-            new_list = list(new_qs)
-        if len(new_list) > word_count:
-            new_list = random.sample(new_list, word_count)
-        if not new_list:
+        # Use learned words for article (学过的字组成的文章)
+        learned_qs = Word.objects.filter(userId=user_id, status="learned", difficulty=difficulty).order_by("-addedAt")
+        target_list = list(learned_qs[: word_count + 50])  # get more, then sample
+        if len(target_list) < 3:
+            learned_qs = Word.objects.filter(userId=user_id, status="learned").order_by("-addedAt")
+            target_list = list(learned_qs[: word_count + 50])
+        if len(target_list) < 3:
+            # Also try "known" for legacy backend compatibility
+            learned_qs = Word.objects.filter(userId=user_id, status__in=("learned", "known")).order_by("-addedAt")
+            target_list = list(learned_qs[: word_count + 50])
+        if len(target_list) > word_count:
+            target_list = random.sample(target_list, word_count)
+        if not target_list:
             return JsonResponse({
-                "message": "Great job! You've learned all your words! 🎉",
-                "suggestion": "Add some new Chinese words to continue your learning journey.",
+                "message": "No words to read yet",
+                "suggestion": "Learn some words first (complete Writing practice and mark them as Learned), then generate an article.",
                 "needMoreWords": True,
             })
-        learned_words = list(Word.objects.filter(userId=user_id, status="learned").order_by("-addedAt")[:30])
-        learned_texts = [w.word for w in learned_words]
-        target_texts = [w.word for w in new_list]
+        # Use all learned words as context for AI
+        all_learned = list(Word.objects.filter(userId=user_id, status__in=("learned", "known")).order_by("-addedAt")[:50])
+        learned_texts = [w.word for w in all_learned]
+        target_texts = [w.word for w in target_list]
         content = generate_chinese_story(target_texts, learned_texts, difficulty)
         article = Article(
             userId=user_id,
             title="Reading",
             content=content,
-            targetWords=[TargetWordEmbed(word=w.pk, wordText=w.word) for w in new_list],
+            targetWords=[TargetWordEmbed(word=w.pk, wordText=w.word) for w in target_list],
             difficulty=difficulty,
         )
         article.save()

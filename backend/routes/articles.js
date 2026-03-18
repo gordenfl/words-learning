@@ -33,64 +33,65 @@ router.post('/generate', async (req, res) => {
     
     const { wordCount = dailyGoal } = req.body;
 
-    // Get unknown words matching difficulty (or all unknown if not enough)
-    // 使用 MongoDB 的 $sample 聚合管道随机选择单词
-    let unknownWords = await Word.aggregate([
-      { 
-        $match: { 
-          userId: req.userId, 
-          status: 'unknown',
-          difficulty: difficulty 
-        } 
-      },
-      { $sample: { size: wordCount } }
-    ]);
+    // Use learned/known words for article (学过的字组成的文章)
+    let learnedWords = await Word.find({ 
+      userId: req.userId, 
+      status: { $in: ['known', 'learned'] },
+      difficulty: difficulty 
+    })
+    .sort({ updatedAt: -1 })
+    .limit(wordCount + 50);
 
-    // If not enough words at this difficulty, get any unknown words (randomly)
-    if (unknownWords.length < 3) {
-      unknownWords = await Word.aggregate([
-        { 
-          $match: { 
-            userId: req.userId, 
-            status: 'unknown' 
-          } 
-        },
-        { $sample: { size: wordCount } }
-      ]);
+    if (learnedWords.length < 3) {
+      learnedWords = await Word.find({ 
+        userId: req.userId, 
+        status: { $in: ['known', 'learned'] }
+      })
+      .sort({ updatedAt: -1 })
+      .limit(wordCount + 50);
     }
 
-    if (unknownWords.length === 0) {
+    if (learnedWords.length < 3) {
       return res.status(200).json({ 
-        message: 'Great job! You\'ve learned all your words! 🎉',
-        suggestion: 'Add some new Chinese words to continue your learning journey.',
+        message: 'No words to read yet',
+        suggestion: 'Learn some words first (complete Writing practice and mark them as Learned), then generate an article.',
         needMoreWords: true
       });
     }
 
-    // 获取用户已学的单词（known）
-    // 限制数量避免单词太多，取最近学习的30个
-    const knownWords = await Word.find({ 
+    // Random sample if we have more than needed
+    const targetWordsList = learnedWords.length > wordCount
+      ? learnedWords.sort(() => Math.random() - 0.5).slice(0, wordCount)
+      : learnedWords;
+
+    if (targetWordsList.length === 0) {
+      return res.status(200).json({ 
+        message: 'No words to read yet',
+        suggestion: 'Learn some words first (complete Writing practice and mark them as Learned), then generate an article.',
+        needMoreWords: true
+      });
+    }
+
+    // All learned words as context for AI
+    const allKnown = await Word.find({ 
       userId: req.userId, 
-      status: 'known'
+      status: { $in: ['known', 'learned'] }
     })
     .sort({ updatedAt: -1 })
-    .limit(30);
+    .limit(50);
 
-    console.log(`📚 Generating article with ${unknownWords.length} unknown words and ${knownWords.length} known words`);
-    
-    // Generate article based on difficulty using AI service
-    const targetWords = unknownWords.map(w => w.word);
-    const knownWordTexts = knownWords.map(w => w.word);
-    
+    const targetWords = targetWordsList.map(w => w.word);
+    const knownWordTexts = allKnown.map(w => w.word);
+
+    console.log(`📚 Generating article with ${targetWordsList.length} learned words`);
     console.log(`🎯 Target words for this article: ${targetWords.join('、')}`);
-    console.log(`📖 Known words to use: ${knownWordTexts.join('、')}`);
     const content = await generateChineseStory(targetWords, knownWordTexts, difficulty);
 
     const article = new Article({
       userId: req.userId,
-      title: `Chinese Learning - ${new Date().toLocaleDateString()}`, // 临时标题，保存后会更新
+      title: `Chinese Learning - ${new Date().toLocaleDateString()}`,
       content,
-      targetWords: unknownWords.map(w => ({
+      targetWords: targetWordsList.map(w => ({
         word: w._id,
         wordText: w.word
       })),

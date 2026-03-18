@@ -67,7 +67,7 @@ export const usersAPI = {
 
 export const articlesAPI = {
   list: () => api.get("/articles"),
-  generate: (wordCount) => api.post("/articles/generate", { wordCount }),
+  generate: (wordCount = 10) => api.post("/articles/generate", { wordCount }),
   markRead: (articleId) => api.patch(`/articles/${articleId}/read`),
 };
 
