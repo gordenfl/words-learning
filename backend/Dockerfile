@@ -1,19 +1,24 @@
-FROM node:18-alpine
+# Explicit Python 3.11 so Django 6.x is available (Django 6 requires 3.10+)
+FROM python:3.11.9-slim-bookworm
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Build deps for bcrypt / cryptography (then remove to keep image smaller)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-RUN npm install
+# Install Python dependencies (upgrade pip for latest package index)
+COPY requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir gunicorn \
+    && python -m gunicorn --version
 
-# Copy application files
+# Copy project code (backend_new as context root)
 COPY . .
 
-# Expose port
+# Default: run gunicorn (bind all interfaces for Docker)
+ENV PORT=8088
 EXPOSE 8088
-
-# Start the application
-CMD ["npm", "start"]
-
+CMD ["sh", "-c", "python -m gunicorn backend_new.wsgi:application -b 0.0.0.0:${PORT:-8088} -w 2 --timeout 120"]
