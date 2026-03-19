@@ -12,7 +12,10 @@ dist/
 *.log
 *.swp
 *.swo
+*.pycache/
+*.pyc
 *~
+venv
 .vscode/
 .idea/
 build/

@@ -2,13 +2,13 @@
 
 ## 🎯 使用外部 MongoDB 实例
 
-你的系统中已经有一个运行中的 MongoDB 实例（`photoshare-mongodb`），本项目将复用它。
+你的系统中已经有一个运行中的 MongoDB 实例（`mongodb`），本项目将复用它。
 
 ---
 
 ## 📋 当前 MongoDB 信息
 
-- **容器名**: `photoshare-mongodb`
+- **容器名**: `mongodb`
 - **镜像**: `mongo:6.0`
 - **端口**: `27017`
 - **网络**: `docker_photoshare-network`
@@ -29,13 +29,13 @@
 编辑 `/Users/yiliu/Documents/GitHub/words-learning/.env`：
 
 ```bash
-# MongoDB Configuration (使用 photoshare-mongodb 的凭证)
-MONGO_ROOT_USERNAME=admin  # 替换为 photoshare 的 MongoDB 用户名
-MONGO_ROOT_PASSWORD=your_actual_password  # 替换为 photoshare 的 MongoDB 密码
+# MongoDB Configuration (使用 mongodb 的凭证)
+MONGO_ROOT_USERNAME=admin  # 替换为 MongoDB 用户名
+MONGO_ROOT_PASSWORD=your_actual_password  # 替换为 MongoDB 密码
 
 # Backend MongoDB 连接 URI
 # 通过容器名连接（推荐 - backend 容器会加入同一网络）
-MONGODB_URI=mongodb://admin:your_actual_password@photoshare-mongodb:27017/words-learning?authSource=admin
+MONGODB_URI=mongodb://admin:your_actual_password@mongodb:27017/words-learning?authSource=admin
 
 # JWT Secret (保持不变)
 JWT_SECRET=TEcxMOFjVx5jj075m8j3pFwlUpQeFkmzHPtOemssBTk6RMpjcUG26-zX6bo5_A6U
@@ -59,7 +59,7 @@ docker-compose logs -f backend
 ### **方式 1: 通过容器名（推荐）✅**
 
 ```bash
-MONGODB_URI=mongodb://admin:password@photoshare-mongodb:27017/words-learning?authSource=admin
+MONGODB_URI=mongodb://admin:password@mongodb:27017/words-learning?authSource=admin
 ```
 
 **优点**:
@@ -113,7 +113,7 @@ MONGODB_URI=mongodb://admin:password@localhost:27017/words-learning?authSource=a
 
 ```bash
 # 进入 MongoDB 容器
-docker exec -it photoshare-mongodb mongosh -u admin -p your_password --authenticationDatabase admin
+docker exec -it mongodb mongosh -u admin -p your_password --authenticationDatabase admin
 
 # 查看所有数据库
 show dbs
@@ -131,14 +131,14 @@ show collections
 
 ### **1. 用户名和密码**
 
-你需要知道 `photoshare-mongodb` 的实际用户名和密码：
+你需要知道 `mongodb` 容器的实际用户名和密码：
 
 ```bash
 # 方法 1: 查看 photoshare 项目的 docker-compose.yml
 cat /path/to/photoshare/docker-compose.yml | grep MONGO
 
 # 方法 2: 查看容器的环境变量
-docker inspect photoshare-mongodb --format '{{.Config.Env}}' | grep MONGO
+docker inspect mongodb --format '{{.Config.Env}}' | grep MONGO
 ```
 
 ### **2. 网络配置**
@@ -173,7 +173,7 @@ cp .env.example .env
 nano .env
 ```
 
-### **步骤 2: 填入 photoshare-mongodb 的凭证**
+### **步骤 2: 填入 mongodb 的凭证**
 
 找到 photoshare 项目的 MongoDB 用户名和密码，填入：
 
@@ -181,7 +181,7 @@ nano .env
 MONGO_ROOT_USERNAME=admin
 MONGO_ROOT_PASSWORD=photoshare_mongodb_的实际密码
 
-MONGODB_URI=mongodb://admin:实际密码@photoshare-mongodb:27017/words-learning?authSource=admin
+MONGODB_URI=mongodb://admin:实际密码@mongodb:27017/words-learning?authSource=admin
 ```
 
 ### **步骤 3: 启动服务**
@@ -218,7 +218,7 @@ docker inspect words-learning-backend --format '{{.NetworkSettings.Networks}}'
 
 ```bash
 # 测试 MongoDB 凭证
-docker exec -it photoshare-mongodb mongosh -u admin -p 你的密码 --authenticationDatabase admin
+docker exec -it mongodb mongosh -u admin -p 你的密码 --authenticationDatabase admin
 ```
 
 ### **问题 3: 找不到数据库**
@@ -247,15 +247,15 @@ docker exec -it photoshare-mongodb mongosh -u admin -p 你的密码 --authentica
 
 **你需要做的**：
 
-1. ✅ 找到 `photoshare-mongodb` 的用户名和密码
+1. ✅ 找到 `mongodb` 的用户名和密码
 2. ✅ 更新 `.env` 文件中的 `MONGO_ROOT_USERNAME` 和 `MONGO_ROOT_PASSWORD`
-3. ✅ 更新 `MONGODB_URI`，使用 `photoshare-mongodb` 作为主机名
+3. ✅ 更新 `MONGODB_URI`，使用 `mongodb` 作为主机名
 4. ✅ 运行 `docker-compose up -d`
 
 **docker-compose.yml 已经配置好了**：
 
 - ❌ 不会创建新的 MongoDB 容器
 - ✅ backend 会加入 `docker_photoshare-network` 网络
-- ✅ 可以通过容器名 `photoshare-mongodb` 直接连接
+- ✅ 可以通过容器名 `mongodb` 直接连接
 
 就这么简单！🎉

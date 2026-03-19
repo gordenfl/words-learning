@@ -343,7 +343,7 @@ docker-compose up -d --build
 
 ```bash
 # 如果使用本地 MongoDB
-docker exec photoshare-mongodb mongodump \
+docker exec mongodb mongodump \
   -u admin -p password \
   --authenticationDatabase admin \
   --db words-learning \
@@ -440,7 +440,7 @@ const Config = {
 你的 Mac
 └─ Docker
    └─ words-learning-backend (3003)
-   └─ photoshare-mongodb (27017)
+   └─ mongodb (27017)
 
 手机 App → http://192.168.101.95:3003
 ```
@@ -756,7 +756,7 @@ docker inspect words-learning-backend
 ```bash
 # 测试连接
 docker exec -it words-learning-backend sh
-ping photoshare-mongodb  # 或测试 MongoDB Atlas
+ping mongodb  # 或测试 MongoDB Atlas
 ```
 
 ### **Q: 端口无法访问**
