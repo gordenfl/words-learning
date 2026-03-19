@@ -419,7 +419,11 @@ onMounted(loadProfile);
 
 <style scoped>
 .profile-page {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 0;
 }
 .loading-container {
@@ -451,13 +455,17 @@ onMounted(loadProfile);
 .loader-text { font-size: 17px; color: #7F8C8D; margin: 0; }
 
 .page-header {
+  flex-shrink: 0;
   padding-top: calc(10px + env(safe-area-inset-top, 0px));
   padding-bottom: 12px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .scroll-content {
-  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: 24px;
 }
 .content {
