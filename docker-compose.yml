@@ -25,9 +25,9 @@ services:
       USE_GOOGLE_VISION: ${USE_GOOGLE_VISION:-true}
       USE_BAIDU_SPEECH: ${USE_BAIDU_SPEECH:-false}
     networks:
-      - photoshare-network
+      - words-learning-network
 
 networks:
-  photoshare-network:
-    external: true
-    name: docker_photoshare-network
+  words-learning-network:
+    name: words-learning-network
+    driver: bridge

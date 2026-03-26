@@ -84,7 +84,15 @@ TEMPLATES = [
 # Django MongoDB Backend
 DEFAULT_AUTO_FIELD = "django_mongodb_backend.fields.ObjectIdAutoField"
 
-MONGODB_URI = _env("MONGODB_URI", "mongodb://localhost:27017/words-learning")
+# Choose a safe default based on whether we are inside Docker.
+# If Docker Compose substitutes an empty MONGODB_URI, _env() would turn it into "",
+# which breaks the mongodb backend. Use _env_nonempty() to fall back.
+DEFAULT_MONGODB_URI = "mongodb://localhost:27017/words-learning"
+if os.path.exists("/.dockerenv"):
+    DEFAULT_MONGODB_URI = "mongodb://mongodb:27017/words-learning"
+
+MONGODB_URI = _env_nonempty("MONGODB_URI", DEFAULT_MONGODB_URI)
+
 # 本地运行时若 URI 里是 Docker 主机名 mongodb，改为 localhost（配合 SSH 隧道）
 if not os.path.exists("/.dockerenv"):
     if "//mongodb:" in MONGODB_URI or "@mongodb:" in MONGODB_URI:

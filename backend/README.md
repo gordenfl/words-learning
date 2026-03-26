@@ -93,7 +93,7 @@ chmod +x backend_new/scripts/deploy-to-gordenfl.sh
 
 1. 本机可 SSH 到 gordenfl.com（默认用 `ec2-user`、密钥 `~/.ssh/gordongmai.com.pem`）。  
    自定义时：`DEPLOY_USER=ec2-user DEPLOY_HOST=gordenfl.com DEPLOY_SSH_KEY=/path/to/key.pem DEPLOY_PATH=/home/ec2-user/CI/words-learning ./backend_new/scripts/deploy-to-gordenfl.sh`
-2. 服务器上已有目录 `DEPLOY_PATH`（默认 `/home/ec2-user/CI/words-learning`），且存在 Docker 网络 `docker_photoshare-network`（与 mongodb 容器同网）。
+2. 服务器上已有目录 `DEPLOY_PATH`（默认 `/home/ec2-user/CI/words-learning`）。`docker-compose` 使用固定网络 `words-learning-network`；部署脚本会尝试把名为 `mongodb` 的容器接入该网（与 backend 同网后 URI 里才能用主机名 `mongodb`）。
 3. 服务器 `DEPLOY_PATH/.env` 中配置好 `MONGODB_URI`，**主机名必须用 `mongodb`**（容器名），例如：  
    `MONGODB_URI=mongodb://gordon_admin:gordenfl@mongodb:27017/words-learning?authSource=admin`  
    若服务器还没有 `.env`，可先在本地配置好项目根目录的 `.env`，脚本会同步到服务器。

@@ -12,14 +12,7 @@ if [ ! -f .env ]; then
   echo "WARNING: .env not found. Docker will use environment defaults."
 fi
 
-REQUIRED_NET="${PHOTOSHARE_NETWORK_NAME:-docker_photoshare-network}"
-if ! docker network inspect "$REQUIRED_NET" >/dev/null 2>&1; then
-  echo "ERROR: Docker network '$REQUIRED_NET' does not exist."
-  echo "  The backend joins this network to reach Mongo (and other stacks on the same host)."
-  echo "  Create it once: docker network create $REQUIRED_NET"
-  echo "  Or run the photoshare / mongo compose stack that defines this network."
-  exit 1
-fi
+WORDS_NET="${WORDS_LEARNING_NETWORK_NAME:-words-learning-network}"
 
 COMPOSE_BIN=""
 if command -v docker-compose >/dev/null 2>&1; then
@@ -35,6 +28,19 @@ echo "Using compose: $COMPOSE_BIN"
 
 # Pull/build and restart backend container only
 $COMPOSE_BIN up -d --build backend
+
+# Backend and standalone Mongo must share a network so hostname "mongodb" resolves.
+if docker ps --format '{{.Names}}' | grep -qx 'mongodb'; then
+  if docker network inspect "$WORDS_NET" >/dev/null 2>&1; then
+    if docker network connect "$WORDS_NET" mongodb 2>/dev/null; then
+      echo "Attached container 'mongodb' to network $WORDS_NET"
+    else
+      echo "mongodb already on $WORDS_NET (or attach skipped)"
+    fi
+  fi
+else
+  echo "No running container named 'mongodb'; ensure MONGODB_URI matches your setup"
+fi
 
 echo ""
 echo "Containers:"

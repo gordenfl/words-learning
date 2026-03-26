@@ -11,7 +11,7 @@
 - **容器名**: `mongodb`
 - **镜像**: `mongo:6.0`
 - **端口**: `27017`
-- **网络**: `docker_photoshare-network`
+- **与 words-learning 后端同网**: `words-learning-network`（`docker-compose` 创建；`mongodb` 容器需接入该网，见部署脚本或手动 `docker network connect`）
 
 ---
 
@@ -70,8 +70,8 @@ MONGODB_URI=mongodb://admin:password@mongodb:27017/words-learning?authSource=adm
 
 **前提**:
 
-- backend 容器必须在同一网络（`docker_photoshare-network`）
-- 我已经在 `docker-compose.yml` 中配置了
+- backend 与 `mongodb` 容器必须在同一网络（`words-learning-network`）
+- 已在根目录 `docker-compose.yml` 中配置；独立运行的 `mongodb` 需 `docker network connect words-learning-network mongodb`（或由 `scripts/cicd/remote-deploy.sh` 自动执行）
 
 ---
 
@@ -143,16 +143,16 @@ docker inspect mongodb --format '{{.Config.Env}}' | grep MONGO
 
 ### **2. 网络配置**
 
-当前配置让 backend 加入 `docker_photoshare-network`：
+当前配置让 backend 使用固定名称的桥接网络 `words-learning-network`，并把独立运行的 `mongodb` 容器接入该网：
 
 ```yaml
 networks:
-  photoshare-network:
-    external: true
-    name: docker_photoshare-network
+  words-learning-network:
+    name: words-learning-network
+    driver: bridge
 ```
 
-这样 backend 和 MongoDB 就在同一网络中了！
+这样 backend 和 MongoDB 就能用主机名 `mongodb` 互通。
 
 ### **3. 数据隔离**
 
@@ -208,7 +208,7 @@ docker-compose logs backend
 
 ```bash
 # 检查网络
-docker network inspect docker_photoshare-network
+docker network inspect words-learning-network
 
 # 确认 backend 是否在网络中
 docker inspect words-learning-backend --format '{{.NetworkSettings.Networks}}'
@@ -255,7 +255,7 @@ docker exec -it mongodb mongosh -u admin -p 你的密码 --authenticationDatabas
 **docker-compose.yml 已经配置好了**：
 
 - ❌ 不会创建新的 MongoDB 容器
-- ✅ backend 会加入 `docker_photoshare-network` 网络
-- ✅ 可以通过容器名 `mongodb` 直接连接
+- ✅ backend 使用 `words-learning-network`；需将现有 `mongodb` 容器接入该网（部署脚本可自动执行）
+- ✅ 接入后可通过容器名 `mongodb` 直接连接
 
 就这么简单！🎉
