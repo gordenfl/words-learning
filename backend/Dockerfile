@@ -19,6 +19,10 @@ RUN pip install --upgrade pip \
 COPY . .
 RUN chmod +x /app/docker-entrypoint.sh
 
+# Admin/static assets for production (DEBUG=False)
+ENV DJANGO_SETTINGS_MODULE=setting.settings
+RUN python manage.py collectstatic --noinput
+
 # Default: run gunicorn (bind all interfaces for Docker)
 ENV PORT=8088
 EXPOSE 8088

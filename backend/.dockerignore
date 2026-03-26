@@ -12,3 +12,4 @@ scripts/ssh-tunnel-mongo.sh
 .pytest_cache
 .coverage
 htmlcov
+staticfiles

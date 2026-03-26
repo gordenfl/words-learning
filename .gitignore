@@ -16,6 +16,7 @@ dist/
 *.pyc
 *~
 venv
+backend/staticfiles/
 .vscode/
 .idea/
 build/
