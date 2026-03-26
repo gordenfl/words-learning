@@ -57,13 +57,13 @@
             <span class="quick-stat-value">{{ stats?.total ?? 0 }}</span>
             <span class="quick-stat-label">Vocabulary</span>
           </router-link>
-          <router-link :to="{ name: 'WordsList', query: { filter: 'learned' } }" class="quick-stat-card">
-            <span class="quick-stat-value stat-success">{{ stats?.learned ?? stats?.known ?? 0 }}</span>
-            <span class="quick-stat-label">Mastered</span>
-          </router-link>
           <router-link :to="{ name: 'WordsList', query: { filter: 'new' } }" class="quick-stat-card">
             <span class="quick-stat-value stat-warning">{{ stats?.new ?? stats?.unknown ?? 0 }}</span>
             <span class="quick-stat-label">Learning</span>
+          </router-link>
+          <router-link :to="{ name: 'WordsList', query: { filter: 'learned' } }" class="quick-stat-card">
+            <span class="quick-stat-value stat-success">{{ stats?.learned ?? stats?.known ?? 0 }}</span>
+            <span class="quick-stat-label">Mastered</span>
           </router-link>
         </div>
 
@@ -256,6 +256,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   padding: 0;
+}
+
+/* Keep bottom content visible above the fixed bottom nav */
+.scroll-content {
+  padding-bottom: calc(24px + 52px + env(safe-area-inset-bottom, 0px));
 }
 .loading-container {
   flex: 1;
@@ -453,9 +458,9 @@ onMounted(() => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(66, 165, 245, 0.15);
-  padding: 8px 4px;
-  height: calc(72px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 4px;
+  height: calc(52px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -4px 20px rgba(66, 165, 245, 0.08);
 }
 .nav-item {
@@ -465,8 +470,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 6px 4px;
-  min-height: 56px;
+  padding: 2px 4px;
+  min-height: 44px;
   text-decoration: none;
   color: #7F8C8D;
   border-radius: 12px;
@@ -479,28 +484,31 @@ onMounted(() => {
   background: rgba(66, 165, 245, 0.08);
 }
 .nav-icon {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .nav-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
 }
 .nav-label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .hidden-input {
-  position: absolute;
-  width: 0;
-  height: 0;
+  /* iOS WKWebView may ignore programmatic click() when input is 0x0 or non-interactive */
+  position: fixed;
+  left: -10000px;
+  top: -10000px;
+  width: 1px;
+  height: 1px;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .scan-modal-overlay {
   position: fixed;
