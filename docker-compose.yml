@@ -1,17 +1,18 @@
 services:
-  backend_new:
+  backend:
     build:
-      context: ./backend_new
+      context: ./backend
       dockerfile: Dockerfile
-    container_name: words-learning-backend-new
+    container_name: words-learning-backend
     restart: always
     ports:
-      - "8089:8088"
+      - "8088:8088"
     environment:
       PORT: 8088
       MONGODB_URI: ${MONGODB_URI}
       JWT_SECRET: ${JWT_SECRET}
       DJANGO_SECRET_KEY: ${JWT_SECRET}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       USE_DEEPSEEK: ${USE_DEEPSEEK:-false}

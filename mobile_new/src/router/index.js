@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 
 const routes = [
@@ -17,7 +17,8 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  // Capacitor / 原生 WebView 下本地加载时，使用 hash history 更稳，避免白屏/空路由
+  history: createWebHashHistory(),
   routes,
 });
 
