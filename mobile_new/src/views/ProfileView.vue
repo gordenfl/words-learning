@@ -724,10 +724,13 @@ onMounted(loadProfile);
 }
 
 .hidden-input {
-  position: absolute;
-  width: 0;
-  height: 0;
+  /* iOS WKWebView may ignore programmatic click() when input is 0x0 or non-interactive */
+  position: fixed;
+  left: -10000px;
+  top: -10000px;
+  width: 1px;
+  height: 1px;
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
 }
 </style>
