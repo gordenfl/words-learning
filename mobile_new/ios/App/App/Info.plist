@@ -47,6 +47,12 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>We use the camera to take photos of book pages so we can scan and extract words for your vocabulary list.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We use your photo library so you can choose an image to scan and extract words for your vocabulary list.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We may save scanned images to your photo library when you choose to export or keep a copy.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>
