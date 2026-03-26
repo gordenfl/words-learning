@@ -21,4 +21,6 @@ COPY . .
 # Default: run gunicorn (bind all interfaces for Docker)
 ENV PORT=8088
 EXPOSE 8088
-CMD ["sh", "-c", "python -m gunicorn backend_new.wsgi:application -b 0.0.0.0:${PORT:-8088} -w 2 --timeout 120"]
+#CMD ["sh", "-c", "python -m gunicorn backend_new.wsgi:application -b 0.0.0.0:${PORT:-8088} -w 2 --timeout 120"]
+CMD ["sh", "-c", "python -m gunicorn setting.wsgi:application -b 0.0.0.0:${PORT:-8088} -w 2 --timeout 120"]
+
