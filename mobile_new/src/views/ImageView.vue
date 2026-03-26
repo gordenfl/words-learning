@@ -1,5 +1,8 @@
 <template>
   <div class="image-view-page" :style="{ backgroundColor: theme.background }">
+    <!-- Flying words layer (viewport overlay) -->
+    <div ref="flyLayer" class="fly-layer" aria-hidden="true"></div>
+
     <template v-if="!imageDataUrl">
       <div class="no-image">
         <p>No image available</p>
@@ -12,7 +15,7 @@
         <div class="content">
           <!-- Photo -->
           <div class="image-container">
-            <div class="image-surface">
+            <div ref="imageSurface" class="image-surface">
               <img :src="imageDataUrl" alt="Scanned" class="preview-image" />
               <div v-if="processingOCR" class="image-overlay">
                 <div class="spinner"></div>
@@ -29,7 +32,11 @@
           </div>
 
           <!-- Extracted words (new) -->
-          <section v-if="ocrCompleted && extractedWords.length > 0" class="section-card">
+          <section
+            v-if="ocrCompleted && extractedWords.length > 0"
+            ref="extractedSection"
+            class="section-card"
+          >
             <h2 class="section-title">Extracted Words ({{ extractedWords.length }})</h2>
             <p class="section-hint">Tap to select words you want to learn ({{ selectedWords.length }} selected)</p>
             <div class="words-list">
@@ -83,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useScanStore } from "../stores/scan";
 import { ocrAPI, wordsAPI } from "../services/api";
@@ -109,6 +116,10 @@ const selectedWords = ref([]);
 const addingWords = ref(false);
 const errorMessage = ref("");
 
+const imageSurface = ref(null);
+const extractedSection = ref(null);
+const flyLayer = ref(null);
+
 function normalizeWords(list, prefix) {
   return (list || []).map((item, index) => {
     if (typeof item === "string") {
@@ -118,6 +129,59 @@ function normalizeWords(list, prefix) {
       word: item.word || item.character || item.text || item.value || "",
       pinyin: item.pinyin || "",
       id: `${prefix}-${index}`,
+    };
+  });
+}
+
+function animateWordsIntoExtracted(list) {
+  // In some iOS WKWebView cases, animations can be janky during heavy OCR; keep it lightweight.
+  if (!flyLayer.value || !imageSurface.value || !extractedSection.value) return;
+  if (!Array.isArray(list) || list.length === 0) return;
+
+  const sourceRect = imageSurface.value.getBoundingClientRect();
+  const targetRect = extractedSection.value.getBoundingClientRect();
+
+  // Start near the bottom edge of the photo; end near the top of the extracted section.
+  const startY = sourceRect.bottom - 24;
+  const endY = Math.min(window.innerHeight - 24, targetRect.top + 48);
+
+  // Cap number of animated tokens to keep perf stable on older devices.
+  const tokens = list.slice(0, 60);
+
+  tokens.forEach((item, idx) => {
+    const text = (item?.word || "").trim();
+    if (!text) return;
+
+    const el = document.createElement("span");
+    el.className = "fly-token";
+    el.textContent = text;
+    flyLayer.value.appendChild(el);
+
+    const startX = sourceRect.left + 16 + Math.random() * Math.max(16, sourceRect.width - 32);
+    const endX = targetRect.left + 24 + Math.random() * Math.max(16, targetRect.width - 48);
+
+    el.style.left = `${startX}px`;
+    el.style.top = `${startY}px`;
+
+    const duration = 650 + Math.random() * 350;
+    const delay = idx * 55;
+
+    const anim = el.animate(
+      [
+        { transform: "translate(-50%, -50%) scale(1)", opacity: 0 },
+        { transform: "translate(-50%, -50%) scale(1)", opacity: 1, offset: 0.1 },
+        { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.9)`, opacity: 1, offset: 0.9 },
+        { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.75)`, opacity: 0 },
+      ],
+      {
+        duration,
+        delay,
+        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+        fill: "forwards",
+      }
+    );
+    anim.onfinish = () => {
+      el.remove();
     };
   });
 }
@@ -138,6 +202,8 @@ async function runOCR() {
     extractedWords.value = newList;
     knownWords.value = knownList;
     ocrCompleted.value = true;
+    await nextTick();
+    animateWordsIntoExtracted(newList);
     if (newList.length === 0 && knownList.length === 0) {
       errorMessage.value = "No Chinese characters detected in the image.";
     } else if (newList.length === 0 && knownList.length > 0) {
@@ -190,6 +256,28 @@ watch(imageDataUrl, (url) => {
 .image-view-page {
   min-height: 100vh;
   padding: 0;
+}
+
+.fly-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+
+.fly-token {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2C3E50;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.14);
+  border: 1px solid rgba(66, 165, 245, 0.22);
+  will-change: transform, opacity;
 }
 .no-image {
   padding: 40px 20px;
