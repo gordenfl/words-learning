@@ -46,7 +46,10 @@
                 :ref="(el) => setWordRef(item.id, el)"
                 type="button"
                 class="word-chip"
-                :class="{ selected: selectedWords.includes(item.word), 'chip-hidden': isAnimatingIntro }"
+                :class="{
+                  selected: selectedWords.includes(item.word),
+                  'chip-hidden': isAnimatingIntro && !revealedIds.has(item.id),
+                }"
                 @click="toggleWord(item.word)"
               >
                 <span v-if="item.pinyin" class="word-pinyin">{{ item.pinyin }}</span>
@@ -122,6 +125,7 @@ const extractedSection = ref(null);
 const flyLayer = ref(null);
 const wordEls = ref({});
 const isAnimatingIntro = ref(false);
+const revealedIds = ref(new Set());
 let introAnimToken = 0;
 
 function normalizeWords(list, prefix) {
@@ -149,6 +153,7 @@ function animateWordsIntoExtracted(list) {
 
   const myToken = ++introAnimToken;
   isAnimatingIntro.value = true;
+  revealedIds.value = new Set();
 
   // Measure source after layout.
   const sourceRect = imageSurface.value.getBoundingClientRect();
@@ -166,6 +171,16 @@ function animateWordsIntoExtracted(list) {
     const el = document.createElement("span");
     el.className = "fly-token";
     el.textContent = text;
+    // Random soft background color; text stays black.
+    const bgColors = [
+      "rgba(255, 214, 214, 0.95)", // soft red
+      "rgba(255, 239, 186, 0.95)", // soft yellow
+      "rgba(201, 242, 206, 0.95)", // soft green
+      "rgba(206, 233, 255, 0.95)", // soft blue
+      "rgba(230, 212, 255, 0.95)", // soft purple
+      "rgba(255, 212, 241, 0.95)", // soft pink
+    ];
+    el.style.background = bgColors[Math.floor(Math.random() * bgColors.length)];
     flyLayer.value.appendChild(el);
     created.push(el);
 
@@ -173,8 +188,8 @@ function animateWordsIntoExtracted(list) {
     el.style.left = `${startX}px`;
     el.style.top = `${startY}px`;
 
-    const duration = 1640;
-    const delay = idx * 220;
+    const duration = 2100;
+    const delay = idx * 280;
     el.style.animationDuration = `${duration}ms`;
     el.style.animationDelay = `0ms`;
 
@@ -194,6 +209,14 @@ function animateWordsIntoExtracted(list) {
       el.style.setProperty("--dx", `${dx}px`);
       el.style.setProperty("--dy", `${dy}px`);
       el.classList.add("fly-token-anim");
+
+      // Reveal the real chip near arrival (don't wait for all tokens).
+      window.setTimeout(() => {
+        if (introAnimToken !== myToken) return;
+        const next = new Set(revealedIds.value);
+        next.add(id);
+        revealedIds.value = next;
+      }, Math.max(0, Math.floor(duration * 0.92)));
     }, delay);
 
     el.addEventListener(
@@ -206,10 +229,14 @@ function animateWordsIntoExtracted(list) {
   });
 
   // Unhide chips after the intro animation window.
-  const totalMs = tokens.length * 220 + 2200;
+  const totalMs = tokens.length * 280 + 2600;
   window.setTimeout(() => {
     if (introAnimToken !== myToken) return;
     isAnimatingIntro.value = false;
+    // Ensure all chips are revealed at the end (fallback).
+    const next = new Set(revealedIds.value);
+    tokens.forEach((it) => it?.id && next.add(it.id));
+    revealedIds.value = next;
     created.forEach((n) => n.remove());
   }, totalMs);
 }
@@ -296,12 +323,12 @@ watch(imageDataUrl, (url) => {
 :deep(.fly-token) {
   position: fixed;
   transform: translate3d(-50%, -50%, 0) scale(0.9);
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #2C3E50;
+  /* background is set per-token (random) */
+  color: #000;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.02em;
   box-shadow: 0 6px 16px rgba(0,0,0,0.14);
   border: 1px solid rgba(66, 165, 245, 0.22);
