@@ -15,12 +15,13 @@ RUN pip install --upgrade pip \
     && pip install --no-cache-dir gunicorn \
     && python -m gunicorn --version
 
-# Copy project code (backend_new as context root)
+# Copy project code (build context is ./backend)
 COPY . .
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Default: run gunicorn (bind all interfaces for Docker)
 ENV PORT=8088
 EXPOSE 8088
-#CMD ["sh", "-c", "python -m gunicorn backend_new.wsgi:application -b 0.0.0.0:${PORT:-8088} -w 2 --timeout 120"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["sh", "-c", "python -m gunicorn setting.wsgi:application -b 0.0.0.0:${PORT:-8088} -w 2 --timeout 120"]
 

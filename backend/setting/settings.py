@@ -22,8 +22,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 def _env(key, default=None):
     return os.environ.get(key, default)
 
-# SECURITY
-SECRET_KEY = _env("DJANGO_SECRET_KEY", _env("JWT_SECRET", "default_secret_key"))
+
+def _env_nonempty(key, default=None):
+    """Like getenv but treat unset or blank as missing (Docker often passes JWT_SECRET=)."""
+    val = os.environ.get(key)
+    if val is None or (isinstance(val, str) and val.strip() == ""):
+        return default
+    return val
+
+
+# SECURITY — empty JWT_SECRET/DJANGO_SECRET_KEY must not yield SECRET_KEY="" (500 on every request)
+SECRET_KEY = _env_nonempty(
+    "DJANGO_SECRET_KEY",
+    _env_nonempty("JWT_SECRET", "default_secret_key"),
+)
 DEBUG = _env("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes", "y", "on")
 ALLOWED_HOSTS = _env("ALLOWED_HOSTS", "*").split(",")
 
@@ -94,6 +106,11 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# Avoid DB-backed sessions (Mongo must have django_session, etc.). Cookie sessions work for admin login.
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+
 # Static files
 STATIC_URL = "static/"
 
@@ -104,5 +121,5 @@ CORS_ALLOW_ALL_ORIGINS = True
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 
 # JWT
-JWT_SECRET = _env("JWT_SECRET", "default_secret_key")
+JWT_SECRET = _env_nonempty("JWT_SECRET", "default_secret_key")
 JWT_EXPIRY_DAYS = 7
