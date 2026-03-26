@@ -43,9 +43,10 @@
               <button
                 v-for="item in extractedWords"
                 :key="item.id"
+                :ref="(el) => setWordRef(item.id, el)"
                 type="button"
                 class="word-chip"
-                :class="{ selected: selectedWords.includes(item.word) }"
+                :class="{ selected: selectedWords.includes(item.word), 'chip-hidden': isAnimatingIntro }"
                 @click="toggleWord(item.word)"
               >
                 <span v-if="item.pinyin" class="word-pinyin">{{ item.pinyin }}</span>
@@ -119,6 +120,9 @@ const errorMessage = ref("");
 const imageSurface = ref(null);
 const extractedSection = ref(null);
 const flyLayer = ref(null);
+const wordEls = ref({});
+const isAnimatingIntro = ref(false);
+let introAnimToken = 0;
 
 function normalizeWords(list, prefix) {
   return (list || []).map((item, index) => {
@@ -133,57 +137,81 @@ function normalizeWords(list, prefix) {
   });
 }
 
+function setWordRef(id, el) {
+  if (!id) return;
+  if (el) wordEls.value[id] = el;
+}
+
 function animateWordsIntoExtracted(list) {
-  // In some iOS WKWebView cases, animations can be janky during heavy OCR; keep it lightweight.
-  if (!flyLayer.value || !imageSurface.value || !extractedSection.value) return;
+  // Match the old mobile implementation: measure each chip position, then fly into it.
+  if (!flyLayer.value || !imageSurface.value) return;
   if (!Array.isArray(list) || list.length === 0) return;
 
+  const myToken = ++introAnimToken;
+  isAnimatingIntro.value = true;
+
+  // Measure source after layout.
   const sourceRect = imageSurface.value.getBoundingClientRect();
-  const targetRect = extractedSection.value.getBoundingClientRect();
-
-  // Start near the bottom edge of the photo; end near the top of the extracted section.
   const startY = sourceRect.bottom - 24;
-  const endY = Math.min(window.innerHeight - 24, targetRect.top + 48);
 
-  // Cap number of animated tokens to keep perf stable on older devices.
   const tokens = list.slice(0, 60);
+  const created = [];
 
   tokens.forEach((item, idx) => {
+    const id = item?.id;
     const text = (item?.word || "").trim();
-    if (!text) return;
+    const chipEl = id ? wordEls.value[id] : null;
+    if (!text || !chipEl) return;
 
     const el = document.createElement("span");
     el.className = "fly-token";
     el.textContent = text;
     flyLayer.value.appendChild(el);
+    created.push(el);
 
     const startX = sourceRect.left + 16 + Math.random() * Math.max(16, sourceRect.width - 32);
-    const endX = targetRect.left + 24 + Math.random() * Math.max(16, targetRect.width - 48);
-
     el.style.left = `${startX}px`;
     el.style.top = `${startY}px`;
 
-    const duration = 650 + Math.random() * 350;
-    const delay = idx * 55;
+    const duration = 1640;
+    const delay = idx * 220;
+    el.style.animationDuration = `${duration}ms`;
+    el.style.animationDelay = `0ms`;
 
-    const anim = el.animate(
-      [
-        { transform: "translate(-50%, -50%) scale(1)", opacity: 0 },
-        { transform: "translate(-50%, -50%) scale(1)", opacity: 1, offset: 0.1 },
-        { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.9)`, opacity: 1, offset: 0.9 },
-        { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.75)`, opacity: 0 },
-      ],
-      {
-        duration,
-        delay,
-        easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-        fill: "forwards",
+    // Measure the target at the moment this token starts (layout/wrap can change).
+    window.setTimeout(() => {
+      if (introAnimToken !== myToken) return;
+      const latestChip = id ? wordEls.value[id] : null;
+      if (!latestChip) {
+        el.remove();
+        return;
       }
+      const target = latestChip.getBoundingClientRect();
+      const endX = target.left + target.width / 2;
+      const endY = target.top + target.height / 2;
+      const dx = endX - startX;
+      const dy = endY - startY;
+      el.style.setProperty("--dx", `${dx}px`);
+      el.style.setProperty("--dy", `${dy}px`);
+      el.classList.add("fly-token-anim");
+    }, delay);
+
+    el.addEventListener(
+      "animationend",
+      () => {
+        el.remove();
+      },
+      { once: true }
     );
-    anim.onfinish = () => {
-      el.remove();
-    };
   });
+
+  // Unhide chips after the intro animation window.
+  const totalMs = tokens.length * 220 + 2200;
+  window.setTimeout(() => {
+    if (introAnimToken !== myToken) return;
+    isAnimatingIntro.value = false;
+    created.forEach((n) => n.remove());
+  }, totalMs);
 }
 
 async function runOCR() {
@@ -265,9 +293,9 @@ watch(imageDataUrl, (url) => {
   z-index: 200;
 }
 
-.fly-token {
+:deep(.fly-token) {
   position: fixed;
-  transform: translate(-50%, -50%);
+  transform: translate3d(-50%, -50%, 0) scale(0.9);
   padding: 6px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
@@ -278,6 +306,38 @@ watch(imageDataUrl, (url) => {
   box-shadow: 0 6px 16px rgba(0,0,0,0.14);
   border: 1px solid rgba(66, 165, 245, 0.22);
   will-change: transform, opacity;
+  opacity: 0;
+  --dx: 0px;
+  --dy: 0px;
+}
+
+:deep(.fly-token-anim) {
+  animation-name: flyToken;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes flyToken {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, -50%, 0) scale(0.85);
+  }
+  12% {
+    opacity: 1;
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
+  92% {
+    opacity: 1;
+    transform: translate3d(calc(-50% + var(--dx)), calc(-50% + var(--dy)), 0) scale(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(-50% + var(--dx)), calc(-50% + var(--dy)), 0) scale(0.8);
+  }
+}
+
+.chip-hidden {
+  opacity: 0;
 }
 .no-image {
   padding: 40px 20px;
