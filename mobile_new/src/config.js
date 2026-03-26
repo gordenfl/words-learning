@@ -1,6 +1,8 @@
 /**
  * 应用配置 - 与 mobile 一致，便于对接同一 backend
- * 本地开发时可用 .env 指定后端地址：VITE_API_HOST=127.0.0.1 VITE_API_PORT=8001
+ * - 本地开发：可用 .env 覆盖 API，例如 VITE_API_HOST=127.0.0.1 VITE_API_PORT=8001
+ * - 生产构建（vite build / Xcode 打 IPA 前的 cap:sync）：固定走 ENV_CONFIG.production（外服），
+ *   避免本机 .env 里的 VITE_API_* 被打进包导致 IPA 仍连 localhost
  */
 const IS_PRODUCTION = import.meta.env.PROD;
 
@@ -27,10 +29,20 @@ const ENV_CONFIG = {
 const envName = IS_PRODUCTION ? "production" : "development";
 const env = ENV_CONFIG[envName];
 
-// 本地开发时优先使用环境变量，这样请求会发到你本机跑的 Django（如 runserver 8001）
-const apiHost = import.meta.env.VITE_API_HOST || env.API.HOST;
-const apiPort = import.meta.env.VITE_API_PORT || env.API.PORT;
-const apiProtocol = import.meta.env.VITE_API_PROTOCOL || env.API.PROTOCOL;
+const devApiHost = import.meta.env.VITE_API_HOST;
+const devApiPort = import.meta.env.VITE_API_PORT;
+const devApiProtocol = import.meta.env.VITE_API_PROTOCOL;
+
+function pickApi(picked, fallback) {
+  if (!IS_PRODUCTION && picked !== undefined && picked !== "") {
+    return picked;
+  }
+  return fallback;
+}
+
+const apiHost = pickApi(devApiHost, env.API.HOST);
+const apiPort = pickApi(devApiPort, env.API.PORT);
+const apiProtocol = pickApi(devApiProtocol, env.API.PROTOCOL);
 
 export default {
   IS_PRODUCTION: IS_PRODUCTION,
