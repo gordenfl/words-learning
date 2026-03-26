@@ -1,11 +1,13 @@
 import { defineStore } from "pinia";
 import { authAPI } from "../services/api";
+import { safeLocalStorageGetItem, safeLocalStorageRemoveItem, safeLocalStorageSetItem } from "../utils/safeStorage";
 
 const TOKEN_KEY = "authToken";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
-    token: localStorage.getItem(TOKEN_KEY) || null,
+    // iOS WKWebView 有时会禁用 localStorage（file/capacitor scheme 下），这里必须兜底避免白屏崩溃
+    token: safeLocalStorageGetItem(TOKEN_KEY) || null,
     user: null,
   }),
 
@@ -16,8 +18,8 @@ export const useAuthStore = defineStore("auth", {
   actions: {
     setToken(token) {
       this.token = token;
-      if (token) localStorage.setItem(TOKEN_KEY, token);
-      else localStorage.removeItem(TOKEN_KEY);
+      if (token) safeLocalStorageSetItem(TOKEN_KEY, token);
+      else safeLocalStorageRemoveItem(TOKEN_KEY);
     },
 
     setUser(user) {

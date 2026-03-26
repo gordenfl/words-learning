@@ -76,6 +76,7 @@ import iconUrl from "../assets/icon.png";
 import { getRandomGreeting } from "../utils/homeGreetings";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { Capacitor } from "@capacitor/core";
 
 // 与 mobile childrenTheme + blueTheme 一致
 const theme = reactive({
@@ -115,8 +116,56 @@ async function onSubmit() {
   }
 }
 
-function onSocialClick(provider) {
+async function onSocialClick(provider) {
+  if (provider === "apple") {
+    await handleAppleSignIn();
+    return;
+  }
   error.value = "Use email to sign in, or use the native app for " + provider + " sign-in.";
+}
+
+async function handleAppleSignIn() {
+  if (Capacitor.getPlatform() !== "ios") {
+    error.value = "Apple Sign In is only available on iOS. Use email to sign in.";
+    return;
+  }
+  try {
+    const { SignInWithApple } = await import("@capacitor-community/apple-sign-in");
+    const result = await SignInWithApple.authorize({
+      clientId: "com.gordenfl.wordslearning",
+      redirectURI: "https://gordenfl.com/auth/apple/callback",
+      scopes: "email name",
+    });
+    const r = result.response;
+    if (!r?.identityToken) {
+      error.value = "Apple Sign In failed: no identity token";
+      return;
+    }
+    const userInfo = {
+      identityToken: r.identityToken,
+      userId: r.user,
+      email: r.email,
+      fullName: r.givenName || r.familyName
+        ? { givenName: r.givenName, familyName: r.familyName }
+        : null,
+    };
+    loading.value = true;
+    error.value = "";
+    const { authAPI } = await import("../services/api");
+    const { data } = await authAPI.appleSignIn(userInfo);
+    if (data?.token) {
+      auth.setToken(data.token);
+      auth.setUser(data.user);
+      router.replace({ name: "Home" });
+    } else {
+      error.value = "Apple Sign In failed";
+    }
+  } catch (e) {
+    if (e?.message?.includes("cancel") || e?.code === "ERR_CANCELED") return;
+    error.value = e.response?.data?.message || e.message || "Apple Sign In failed";
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 

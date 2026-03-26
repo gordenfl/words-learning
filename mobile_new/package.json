@@ -5,24 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/strip-crossorigin.cjs",
     "preview": "vite preview",
     "cap:init": "cap add ios && cap add android",
-    "cap:sync": "npm run build && npx cap sync",
-    "cap:ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "cap:sync": "npm run build && npx cap sync && node scripts/ensure-webdist.cjs",
+    "cap:ios": "npm run build && npx cap sync ios && node scripts/ensure-webdist.cjs && npx cap open ios",
     "cap:android": "npm run build && npx cap sync android && npx cap open android"
   },
   "dependencies": {
-    "@capacitor/android": "^8.2.0",
-    "@capacitor/cli": "^8.2.0",
-    "@capacitor/core": "^8.2.0",
-    "@capacitor/ios": "^8.2.0",
+    "@capacitor-community/apple-sign-in": "^7.1.0",
+    "@capacitor/android": "^7.6.0",
+    "@capacitor/cli": "^7.6.0",
+    "@capacitor/core": "^7.6.0",
+    "@capacitor/ios": "^7.6.0",
     "axios": "^1.13.6",
     "pinia": "^3.0.4",
     "vue": "^3.5.30",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "^5.9.3",
     "vite": "^5.4.0"

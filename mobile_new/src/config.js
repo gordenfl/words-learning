@@ -6,7 +6,8 @@ const IS_PRODUCTION = import.meta.env.PROD;
 
 const ENV_CONFIG = {
   development: {
-    API: { HOST: "gordenfl.com", PORT: "8088", PROTOCOL: "http" },
+    // 内部开发默认走本机 Django（可用 VITE_API_* 覆盖）
+    API: { HOST: "localhost", PORT: "8001", PROTOCOL: "http" },
     GOOGLE_OAUTH: {
       IOS_CLIENT_ID: "123044373895-h042aqgmij6a60hee8gm239fd71kihkn.apps.googleusercontent.com",
       ANDROID_CLIENT_ID: "123044373895-rtmbsjo07dl3v8s0d27lbhvfei2tca2h.apps.googleusercontent.com",

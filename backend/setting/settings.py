@@ -24,7 +24,7 @@ def _env(key, default=None):
 
 # SECURITY
 SECRET_KEY = _env("DJANGO_SECRET_KEY", _env("JWT_SECRET", "default_secret_key"))
-DEBUG = True
+DEBUG = _env("DJANGO_DEBUG", "false").lower() in ("1", "true", "yes", "y", "on")
 ALLOWED_HOSTS = _env("ALLOWED_HOSTS", "*").split(",")
 
 # Application definition

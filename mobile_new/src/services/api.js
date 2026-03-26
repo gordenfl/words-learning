@@ -3,6 +3,7 @@
  */
 import axios from "axios";
 import Config from "../config";
+import { safeLocalStorageGetItem } from "../utils/safeStorage";
 
 const api = axios.create({
   baseURL: Config.API.BASE_URL,
@@ -13,7 +14,7 @@ const api = axios.create({
 // 请求时附带 token（从 localStorage 取，与 Capacitor 兼容）
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("authToken");
+    const token = safeLocalStorageGetItem("authToken");
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
