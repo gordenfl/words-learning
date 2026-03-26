@@ -36,8 +36,12 @@ jobs:
           DEPLOY_HOST="${{ secrets.DEPLOY_HOST }}"
           DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
 
+          # Note: --delete removes dest files absent from the repo. Without protecting .env,
+          # the server's .env would be deleted every deploy (gitignored → not in checkout).
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key" \
+            --filter "protect /.env" \
+            --filter "protect /.env.*" \
             --exclude ".git/" \
             --exclude "**/node_modules/" \
             --exclude "**/dist/" \
