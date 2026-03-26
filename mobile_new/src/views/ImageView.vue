@@ -1,8 +1,5 @@
 <template>
   <div class="image-view-page" :style="{ backgroundColor: theme.background }">
-    <!-- Flying words layer (viewport overlay) -->
-    <div ref="flyLayer" class="fly-layer" aria-hidden="true"></div>
-
     <template v-if="!imageDataUrl">
       <div class="no-image">
         <p>No image available</p>
@@ -12,6 +9,8 @@
 
     <template v-else>
       <div class="scroll-content">
+        <!-- Flying words layer (inside scroller so it follows scroll) -->
+        <div ref="flyLayer" class="fly-layer" aria-hidden="true"></div>
         <div class="content">
           <!-- Photo -->
           <div class="image-container">
@@ -123,6 +122,7 @@ const errorMessage = ref("");
 const imageSurface = ref(null);
 const extractedSection = ref(null);
 const flyLayer = ref(null);
+const scrollEl = ref(null);
 const wordEls = ref({});
 const isAnimatingIntro = ref(false);
 const revealedIds = ref(new Set());
@@ -155,9 +155,15 @@ function animateWordsIntoExtracted(list) {
   isAnimatingIntro.value = true;
   revealedIds.value = new Set();
 
+  // Find the scroller element (the parent of fly-layer).
+  const scroller = flyLayer.value.closest(".scroll-content");
+  if (!scroller) return;
+
   // Measure source after layout.
+  const scrollerRect = scroller.getBoundingClientRect();
   const sourceRect = imageSurface.value.getBoundingClientRect();
-  const startY = sourceRect.bottom - 24;
+  // Convert viewport coords -> scroller content coords.
+  const startY = sourceRect.bottom - scrollerRect.top + scroller.scrollTop - 24;
 
   const tokens = list.slice(0, 60);
   const created = [];
@@ -184,7 +190,12 @@ function animateWordsIntoExtracted(list) {
     flyLayer.value.appendChild(el);
     created.push(el);
 
-    const startX = sourceRect.left + 16 + Math.random() * Math.max(16, sourceRect.width - 32);
+    const startX =
+      sourceRect.left -
+      scrollerRect.left +
+      scroller.scrollLeft +
+      16 +
+      Math.random() * Math.max(16, sourceRect.width - 32);
     el.style.left = `${startX}px`;
     el.style.top = `${startY}px`;
 
@@ -202,8 +213,10 @@ function animateWordsIntoExtracted(list) {
         return;
       }
       const target = latestChip.getBoundingClientRect();
-      const endX = target.left + target.width / 2;
-      const endY = target.top + target.height / 2;
+      const endX =
+        target.left - scrollerRect.left + scroller.scrollLeft + target.width / 2;
+      const endY =
+        target.top - scrollerRect.top + scroller.scrollTop + target.height / 2;
       const dx = endX - startX;
       const dy = endY - startY;
       el.style.setProperty("--dx", `${dx}px`);
@@ -287,7 +300,6 @@ async function addWords() {
   try {
     await wordsAPI.batch(selectedWords.value, imageDataUrl.value || "");
     scanStore.clear();
-    alert(`Success! ✨ Added ${selectedWords.value.length} new word(s) to your list!`);
     router.replace({ name: "Home" });
   } catch (err) {
     alert(err.response?.data?.error || "Failed to add words. Please try again.");
@@ -316,7 +328,7 @@ watch(imageDataUrl, (url) => {
 }
 
 .fly-layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 200;
@@ -383,8 +395,10 @@ watch(imageDataUrl, (url) => {
 .scroll-content {
   flex: 1;
   overflow: auto;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  /* Extra space so bottom CTA isn't covered by iOS home indicator / toolbars */
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   -webkit-overflow-scrolling: touch;
+  position: relative;
 }
 .content {
   padding: 20px;

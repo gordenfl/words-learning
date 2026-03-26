@@ -57,13 +57,13 @@
             <span class="quick-stat-value">{{ stats?.total ?? 0 }}</span>
             <span class="quick-stat-label">Vocabulary</span>
           </router-link>
-          <router-link :to="{ name: 'WordsList', query: { filter: 'learned' } }" class="quick-stat-card">
-            <span class="quick-stat-value stat-success">{{ stats?.learned ?? stats?.known ?? 0 }}</span>
-            <span class="quick-stat-label">Mastered</span>
-          </router-link>
           <router-link :to="{ name: 'WordsList', query: { filter: 'new' } }" class="quick-stat-card">
             <span class="quick-stat-value stat-warning">{{ stats?.new ?? stats?.unknown ?? 0 }}</span>
             <span class="quick-stat-label">Learning</span>
+          </router-link>
+          <router-link :to="{ name: 'WordsList', query: { filter: 'learned' } }" class="quick-stat-card">
+            <span class="quick-stat-value stat-success">{{ stats?.learned ?? stats?.known ?? 0 }}</span>
+            <span class="quick-stat-label">Mastered</span>
           </router-link>
         </div>
 
@@ -260,7 +260,7 @@ onMounted(() => {
 
 /* Keep bottom content visible above the fixed bottom nav */
 .scroll-content {
-  padding-bottom: calc(24px + 36px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(24px + 52px + env(safe-area-inset-bottom, 0px));
 }
 .loading-container {
   flex: 1;
@@ -459,7 +459,7 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(66, 165, 245, 0.15);
   padding: 4px 4px;
-  height: calc(36px + env(safe-area-inset-bottom, 0px));
+  height: calc(52px + env(safe-area-inset-bottom, 0px));
   padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -4px 20px rgba(66, 165, 245, 0.08);
 }
@@ -471,7 +471,7 @@ onMounted(() => {
   justify-content: center;
   gap: 4px;
   padding: 2px 4px;
-  min-height: 28px;
+  min-height: 44px;
   text-decoration: none;
   color: #7F8C8D;
   border-radius: 12px;
@@ -484,18 +484,18 @@ onMounted(() => {
   background: rgba(66, 165, 245, 0.08);
 }
 .nav-icon {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .nav-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
 }
 .nav-label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
