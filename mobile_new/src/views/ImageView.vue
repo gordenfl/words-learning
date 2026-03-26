@@ -309,7 +309,9 @@ watch(imageDataUrl, (url) => {
 
 <style scoped>
 .image-view-page {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   padding: 0;
 }
 
@@ -381,7 +383,8 @@ watch(imageDataUrl, (url) => {
 .scroll-content {
   flex: 1;
   overflow: auto;
-  padding-bottom: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
 }
 .content {
   padding: 20px;

@@ -257,6 +257,11 @@ onMounted(() => {
   flex-direction: column;
   padding: 0;
 }
+
+/* Keep bottom content visible above the fixed bottom nav */
+.scroll-content {
+  padding-bottom: calc(24px + 36px + env(safe-area-inset-bottom, 0px));
+}
 .loading-container {
   flex: 1;
   display: flex;
@@ -453,9 +458,9 @@ onMounted(() => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid rgba(66, 165, 245, 0.15);
-  padding: 8px 4px;
-  height: calc(72px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 4px;
+  height: calc(36px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -4px 20px rgba(66, 165, 245, 0.08);
 }
 .nav-item {
@@ -465,8 +470,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 6px 4px;
-  min-height: 56px;
+  padding: 2px 4px;
+  min-height: 28px;
   text-decoration: none;
   color: #7F8C8D;
   border-radius: 12px;
