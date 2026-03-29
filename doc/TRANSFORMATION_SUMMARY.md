@@ -172,9 +172,9 @@
 
 ### 文件修改
 
-- `mobile/src/screens/HomeScreen.js` - 主要改造
-- `mobile/src/theme/childrenTheme.js` - 主题配置（已创建）
-- `mobile/src/components/children/ProgressCard.js` - 进度卡片组件（已创建）
+- `mobile__old/src/screens/HomeScreen.js` - 主要改造
+- `mobile__old/src/theme/childrenTheme.js` - 主题配置（已创建）
+- `mobile__old/src/components/children/ProgressCard.js` - 进度卡片组件（已创建）
 
 ### 依赖
 
@@ -199,7 +199,7 @@
 1. 启动应用：
 
 ```bash
-cd mobile
+cd mobile__old
 npm start
 ```
 

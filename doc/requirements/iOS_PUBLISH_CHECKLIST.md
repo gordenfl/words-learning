@@ -83,7 +83,7 @@
 #### 图标和截图 🎨
 
 - [ ] **App 图标** (1024x1024 PNG，无透明度)
-  - 文件位置: `mobile/assets/icon.png` ✅ (已有)
+  - 文件位置: `mobile__old/assets/icon.png` ✅ (已有)
   - 尺寸要求: 1024x1024 px
   - 格式要求: PNG (不能有透明通道)
 
@@ -204,7 +204,7 @@
 ### 第二步: 构建 iOS 应用
 
 ```bash
-cd mobile
+cd mobile__old
 eas build --platform ios --profile production
 ```
 

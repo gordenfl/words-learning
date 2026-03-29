@@ -85,7 +85,7 @@ words-learning/
 │   ├── package.json
 │   └── Dockerfile
 │
-├── mobile/                    # React Native应用
+├── mobile__old/                    # React Native应用
 │   ├── src/
 │   │   ├── screens/         # 页面组件（8个）
 │   │   └── services/        # API服务
@@ -120,7 +120,7 @@ docker-compose up -d
 
 # 或手动启动
 cd backend && npm install && npm start
-cd mobile && npm install && npm start
+cd mobile__old && npm install && npm start
 ```
 
 ### 测试API

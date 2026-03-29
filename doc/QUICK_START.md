@@ -92,7 +92,7 @@ npm install
 npm start
 
 # 2. 在新终端中，安装并启动移动应用
-cd mobile
+cd mobile__old
 npm install
 npm start
 ```
@@ -104,8 +104,8 @@ npm start
 # 1. 安装Expo CLI（如果还没安装）
 npm install -g expo-cli
 
-# 2. 进入mobile目录
-cd mobile
+# 2. 进入 mobile__old 目录（归档的 React Native 应用）
+cd mobile__old
 
 # 3. 安装依赖
 npm install
@@ -258,7 +258,7 @@ docker-compose up -d
 
 **解决**:
 ```javascript
-// 编辑 mobile/src/services/api.js
+// 编辑 mobile__old/src/services/api.js
 // Android模拟器使用:
 const API_BASE_URL = 'http://10.0.2.2:3000/api';
 

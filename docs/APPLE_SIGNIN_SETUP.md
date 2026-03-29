@@ -1,6 +1,6 @@
-# Apple ID 登录 - mobile_new 配置指南
+# Apple ID 登录 - mobile（Vue + Capacitor）配置指南
 
-仅针对 **mobile_new**（Vue + Capacitor）项目。
+仅针对 **`mobile/`**（Vue + Capacitor）主应用。
 
 ---
 
@@ -26,7 +26,7 @@
 ### 2. 安装 Capacitor 插件
 
 ```bash
-cd mobile_new
+cd mobile
 npm i @capacitor-community/apple-sign-in
 npx cap sync ios
 ```

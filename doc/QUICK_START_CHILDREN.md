@@ -7,7 +7,7 @@
 ### 第一步：应用主题系统（今天就可以开始！）
 
 我已经为你创建了：
-- ✅ `mobile/src/theme/childrenTheme.js` - 完整的儿童友好主题
+- ✅ `mobile__old/src/theme/childrenTheme.js` - 完整的儿童友好主题
 
 **立即行动**：
 1. 在现有页面中引入主题
@@ -68,17 +68,17 @@ import ChildrenTheme from '../theme/childrenTheme';
    - 详细的实施步骤
    - 设计参考和建议
 
-2. **`mobile/src/theme/childrenTheme.js`**
+2. **`mobile__old/src/theme/childrenTheme.js`**
    - 完整的主题系统
    - 颜色、字体、间距等配置
    - 可直接使用
 
-3. **`mobile/src/components/children/ProgressCard.js`**
+3. **`mobile__old/src/components/children/ProgressCard.js`**
    - 进度卡片组件
    - 带动画效果
    - 可直接在首页使用
 
-4. **`mobile/src/components/children/AchievementBadge.js`**
+4. **`mobile__old/src/components/children/AchievementBadge.js`**
    - 成就徽章组件
    - 解锁动画
    - 可用于成就系统
@@ -89,7 +89,7 @@ import ChildrenTheme from '../theme/childrenTheme';
 
 ### 1. 在首页引入主题
 
-编辑 `mobile/src/screens/HomeScreen.js`：
+编辑 `mobile__old/src/screens/HomeScreen.js`：
 
 ```javascript
 // 在文件顶部添加
@@ -109,7 +109,7 @@ import ProgressCard from '../components/children/ProgressCard';
 ### 2. 测试运行
 
 ```bash
-cd mobile
+cd mobile__old
 npm start
 ```
 

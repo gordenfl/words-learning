@@ -129,7 +129,7 @@ curl http://gordenfl.com:3003/api/health
 
 ### **步骤 7: 更新手机 App 配置**
 
-编辑 `mobile/config.js`：
+编辑 `mobile__old/config.js`：
 
 ```javascript
 const Config = {
@@ -266,7 +266,7 @@ nano deploy.sh
 curl http://gordenfl.com:3003/api/health
 
 # 4. 更新手机 App
-# 编辑 mobile/config.js
+# 编辑 mobile__old/config.js
 # HOST: 'gordenfl.com'
 ```
 

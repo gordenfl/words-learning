@@ -53,7 +53,7 @@ npm start
 ./test-api.sh
 
 # 移动应用测试
-cd mobile
+cd mobile__old
 npm start
 ```
 

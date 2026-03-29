@@ -28,7 +28,7 @@ import ProgressCard from "../components/children/ProgressCard";
 import CenterCharacter from "../components/children/CenterCharacter";
 import FeatureIcon from "../components/children/FeatureIcon";
 
-export default function HomeScreen({ navigation, route }) {
+export default function HomeScreen({ navigation }) {
   const theme = useTheme();
   
   // 所有可用的圆形按钮图片
@@ -191,28 +191,6 @@ export default function HomeScreen({ navigation, route }) {
     }
     navigation.navigate("ImageView", { imageUri });
   };
-
-  // 处理从 CameraScreen 传递过来的照片（不处理文字）
-  useEffect(() => {
-    if (route.params?.scannedImage) {
-      if (__DEV__) {
-        console.log("📥 Received image from CameraScreen");
-      }
-
-      // 从 CameraScreen 传递过来的照片
-      const { scannedImage: imageUri } = route.params;
-
-      // 导航到全屏照片显示界面
-      navigation.navigate("ImageView", { imageUri });
-
-      // 清除路由参数，避免重复处理
-      navigation.setParams({
-        scannedImage: null,
-        extractedWords: null,
-        knownWords: null,
-      });
-    }
-  }, [route.params?.scannedImage, navigation]);
 
   const takePhoto = async () => {
     console.log("📷 takePhoto function called");

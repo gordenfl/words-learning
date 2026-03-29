@@ -1,13 +1,13 @@
 # Chinese Words Learning (Vue 3 + Capacitor)
 
-与 `mobile`（React Native/Expo）功能对齐的 Vue 3 版本，使用 **Capacitor** 打包为 iOS / Android 应用。
+主移动应用：**Vue 3 + Capacitor**（本目录）。旧版 React Native/Expo 已移至仓库根目录的 `mobile__old/`，仅作归档参考。
 
 ## 技术栈
 
 - **Vue 3** + **Vite**
 - **Vue Router** 路由
 - **Pinia** 状态（登录态）
-- **Axios** 请求（与 backend / backend_new 同一 API）
+- **Axios** 请求（与 `backend` 同一 API）
 - **Capacitor** 原生壳（iOS / Android）
 
 ## 开发
@@ -47,7 +47,7 @@ npx cap sync
 npx cap open ios    # 或 open android
 ```
 
-## 已实现功能（与 mobile 对齐）
+## 已实现功能（与旧版 RN 应用对齐）
 
 - 登录 / 注册（邮箱密码）
 - 首页（统计 + 入口）
@@ -57,7 +57,7 @@ npx cap open ios    # 或 open android
 - 学习计划
 - 个人资料与退出登录
 
-API 与 `mobile` 一致，使用同一 backend（`config.js` 中 HOST/PORT）。
+API 与 `mobile__old`（归档）一致，使用同一 backend（`config.js` 中 HOST/PORT）。
 
 ## 配置
 
@@ -66,4 +66,4 @@ API 与 `mobile` 一致，使用同一 backend（`config.js` 中 HOST/PORT）。
 
 ## 图标与启动图
 
-可将 `mobile/assets/icon.png`、`mobile/assets/adaptive-icon.png` 等复制到 `public/` 或按 Capacitor 文档替换各平台图标与 splash。
+可将 `mobile__old/assets/icon.png`、`mobile__old/assets/adaptive-icon.png` 等复制到 `public/` 或按 Capacitor 文档替换各平台图标与 splash。
