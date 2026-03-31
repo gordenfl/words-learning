@@ -25,4 +25,15 @@ Pinyin final demo audio (optional)
 
 3) Optional: VITE_PINYIN_AUDIO_EXT=wav
 
-4) Or set full URLs in mobile/src/utils/pinyinFinalAudio.js URL_OVERRIDES.
+4) hanyu-pinyin-audio (GitHub mirror of gitcode syllable clips):
+   - From mobile/: npm run pinyin:sync-hanyu
+   - See ../pinyin-hanyu/README.txt — then set VITE_PINYIN_AUDIO_BASE_URL=/audio/pinyin-hanyu
+     and VITE_PINYIN_AUDIO_NAMING=hanyu
+
+5) Authorized bulk audio (e.g. licensed Dig Mandarin clips):
+   - From mobile/: node scripts/generate-pinyin-audio-manifest.mjs
+     -> scripts/manifest.to-fill.json lists every {stem}-{tone}.mp3 the app needs.
+   - Replace each "url" with the direct MP3 link from your source (under your license).
+   - node scripts/download-pinyin-audio.mjs scripts/manifest.to-fill.json
+   - Set VITE_PINYIN_AUDIO_BASE_URL=/audio/pinyin in mobile/.env
+   - Rebuild / cap sync. Empty "url" rows are skipped.

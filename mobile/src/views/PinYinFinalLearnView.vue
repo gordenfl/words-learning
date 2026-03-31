@@ -25,17 +25,17 @@
     </div>
 
     <div v-if="demoAudioOn" class="audio-hint">
-      Demo audio from <code class="code">VITE_PINYIN_AUDIO_BASE_URL</code>. This final:
-      <code class="code">{{ audioStem }}-1.{{ audioExt }}</code> …
-      <code class="code">{{ audioStem }}-4.{{ audioExt }}</code>. Missing files fall back to speech.
+      Clips from <code class="code">VITE_PINYIN_AUDIO_BASE_URL</code>
+      (<code class="code">VITE_PINYIN_AUDIO_NAMING</code>={{ audioNaming }}). This final:
+      <code class="code">{{ audioFileHint }}</code>.
     </div>
     <div v-else-if="isDev" class="audio-hint audio-hint-muted">
-      Tip: set <code class="code">VITE_PINYIN_AUDIO_BASE_URL=/audio/pinyin</code> and add clips under
-      <code class="code">public/audio/pinyin/</code> — see README there.
+      Static audio: <code class="code">VITE_PINYIN_AUDIO_BASE_URL=/audio/pinyin-hanyu</code> +
+      <code class="code">VITE_PINYIN_AUDIO_NAMING=hanyu</code> after <code class="code">npm run pinyin:sync-hanyu</code>,
+      or hyphen naming under <code class="code">public/audio/pinyin/</code> — see README there.
     </div>
-
-    <div class="hint" v-if="!speechSupported && !demoAudioOn">
-      Your device/browser doesn’t support speech synthesis. (Audio will be added later.)
+    <div v-else class="hint">
+      Audio packs are not configured. Set <code class="code">VITE_PINYIN_AUDIO_BASE_URL</code> in the build so taps play MP3 clips.
     </div>
   </div>
 </template>
@@ -44,9 +44,9 @@
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { applyToneMark } from "../utils/pinyinTone";
-import { speechHanziForFinalTone } from "../utils/pinyinFinalSpeech";
 import {
   audioUrlForFinalTone,
+  hanyuSyllableBaseForStem,
   isPinyinDemoAudioConfigured,
   pinyinFinalAudioStem,
 } from "../utils/pinyinFinalAudio";
@@ -63,7 +63,6 @@ const finalText = computed(() => {
 const learned = computed(() => progress.isFinalLearned(finalText.value));
 
 const playing = ref(false);
-const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 
 const toneOrder = [1, 2, 3, 4];
 const toneMarks = ["ˉ", "ˊ", "ˇ", "ˋ"];
@@ -73,6 +72,16 @@ const audioStem = computed(() => pinyinFinalAudioStem(finalText.value));
 const audioExt = computed(() =>
   (import.meta.env.VITE_PINYIN_AUDIO_EXT || "mp3").replace(/^\./, "")
 );
+const audioNaming = computed(() => (import.meta.env.VITE_PINYIN_AUDIO_NAMING || "hyphen").toLowerCase());
+const audioFileHint = computed(() => {
+  const ext = audioExt.value;
+  const st = audioStem.value;
+  if (audioNaming.value === "hanyu") {
+    const s = hanyuSyllableBaseForStem(st);
+    return `${s}1.${ext} … ${s}4.${ext}`;
+  }
+  return `${st}-1.${ext} … ${st}-4.${ext}`;
+});
 
 const isDev = import.meta.env.DEV;
 
@@ -82,38 +91,11 @@ function toned(tone) {
   return applyToneMark(finalText.value, tone);
 }
 
-/** Slower rate so each tone sounds longer (0.1–10, default ~1). */
-const SPEECH_RATE = 0.55;
 /** Gap after each tone when playing all four in order (ms). */
 const PAUSE_BETWEEN_TONES_MS = 650;
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-function speak(text) {
-  return new Promise((resolve) => {
-    if (!speechSupported) {
-      resolve();
-      return;
-    }
-    try {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "zh-CN";
-      u.rate = SPEECH_RATE;
-      u.onend = () => resolve();
-      u.onerror = () => resolve();
-      window.speechSynthesis.speak(u);
-    } catch {
-      resolve();
-    }
-  });
-}
-
-function speakTextForTone(tone) {
-  const hanzi = speechHanziForFinalTone(finalText.value, tone);
-  return hanzi || toned(tone);
 }
 
 function stopDemoAudio() {
@@ -127,7 +109,7 @@ function stopDemoAudio() {
   }
 }
 
-/** Try demo clip; returns true if playback finished, false if skipped/failed (use TTS). */
+/** Play clip; returns true if playback finished, false if skipped/failed. */
 function playDemoUrl(url) {
   return new Promise((resolve) => {
     if (!url) {
@@ -160,18 +142,13 @@ function playDemoUrl(url) {
 
 async function playOne(tone) {
   const url = audioUrlForFinalTone(finalText.value, tone);
-  if (url) {
-    const ok = await playDemoUrl(url);
-    if (ok) return;
-  }
-  stopDemoAudio();
-  await speak(speakTextForTone(tone));
+  if (!url) return;
+  await playDemoUrl(url);
 }
 
 async function playTone(tone) {
   playing.value = true;
   progress.markFinalLearned(finalText.value);
-  window.speechSynthesis?.cancel?.();
   await playOne(tone);
   playing.value = false;
 }
@@ -179,7 +156,6 @@ async function playTone(tone) {
 async function playAll() {
   playing.value = true;
   progress.markFinalLearned(finalText.value);
-  window.speechSynthesis?.cancel?.();
   for (let i = 0; i < toneOrder.length; i++) {
     const t = toneOrder[i];
     // eslint-disable-next-line no-await-in-loop

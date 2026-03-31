@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local pinyin download manifest (may contain licensed CDN URLs)
+scripts/manifest.to-fill.json
+
+# Large third-party clip pack (run npm run pinyin:sync-hanyu after clone)
+public/audio/pinyin-hanyu/*.mp3

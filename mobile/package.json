@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "pinyin:audio:manifest": "node scripts/generate-pinyin-audio-manifest.mjs",
+    "pinyin:audio:download": "node scripts/download-pinyin-audio.mjs",
+    "pinyin:sync-hanyu": "node scripts/sync-hanyu-pinyin-audio.mjs",
     "build": "vite build && node scripts/strip-crossorigin.cjs",
     "preview": "vite preview",
     "cap:init": "cap add ios && cap add android",

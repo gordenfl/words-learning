@@ -1,0 +1,10 @@
+[
+  {
+    "saveAs": "a-1.mp3",
+    "url": "https://example.com/your-authorized-folder/a_tone1.mp3"
+  },
+  {
+    "saveAs": "a-2.mp3",
+    "url": "https://example.com/your-authorized-folder/a_tone2.mp3"
+  }
+]

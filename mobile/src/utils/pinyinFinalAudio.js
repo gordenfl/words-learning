@@ -1,13 +1,41 @@
 /**
- * Optional demo audio for pinyin finals (per tone). Set VITE_PINYIN_AUDIO_BASE_URL
- * and place files like a-1.mp3 … a-4.mp3 under that path (see public/audio/pinyin/README.txt).
+ * Optional demo audio for pinyin finals (per tone).
  *
- * Override any single clip with URL_OVERRIDES (full URL), key = "{fileStem}-{tone}" e.g. "a-3".
+ * Naming modes (VITE_PINYIN_AUDIO_NAMING):
+ * - hyphen: {stem}-{tone}.mp3  (e.g. a-1.mp3) — your own files / manifest downloads
+ * - hanyu:  {syllable}{tone}.mp3 — matches zispace/hanyu-pinyin-audio (see scripts/sync-hanyu-pinyin-audio.mjs)
+ *
+ * Set VITE_PINYIN_AUDIO_BASE_URL=/audio/pinyin-hanyu and VITE_PINYIN_AUDIO_NAMING=hanyu after sync.
  */
 
-const URL_OVERRIDES = {
-  // Example:
-  // "a-1": "https://your-cdn.example.com/pinyin/a-1.mp3",
+/**
+ * Map our file stem (pinyinFinalAudioStem) to syllable prefix used in hanyu-pinyin-audio filenames
+ * for “zero initial” readings (yi/wu/yu/…).
+ */
+const HANYU_SYLLABLE_FOR_STEM = {
+  i: "yi",
+  u: "wu",
+  "u-dia": "yu",
+  "ue-dia": "yue",
+  "uan-dia": "yuan",
+  "un-dia": "yun",
+  ia: "ya",
+  ie: "ye",
+  iao: "yao",
+  iu: "you",
+  ian: "yan",
+  in: "yin",
+  iang: "yang",
+  ing: "ying",
+  iong: "yong",
+  ua: "wa",
+  uo: "wo",
+  uai: "wai",
+  ui: "wei",
+  uan: "wan",
+  un: "wen",
+  uang: "wang",
+  ueng: "weng",
 };
 
 function normalizeFinal(raw) {
@@ -21,7 +49,7 @@ function normalizeFinal(raw) {
   return s.toLowerCase();
 }
 
-/** ASCII-safe filename stem (matches README naming). */
+/** ASCII-safe filename stem (hyphon mode / override keys). */
 export function pinyinFinalAudioStem(rawFinal) {
   const n = normalizeFinal(rawFinal);
   if (n === "ü") return "u-dia";
@@ -31,25 +59,37 @@ export function pinyinFinalAudioStem(rawFinal) {
   return n;
 }
 
+/** Syllable root used in hanyu-pinyin-audio repo (a1.mp3, yin1.mp3, …). */
+export function hanyuSyllableBaseForStem(stem) {
+  return HANYU_SYLLABLE_FOR_STEM[stem] ?? stem;
+}
+
 export function isPinyinDemoAudioConfigured() {
   const base = (import.meta.env.VITE_PINYIN_AUDIO_BASE_URL || "").trim();
-  return !!base || Object.keys(URL_OVERRIDES).length > 0;
+  return !!base;
 }
 
 /**
- * Absolute URL or site-relative URL to load with new Audio(). Empty = use TTS only.
+ * Absolute URL or site-relative URL to load with new Audio(). Empty = no static clip.
  */
 export function audioUrlForFinalTone(rawFinal, tone) {
   const stem = pinyinFinalAudioStem(rawFinal);
   const t = Number(tone);
   if (!stem || t < 1 || t > 4) return "";
-  const key = `${stem}-${t}`;
-  if (URL_OVERRIDES[key]) return URL_OVERRIDES[key];
 
   const base = (import.meta.env.VITE_PINYIN_AUDIO_BASE_URL || "").trim();
   if (!base) return "";
   const ext = (import.meta.env.VITE_PINYIN_AUDIO_EXT || "mp3").replace(/^\./, "");
-  const file = `${stem}-${t}.${ext}`;
+  const naming = (import.meta.env.VITE_PINYIN_AUDIO_NAMING || "hyphen").toLowerCase();
+
+  let file;
+  if (naming === "hanyu") {
+    const syllable = hanyuSyllableBaseForStem(stem);
+    file = `${syllable}${t}.${ext}`;
+  } else {
+    file = `${stem}-${t}.${ext}`;
+  }
+
   const root = base.replace(/\/$/, "");
   return `${root}/${file}`;
 }
