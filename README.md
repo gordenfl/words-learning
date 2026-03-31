@@ -22,11 +22,12 @@ A comprehensive vocabulary learning application with image recognition, article 
 - JWT (身份认证)
 - BCrypt (密码加密)
 
-### 移动端
-- React Native + Expo
-- React Navigation
-- Axios (API调用)
-- AsyncStorage (本地存储)
+### 移动端（主应用）
+- Vue 3 + Vite + Capacitor（目录 `mobile/`）
+- Vue Router、Pinia、Axios
+
+### 移动端（归档）
+- `mobile__old/`：原 React Native + Expo 工程，仅供参考，不再维护
 
 ### 部署
 - Docker + Docker Compose
@@ -51,21 +52,13 @@ words-learning/
 │   ├── server.js           # 服务器入口
 │   ├── package.json
 │   └── Dockerfile
-├── mobile/                   # React Native移动应用
+├── mobile/                   # 主移动应用（Vue 3 + Capacitor）
+│   ├── src/                  # 视图、路由、API、状态
+│   ├── package.json
+│   └── capacitor.config.ts
+├── mobile__old/              # 归档：原 React Native / Expo（不维护）
 │   ├── src/
-│   │   ├── screens/        # 应用页面
-│   │   │   ├── LoginScreen.js
-│   │   │   ├── RegisterScreen.js
-│   │   │   ├── HomeScreen.js
-│   │   │   ├── WordsListScreen.js
-│   │   │   ├── AddWordScreen.js
-│   │   │   ├── CameraScreen.js
-│   │   │   ├── ArticleScreen.js
-│   │   │   └── ProfileScreen.js
-│   │   └── services/       # API服务
-│   │       └── api.js
 │   ├── App.js
-│   ├── app.json
 │   └── package.json
 ├── docker-compose.yml        # Docker编排配置
 ├── package.json             # 根package.json
@@ -132,28 +125,28 @@ npm start
 npm run dev
 ```
 
-#### 移动应用设置
+#### 移动应用设置（主应用 `mobile/`）
 
-1. **安装Expo CLI**
-```bash
-npm install -g expo-cli
-```
-
-2. **安装依赖**
+1. **安装依赖**
 ```bash
 cd mobile
 npm install
 ```
 
-3. **启动应用**
+2. **本地开发（浏览器）**
 ```bash
-npm start
+npm run dev
+```
+浏览器访问终端提示的本地地址（默认 http://localhost:5173），API 地址见 `mobile/src/config.js`。
+
+3. **原生 iOS / Android**（需已安装 Capacitor 平台工程）
+```bash
+npm run cap:ios
+# 或
+npm run cap:android
 ```
 
-4. **运行应用**
-- 扫描二维码在手机上使用Expo Go运行
-- 按 `i` 在iOS模拟器运行
-- 按 `a` 在Android模拟器运行
+归档的 React Native 应用在 `mobile__old/`，如需旧版 Expo 流程请进入该目录查看其 `package.json`。
 
 ## API文档
 
@@ -255,7 +248,7 @@ Authorization: Bearer <token>
 - [x] 文章生成
 - [x] 用户个人资料管理
 - [x] Docker部署配置
-- [x] React Native移动应用基础架构
+- [x] 移动应用：Vue 3 + Capacitor（`mobile/`）；RN 版已归档至 `mobile__old/`
 
 ### 🚧 待实现
 - [ ] 集成Google Cloud Vision API进行图片文字识别

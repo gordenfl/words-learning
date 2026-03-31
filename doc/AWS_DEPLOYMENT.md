@@ -285,7 +285,7 @@ curl -X POST http://your-server-ip:3003/api/auth/register \
 
 ### **步骤 9: 更新移动 App 配置**
 
-修改 `mobile/config.js`：
+修改 `mobile__old/config.js`：
 
 ```javascript
 const Config = {
@@ -417,7 +417,7 @@ sudo certbot renew --dry-run
 ### **步骤 4: 更新 App 配置**
 
 ```javascript
-// mobile/config.js
+// mobile__old/config.js
 const Config = {
   API: {
     HOST: 'api.words-learning.com',  // 使用域名
@@ -640,7 +640,7 @@ networks:
 ### **本地开发配置：**
 
 ```javascript
-// mobile/config.js
+// mobile__old/config.js
 const Config = {
   API: {
     HOST: '192.168.101.95',  // 本地 IP
@@ -652,7 +652,7 @@ const Config = {
 ### **生产环境配置：**
 
 ```javascript
-// mobile/config.js
+// mobile__old/config.js
 const IS_PRODUCTION = false; // 发布时改为 true
 
 const Config = {

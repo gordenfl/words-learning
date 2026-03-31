@@ -11,7 +11,7 @@ words-learning/
 ├── docker-compose.yml
 ├── backend/
 │   └── server.js  ← 通过 Docker 环境变量传递
-└── mobile/
+└── mobile__old/
     └── config.js  ← 不使用 .env（直接配置）
 ```
 
@@ -19,7 +19,7 @@ words-learning/
 
 ```
 ❌ backend/.env       # 不要在这里
-❌ mobile/.env        # 不要在这里
+❌ mobile__old/.env        # 不要在这里
 ❌ 其他子目录         # 不要在这里
 ```
 
@@ -176,7 +176,7 @@ words-learning/
 ├── docker-compose.yml      ← 读取 .env
 ├── backend/
 │   └── server.js           
-└── mobile/
+└── mobile__old/
     └── config.js           ← 不使用 .env
 ```
 

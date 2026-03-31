@@ -72,7 +72,7 @@ def login(request):
     try:
         body = json.loads(request.body)
         # Accept either email or username in the same field.
-        # mobile_new currently sends "email", but users may type a username there.
+        # mobile (Vue app) currently sends "email", but users may type a username there.
         identifier = (body.get("email") or body.get("username") or body.get("identifier") or "").strip()
         password = body.get("password") or ""
         # Debug logging (safe): never log plaintext passwords

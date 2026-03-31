@@ -53,7 +53,7 @@
 **创建儿童友好的设计系统**：
 
 ```javascript
-// mobile/src/theme/childrenTheme.js
+// mobile__old/src/theme/childrenTheme.js
 export const ChildrenTheme = {
   colors: {
     primary: '#FF6B9D',      // 粉红色（温暖、友好）
@@ -292,7 +292,7 @@ npm install react-native-confetti-cannon  # 庆祝动画
 ### 2. 文件结构建议
 
 ```
-mobile/src/
+mobile__old/src/
 ├── theme/
 │   ├── childrenTheme.js      # 儿童主题
 │   └── colors.js
@@ -319,7 +319,7 @@ mobile/src/
 **建议使用 Context API 或 Redux**：
 
 ```javascript
-// mobile/src/context/ChildrenContext.js
+// mobile__old/src/context/ChildrenContext.js
 export const ChildrenContext = createContext({
   stars: 0,
   achievements: [],
@@ -417,14 +417,14 @@ export const ChildrenContext = createContext({
 ### 1. 创建主题文件
 
 ```bash
-mkdir -p mobile/src/theme
-touch mobile/src/theme/childrenTheme.js
+mkdir -p mobile__old/src/theme
+touch mobile__old/src/theme/childrenTheme.js
 ```
 
 ### 2. 安装必要依赖
 
 ```bash
-cd mobile
+cd mobile__old
 npm install react-native-reanimated
 npm install react-native-chart-kit
 npm install react-native-svg
@@ -434,8 +434,8 @@ npm install lottie-react-native
 ### 3. 创建第一个儿童组件
 
 ```bash
-mkdir -p mobile/src/components/children
-touch mobile/src/components/children/ProgressCard.js
+mkdir -p mobile__old/src/components/children
+touch mobile__old/src/components/children/ProgressCard.js
 ```
 
 ---

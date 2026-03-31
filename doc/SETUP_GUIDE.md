@@ -115,7 +115,7 @@ npm install -g expo-cli
 
 ```bash
 # 进入移动应用目录
-cd mobile
+cd mobile__old
 
 # 安装依赖
 npm install
@@ -123,7 +123,7 @@ npm install
 
 ### 3. 配置API地址
 
-编辑 `mobile/src/services/api.js`:
+编辑 `mobile__old/src/services/api.js`:
 
 ```javascript
 // 本地开发

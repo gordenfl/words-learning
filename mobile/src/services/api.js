@@ -1,159 +1,88 @@
+/**
+ * API 封装 - 与 mobile__old（RN）行为一致，对接 backend
+ */
 import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Config from "../../config";
-
-// 从配置文件读取API地址
-// 如需修改IP地址，请编辑 mobile/config.js 文件
-const API_BASE_URL = Config.API.BASE_URL;
+import Config from "../config";
+import { safeLocalStorageGetItem } from "../utils/safeStorage";
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000, // 增加到 30 秒（移动网络可能较慢）
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: Config.API.BASE_URL,
+  timeout: 30000,
+  headers: { "Content-Type": "application/json" },
 });
 
-// Add token to requests
+// 请求时附带 token（从 localStorage 取，与 Capacitor 兼容）
 api.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem("authToken");
-    if (__DEV__) {
-      console.log("🔐 API Request:", config.method.toUpperCase(), config.url);
-      console.log("   Token exists:", !!token);
-      if (token) {
-        console.log("   Token preview:", token.substring(0, 20) + "...");
-      }
-    }
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  (config) => {
+    const token = safeLocalStorageGetItem("authToken");
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (err) => Promise.reject(err)
 );
 
-// Handle response errors
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // 只在开发时打印简洁的错误信息（不显示堆栈）
-    if (__DEV__) {
-      const status = error.response?.status;
-      const message = error.response?.data?.error || error.message;
-      console.log(`❌ API Error (${status}):`, message);
-      console.log(`❌ Full error response:`, error.response?.data);
+  (res) => res,
+  (err) => {
+    if (import.meta.env.DEV) {
+      console.warn("API Error:", err.response?.status, err.response?.data?.error || err.message);
     }
-    return Promise.reject(error);
+    return Promise.reject(err);
   }
 );
 
-// Auth API
 export const authAPI = {
   register: (username, email, password) =>
-    api.post("/auth/register", {
-      username,
-      email,
-      password,
-      displayName: username || email?.split("@")[0] || "",
-    }),
-
+    api.post("/auth/register", { username, email, password }),
   login: (email, password) => api.post("/auth/login", { email, password }),
-
   getProfile: () => api.get("/auth/me"),
-
   changePassword: (oldPassword, newPassword) => {
-    // 如果 oldPassword 为 null 或 undefined，不发送该字段
     const payload = { newPassword };
-    if (oldPassword !== null && oldPassword !== undefined) {
-      payload.oldPassword = oldPassword;
-    }
+    if (oldPassword != null) payload.oldPassword = oldPassword;
     return api.post("/auth/change-password", payload);
   },
-
   googleSignIn: (userInfo) => api.post("/auth/google", { userInfo }),
-
   facebookSignIn: (userInfo) => api.post("/auth/facebook", { userInfo }),
-
   appleSignIn: (userInfo) => api.post("/auth/apple", { userInfo }),
 };
 
-// Words API
 export const wordsAPI = {
-  getWords: (status) => api.get("/words", { params: { status } }),
-
-  getAll: () => api.get("/words"),
-
-  getWord: (wordId) => api.get(`/words/${wordId}`),
-
-  getStats: () => api.get("/words/stats"),
-
-  addWord: (word, definition, examples, sourceImage) =>
-    api.post("/words", { word, definition, examples, sourceImage }),
-
-  addWords: (words, sourceImage) =>
-    api.post("/words/batch", { words, sourceImage }),
-
-  updateStatus: (wordId, status) =>
-    api.patch(`/words/${wordId}/status`, { status }),
-
-  updateWordStatus: (wordId, status) =>
-    api.patch(`/words/${wordId}/status`, { status }),
-
+  list: (params) => api.get("/words", { params }),
+  stats: () => api.get("/words/stats"),
+  get: (wordId) => api.get(`/words/${wordId}`),
+  create: (body) => api.post("/words", body),
+  batch: (words, sourceImage) => api.post("/words/batch", { words, sourceImage }),
+  updateStatus: (wordId, status) => api.patch(`/words/${wordId}/status`, { status }),
   delete: (wordId) => api.delete(`/words/${wordId}`),
-
-  deleteWord: (wordId) => api.delete(`/words/${wordId}`),
-
-  generateDetails: (wordId, force = false, updateType = "both") =>
-    api.post(`/words/${wordId}/generate-details`, { force, updateType }),
+  generateDetails: (wordId, options) => api.post(`/words/${wordId}/generate-details`, options || {}),
+  generateCongrats: () => api.post("/words/generate-congrats"),
 };
 
-// Articles API
-export const articlesAPI = {
-  getArticles: () => api.get("/articles"),
-
-  generateArticle: (wordCount) => api.post("/articles/generate", { wordCount }),
-
-  markAsRead: (articleId) => api.patch(`/articles/${articleId}/read`),
-};
-
-// Users API
 export const usersAPI = {
-  getUser: (userId) => api.get(`/users/${userId}`),
-
-  updateProfile: (displayName, avatar, bio) =>
-    api.patch("/users/profile", { displayName, avatar, bio }),
-
-  updateTheme: (theme) =>
-    api.patch("/users/theme", { theme }),
-
-  followUser: (userId) => api.post(`/users/${userId}/follow`),
-
-  unfollowUser: (userId) => api.delete(`/users/${userId}/follow`),
-
-  searchUsers: (query) =>
-    api.get("/users/search/query", { params: { q: query } }),
-
-  deleteAccount: () => api.delete("/users/account"),
-
-  // Learning Plan APIs
   getLearningPlan: () => api.get("/users/learning-plan"),
-
-  updateLearningPlan: (plan) => api.patch("/users/learning-plan", plan),
+  updateLearningPlan: (body) => api.patch("/users/learning-plan", body),
+  updateProfile: (body) => api.patch("/users/profile", body),
+  updateTheme: (theme) => api.patch("/users/theme", { theme }),
+  deleteAccount: () => api.delete("/users/account"),
 };
 
-// OCR API
+export const articlesAPI = {
+  list: () => api.get("/articles"),
+  generate: (wordCount = 10) => api.post("/articles/generate", { wordCount }),
+  markRead: (articleId) => api.patch(`/articles/${articleId}/read`),
+};
+
 export const ocrAPI = {
-  extractText: (imageBase64) =>
-    api.post("/ocr/extract-base64", { imageBase64 }),
+  extract: (formData) => api.post("/ocr/extract", formData, { headers: { "Content-Type": "multipart/form-data" } }),
+  extractBase64: (imageBase64) => api.post("/ocr/extract-base64", { imageBase64 }),
+  extractText: (imageBase64) => api.post("/ocr/extract-base64", { imageBase64 }),
 };
 
-// Speech API
 export const speechAPI = {
-  recognizeAudio: (audioBase64, languageCode = "zh-CN") =>
-    api.post("/speech/recognize-base64", { audioBase64, languageCode }),
+  recognize: (formData) => api.post("/speech/recognize", formData, { headers: { "Content-Type": "multipart/form-data" } }),
+  recognizeBase64: (audioBase64, languageCode) => api.post("/speech/recognize-base64", { audioBase64, languageCode }),
+  ttsVoices: () => api.get("/speech/tts/voices"),
+  ttsSynthesize: (text, voiceId, lang) => api.post("/speech/tts/synthesize", { text, voiceId, lang }),
 };
 
 export default api;

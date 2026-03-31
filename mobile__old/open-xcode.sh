@@ -2,7 +2,7 @@
 
 # 打开 Xcode 项目的脚本
 
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile/ios
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old/ios
 
 # 关闭所有 Xcode 实例
 killall Xcode 2>/dev/null

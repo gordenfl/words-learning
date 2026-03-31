@@ -8,7 +8,7 @@ echo ""
 # 检查是否在 mobile 目录
 if [ ! -f "package.json" ]; then
     echo "❌ 请在 mobile 目录下运行此脚本"
-    echo "   cd mobile && ./build-apk.sh"
+    echo "   cd mobile__old && ./build-apk.sh"
     exit 1
 fi
 

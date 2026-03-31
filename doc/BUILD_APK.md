@@ -10,15 +10,15 @@
 
 ### **1. 配置已自动完成** ✅
 
-- ✅ `mobile/config.js` - 自动切换开发/生产环境
+- ✅ `mobile__old/config.js` - 自动切换开发/生产环境
 
   ```javascript
   // 开发模式（Expo Go）: 192.168.101.95:3003
   // 生产模式（APK）: gordenfl.com:3003
   ```
 
-- ✅ `mobile/app.json` - Android 打包配置
-- ✅ `mobile/eas.json` - EAS Build 配置
+- ✅ `mobile__old/app.json` - Android 打包配置
+- ✅ `mobile__old/eas.json` - EAS Build 配置
 
 ---
 
@@ -31,7 +31,7 @@
 #### **步骤 1: 安装 EAS CLI**
 
 ```bash
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 npm install -g eas-cli
 ```
 
@@ -105,7 +105,7 @@ source ~/.zshrc
 #### **步骤 3: 构建 APK**
 
 ```bash
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 
 # 构建生产版 APK
 npx expo build:android -t apk
@@ -118,7 +118,7 @@ npx expo build:android -t apk
 快速生成可分享的 APK。
 
 ```bash
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 
 # 发布应用
 npx expo publish
@@ -134,8 +134,8 @@ npx eas build -p android --profile preview
 ### **使用 EAS Build（5 分钟开始构建）**
 
 ```bash
-# 1. 进入 mobile 目录
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+# 1. 进入 mobile__old 目录
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 
 # 2. 安装 EAS CLI（如果还没有）
 npm install -g eas-cli
@@ -192,7 +192,7 @@ adb install words-learning.apk
 ### **检查 APK 会连接到哪里：**
 
 ```bash
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 
 # 查看生产环境配置
 grep "gordenfl.com" config.js
@@ -208,7 +208,7 @@ grep "gordenfl.com" config.js
 ### **开发 vs 生产自动切换：**
 
 ```javascript
-// mobile/config.js
+// mobile__old/config.js
 const IS_DEVELOPMENT = __DEV__;
 
 // 开发模式（Expo Go 调试）
@@ -231,7 +231,7 @@ const IS_DEVELOPMENT = __DEV__;
 EAS Build 需要以下图标（可选，有默认图标）：
 
 ```bash
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 
 # 创建简单的占位图标
 mkdir -p assets
@@ -254,7 +254,7 @@ mkdir -p assets
 ### **最快方式（推荐）：**
 
 ```bash
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 
 # 一键构建 APK
 eas build -p android --profile preview
@@ -312,7 +312,7 @@ sudo ufw status
 现在运行：
 
 ```bash
-cd /Users/yiliu/Documents/GitHub/words-learning/mobile
+cd /Users/yiliu/Documents/GitHub/words-learning/mobile__old
 eas build -p android --profile preview
 ```
 
