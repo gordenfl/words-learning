@@ -12,30 +12,15 @@
 
     <div class="tones">
       <button
-        v-for="(t, idx) in toneOrder"
+        v-for="t in toneOrder"
         :key="t"
         type="button"
         class="tone-btn"
         @click="playTone(t)"
         :disabled="playing"
       >
-        <div class="tone-num">{{ toneMarks[idx] }}</div>
         <div class="tone-text">{{ toned(t) }}</div>
       </button>
-    </div>
-
-    <div v-if="demoAudioOn" class="audio-hint">
-      Clips from <code class="code">VITE_PINYIN_AUDIO_BASE_URL</code>
-      (<code class="code">VITE_PINYIN_AUDIO_NAMING</code>={{ audioNaming }}). This final:
-      <code class="code">{{ audioFileHint }}</code>.
-    </div>
-    <div v-else-if="isDev" class="audio-hint audio-hint-muted">
-      Static audio: <code class="code">VITE_PINYIN_AUDIO_BASE_URL=/audio/pinyin-hanyu</code> +
-      <code class="code">VITE_PINYIN_AUDIO_NAMING=hanyu</code> after <code class="code">npm run pinyin:sync-hanyu</code>,
-      or hyphen naming under <code class="code">public/audio/pinyin/</code> — see README there.
-    </div>
-    <div v-else class="hint">
-      Audio packs are not configured. Set <code class="code">VITE_PINYIN_AUDIO_BASE_URL</code> in the build so taps play MP3 clips.
     </div>
   </div>
 </template>
@@ -46,9 +31,6 @@ import { useRoute } from "vue-router";
 import { applyToneMark } from "../utils/pinyinTone";
 import {
   audioUrlForFinalTone,
-  hanyuSyllableBaseForStem,
-  isPinyinDemoAudioConfigured,
-  pinyinFinalAudioStem,
 } from "../utils/pinyinFinalAudio";
 import { usePinyinProgressStore } from "../stores/pinyinProgress";
 
@@ -65,25 +47,6 @@ const learned = computed(() => progress.isFinalLearned(finalText.value));
 const playing = ref(false);
 
 const toneOrder = [1, 2, 3, 4];
-const toneMarks = ["ˉ", "ˊ", "ˇ", "ˋ"];
-
-const demoAudioOn = computed(() => isPinyinDemoAudioConfigured());
-const audioStem = computed(() => pinyinFinalAudioStem(finalText.value));
-const audioExt = computed(() =>
-  (import.meta.env.VITE_PINYIN_AUDIO_EXT || "mp3").replace(/^\./, "")
-);
-const audioNaming = computed(() => (import.meta.env.VITE_PINYIN_AUDIO_NAMING || "hyphen").toLowerCase());
-const audioFileHint = computed(() => {
-  const ext = audioExt.value;
-  const st = audioStem.value;
-  if (audioNaming.value === "hanyu") {
-    const s = hanyuSyllableBaseForStem(st);
-    return `${s}1.${ext} … ${s}4.${ext}`;
-  }
-  return `${st}-1.${ext} … ${st}-4.${ext}`;
-});
-
-const isDev = import.meta.env.DEV;
 
 let activeDemoAudio = null;
 
@@ -213,8 +176,9 @@ async function playAll() {
   cursor: default;
 }
 .big-text {
+  font-family: var(--sans);
   font-size: 72px;
-  font-weight: 1000;
+  font-weight: 900;
   line-height: 1;
   color: #2c3e50;
   letter-spacing: 0.02em;
@@ -236,7 +200,9 @@ async function playAll() {
   border: 1px solid #e8e8e8;
   background: #fff;
   padding: 14px 12px;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 2px 10px rgba(0,0,0,0.06);
   cursor: pointer;
 }
@@ -248,14 +214,12 @@ async function playAll() {
   cursor: default;
 }
 .tone-num {
-  font-size: 12px;
-  font-weight: 900;
-  color: #7f8c8d;
+  display: none;
 }
 .tone-text {
-  margin-top: 6px;
+  font-family: var(--sans);
   font-size: 28px;
-  font-weight: 1000;
+  font-weight: 900;
   color: #2c3e50;
 }
 .hint {
