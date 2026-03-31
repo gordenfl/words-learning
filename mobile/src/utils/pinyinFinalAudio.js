@@ -66,7 +66,7 @@ export function hanyuSyllableBaseForStem(stem) {
 
 export function isPinyinDemoAudioConfigured() {
   const base = (import.meta.env.VITE_PINYIN_AUDIO_BASE_URL || "").trim();
-  return !!base;
+  return !!(base || "/audio/pinyin-hanyu");
 }
 
 /**
@@ -77,10 +77,9 @@ export function audioUrlForFinalTone(rawFinal, tone) {
   const t = Number(tone);
   if (!stem || t < 1 || t > 4) return "";
 
-  const base = (import.meta.env.VITE_PINYIN_AUDIO_BASE_URL || "").trim();
-  if (!base) return "";
+  const base = (import.meta.env.VITE_PINYIN_AUDIO_BASE_URL || "").trim() || "/audio/pinyin-hanyu";
   const ext = (import.meta.env.VITE_PINYIN_AUDIO_EXT || "mp3").replace(/^\./, "");
-  const naming = (import.meta.env.VITE_PINYIN_AUDIO_NAMING || "hyphen").toLowerCase();
+  const naming = (import.meta.env.VITE_PINYIN_AUDIO_NAMING || "hanyu").toLowerCase();
 
   let file;
   if (naming === "hanyu") {
